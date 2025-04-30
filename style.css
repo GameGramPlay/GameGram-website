@@ -15,7 +15,8 @@ body {
   border-radius: 40px;
   font-size: 28px;
   font-weight: bold;
-  margin-top: center;
+  margin: auto;
+  width: 50%;
   letter-spacing: 2px;
   text-align: center;
 }
