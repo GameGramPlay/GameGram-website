@@ -6,6 +6,7 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
+  animation: fade-in 1s ease-out;
 }
 
 .title-bubble {
@@ -19,6 +20,12 @@ body {
   width: 50%;
   letter-spacing: 2px;
   text-align: center;
+  animation: fade-in-scale 0.8s ease-out;
+  transition: background-color 0.3s;
+}
+
+.title-bubble:hover {
+  background-color: #1de9b6;
 }
 
 nav {
@@ -32,10 +39,12 @@ nav a {
   text-decoration: none;
   color: #00796b;
   font-weight: bold;
+  transition: color 0.3s, transform 0.2s;
 }
 
 nav a:hover {
   color: #004d40;
+  transform: scale(1.1);
 }
 
 nav a.active {
@@ -49,6 +58,7 @@ nav a.active {
   background: linear-gradient(to bottom right, #003344, #00acc1);
   clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
   margin: 40px auto;
+  animation: pulse 2s infinite ease-in-out;
 }
 
 .feature-bubble {
@@ -58,6 +68,12 @@ nav a.active {
   font-size: 18px;
   margin: 12px auto;
   width: fit-content;
+  transition: transform 0.2s, background-color 0.3s;
+}
+
+.feature-bubble:hover {
+  background-color: #1de9b6;
+  transform: scale(1.05);
 }
 
 .waveform {
@@ -82,7 +98,23 @@ nav a.active {
 .bar:nth-child(5) { animation-delay: 0.4s; }
 .bar:nth-child(6) { animation-delay: 0.5s; }
 
+/* Animations */
 @keyframes bounce {
   0%, 100% { height: 15px; }
   50% { height: 50px; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in-scale {
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
 }
