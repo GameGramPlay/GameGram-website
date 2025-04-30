@@ -1,0 +1,74 @@
+body {
+  margin: 0;
+  font-family: 'Orbitron', sans-serif;
+  background-color: #e0f7fa;
+  color: #000;
+}
+
+.title-bubble {
+  background-color: #00e5ff;
+  display: inline-block;
+  padding: 18px 35px;
+  border-radius: 40px;
+  font-size: 28px;
+  font-weight: bold;
+  margin-top: 20px;
+  letter-spacing: 2px;
+}
+
+a {
+  display: inline-block;
+  margin: 15px;
+  text-decoration: none;
+  color: #00796b;
+  font-weight: bold;
+}
+
+nav {
+  margin-top: 30px;
+  text-align: center;
+}
+
+.diamond {
+  width: 100px;
+  height: 100px;
+  background: linear-gradient(to bottom right, #003344, #00acc1);
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  margin: 40px auto;
+}
+
+.feature-bubble {
+  background-color: #00e5ff;
+  padding: 15px 25px;
+  border-radius: 25px;
+  font-size: 18px;
+  margin: 12px auto;
+  width: fit-content;
+}
+
+.waveform {
+  margin: 40px auto 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  height: 60px;
+}
+
+.bar {
+  width: 6px;
+  background-color: black;
+  margin: 0 3px;
+  animation: bounce 1.2s infinite ease-in-out;
+}
+
+.bar:nth-child(1) { animation-delay: 0s; }
+.bar:nth-child(2) { animation-delay: 0.1s; }
+.bar:nth-child(3) { animation-delay: 0.2s; }
+.bar:nth-child(4) { animation-delay: 0.3s; }
+.bar:nth-child(5) { animation-delay: 0.4s; }
+.bar:nth-child(6) { animation-delay: 0.5s; }
+
+@keyframes bounce {
+  0%, 100% { height: 15px; }
+  50% { height: 50px; }
+}
