@@ -120,3 +120,27 @@ nav a.active {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.05); }
 }
+
+.game-list {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 60px;
+}
+
+.game-link {
+  text-decoration: none;
+  background-color: #00e5ff;
+  padding: 12px 24px;
+  border-radius: 20px;
+  font-size: 20px;
+  color: #003344;
+  transition: transform 0.2s, background-color 0.3s;
+}
+
+.game-link:hover {
+  background-color: #1de9b6;
+  transform: scale(1.05);
+}
+
