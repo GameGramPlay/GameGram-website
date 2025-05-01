@@ -1,0 +1,522 @@
+<!DOCTYPE HTML>
+<html lang="en-US">
+<head>
+    <title>Basketball Stars Unblocked - Github</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="canonical" href="https://basketball-stars.github.io"><style>
+    .active {background-color: #000000 !important;}
+    html, body {
+        background-color: #1a1a1a;
+        -ms-touch-action: none
+    }
+    * {
+        padding: 0;
+        margin: 0
+    }
+    body {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen,
+        Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
+        font-size: 1vw;
+        height: 100vh;
+        color: #ffffff;
+        line-height: 1.5;
+    }
+    body a {
+        color: #ffffff;
+        text-decoration: none;
+    }
+    body a:hover {
+        text-decoration: underline;
+    }
+    #full-page-container {
+        height: 100vh;
+        max-width: 1920px;
+        height: -webkit-fill-available
+    }
+    .gameArea {
+        display: -ms-flexbox;
+        display: flex;
+        padding: 10px;
+    }
+    .top {
+        background-color: #000;
+        max-width: 100%;
+        position: relative;
+        display: flex;
+        flex-flow: row nowrap;
+        align-items: center;
+        justify-content: space-between;
+        text-align: center;
+    }
+    .top div:nth-child(1) {
+        width: 80px;
+        height: 80px;
+    }
+    .mid {
+        flex: 1;
+    }
+    .mid a {
+        padding: 12px 20px;
+        background-color: #ffffff;
+        color: black;
+    }
+    .btn1 {
+        background-color: #ca0000;
+        color: #ffffff;
+        padding: 12px 36px;
+        cursor: pointer;
+        text-transform: uppercase;
+        font-size: 14px;
+        font-weight: 700;
+        border-radius: 4px;
+    }
+    .btn1:hover {
+        background-color: #909090;
+        text-decoration: none;
+    }
+    .search {
+        background: url(https://hoopgames.github.io/images/icons.png) no-repeat;
+        background-position: 9px 11px;
+        cursor: pointer;
+        margin-left: 30px;
+        width: 50px;
+        height: 40px;
+    }
+    .searchBox {
+        padding: 20px;
+        height: auto;
+        transition: padding .2s,height .1s,opacity .15s;
+        position: absolute;
+        top: 100%;
+        right: 4px;
+        width: 325px;
+        border: 1px solid #3e3e3e;
+        background-color: #1a1a1a;
+        z-index: 12;
+        opacity: 0;
+        visibility: hidden;
+    }
+    .searchBox input {
+        width: 100%;
+        background-color: black;
+        color: #f5f5f5;
+        font-size: 110%;
+        border: solid thin #3d4853;
+        padding: 5px 30px 5px 14px;
+        outline: none;
+    }
+    .close {
+        background: url(https://hoopgames.github.io/images/icons.png) no-repeat;
+        background-position: -1px -1px;
+        position: absolute;
+        top: 26px;
+        right: 29px;
+        padding: 0 10px;
+        width: 20px;
+        height: 20px;
+        border: 0;
+        cursor: pointer;
+    }
+    .active form {
+        opacity: 1 !important;
+        visibility: visible !important;
+        display: block !important;
+    }
+    .active div:nth-child(3) {
+        background-position: -34px 11px !important;
+    }
+    .col1, .col2 {
+        padding: 80px 10px 10px 10px;
+        width: 180px;
+    }
+    .game {
+        min-height: 600px;
+        flex-basis: 100%;
+        text-align: left;
+    }
+    .game article {
+        margin-bottom: 50px;
+    }
+    h1 {
+        font-size: 24px;
+        float: left;
+        padding: 0;
+    }
+    .game article .text ol,  .game article .text ul {
+        margin: 10px 20px;
+    }
+    .game article .text p {
+        margin: 10px 0;
+    }
+    .game article .text p,.game article .text ol {
+        line-height: 1.5;
+        font-size: 16px;
+        color: #cbcbcb;
+    }
+    .game article h2 {
+        color: #e6e6e6;
+    }
+    #gade {
+        text-align: center;
+    }
+    #fullscreen-btn {
+        cursor: pointer;
+    }
+    .zoom {
+        transition: transform .2s;
+    }
+    .zoom:hover {
+        transform: scale(1.2); /* (150% zoom - Note: if the zoom is too large, it will go outside of the viewport) */
+    }
+    .gameHead {
+        overflow: hidden;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        height: 52px;
+        padding: 0 5px 15px 5px;
+    }
+    .nS {
+        flex-grow: 1;
+    }
+    nav.menu {
+        position: fixed;
+        left: 0;
+        top: 0;
+        z-index: 100;
+    }
+    #menuToggle {
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        top: 25px;
+        left: 25px;
+        z-index: 1;
+        -webkit-user-select: none;
+        user-select: none;
+    }
+    #menuToggle a
+    {
+        text-decoration: none;
+        color: #fff;
+
+        transition: color 0.3s ease;
+    }
+    #menuToggle input
+    {
+        display: block;
+        width: 70px;
+        height: 55px;
+        position: absolute;
+        top: -7px;
+        left: -5px;
+        cursor: pointer;
+        opacity: 0; /* hide this */
+        z-index: 2; /* and place it over the hamburger */
+        -webkit-touch-callout: none;
+    }
+    #menuToggle span
+    {
+        display: block;
+        width: 50px;
+        height: 4px;
+        margin-bottom: 10px;
+        position: relative;
+
+        background: #fff;
+        border-radius: 3px;
+
+        z-index: 1;
+
+        transform-origin: 6px 0px;
+
+        transition: transform 0.5s cubic-bezier(0.77,0.2,0.05,1.0),
+        background 0.5s cubic-bezier(0.77,0.2,0.05,1.0),
+        opacity 0.55s ease;
+    }
+
+    #menuToggle span:first-child
+    {
+        transform-origin: 0% 0%;
+    }
+
+    #menuToggle span:nth-last-child(2)
+    {
+        transform-origin: 0% 100%;
+    }
+    #menuToggle input:checked ~ span
+    {
+        opacity: 1;
+        transform: rotate(45deg) translate(-3px, -1px);
+        background: #fff;
+    }
+    #menuToggle input:checked ~ span:nth-last-child(3)
+    {
+        opacity: 0;
+        transform: rotate(0deg) scale(0.2, 0.2);
+    }
+    #menuToggle input:checked ~ span:nth-last-child(2)
+    {
+        transform: rotate(-45deg) translate(0, -1px);
+    }
+    #menu
+    {
+
+        list-style-type: none;
+        -webkit-font-smoothing: antialiased;
+        /* to stop flickering of text in safari */
+        overflow-y: scroll;
+        overflow-x: hidden;
+        max-height: calc(100vh - 65px);
+        margin-top: 100px;
+    }
+    /* width */
+    #menu::-webkit-scrollbar {
+        width: 15px;
+    }
+    #menu::-webkit-scrollbar-track {
+        box-shadow: inset 0 0 5px grey;
+    }
+    #menu::-webkit-scrollbar-thumb {
+        background: #777;
+        border-radius: 5px;
+    }
+    #menu::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
+
+    #menu li
+    {
+        border-radius: 25px;
+        padding: 10px;
+        list-style-type: none;
+        display: flex;
+        flex-direction: row;
+    }
+    #menu li:hover {
+        background-color: #000000 !important;
+    }
+    #menu img {
+        margin: 0 7px 0 10px;
+        width: 30px;
+        height: 30px;
+        border-radius: 5px;
+    }
+    #menu li a {
+        display: flex;
+        align-items: center;
+    }
+    #menu a {
+        color: #e6e6e6;
+        font-size: 1.1rem;
+        font-weight: 500;
+        transition: 200ms;
+        white-space: nowrap;
+    }
+    #menu li:first-child {
+        font-size: 80%;
+    }
+    #scrollable {
+
+        transform-origin: 0% 0%;
+        transform: translate(-100%, 0);
+
+        transition: transform 0.5s cubic-bezier(0.77,0.2,0.05,1.0);
+
+        position: absolute;
+        min-width: 200px;
+        padding: 30px;
+        margin: -100px 0 0 -30px;
+        background: #16181c;
+    }
+    #menuToggle input:checked ~ #scrollable
+    {
+        transform: none;
+    }
+    .g a div {
+        padding: 1px;
+        font-weight: 700;
+        font-size: 96%;
+    }
+    footer {
+        display: flex;
+        padding-top: 40px;
+        background-color: #000;
+    }
+    footer a {
+        text-decoration: none;
+    }
+    footer h3 {
+        padding-bottom: 10px;
+    }
+    footer > div {
+        padding: 40px;
+        width: 33%;
+    }
+    footer > div:first-child {
+        border-left: 0px;
+    }
+    footer ul {
+        columns: 2;
+        column-gap: 20px;
+        list-style: none;
+    }
+    .social a {
+        background: #333 url(https://hoopgames.github.io/images/icons.png) no-repeat;
+        width: 35px;
+        height: 35px;
+        display: inline-block;
+        margin: 0 3px;
+        border-radius: 6px;
+        line-height: 0;
+        font-size: 0;
+        color: transparent;
+    }
+    .social a:nth-child(2) {
+        background-position: -70px -16px;
+    }
+    .social a:nth-child(3) {
+        background-position: -69px -83px;
+    }
+    .social a:nth-child(4) {
+        background-position: -70px -52px;
+    }
+    .social a:nth-child(5) {
+        background-position: -69px -110px;
+    }
+
+    @media only screen and (max-width: 1280px) {
+
+        body {
+            font-size: 14px;
+        }
+        .col2 {
+            display: none;
+        }
+    }
+
+    @media only screen and (max-width: 1024px) {
+
+        .col1 {
+            display: none;
+        }
+    }
+
+    @media only screen and (max-width: 650px) {
+
+        footer {
+            flex-wrap: wrap;
+        }
+        footer > div {
+            width: 100%;
+        }
+    }
+</style>
+</head>
+<body>
+<main id="full-page-container">
+    <div class="top">
+        <div></div>
+        <div class="mid">
+            <a class="btn1" href="https://basketball-stars.github.io">Basketball Stars</a>
+        </div>
+        <div class="search"></div>
+        <form role="search" method="get" class="searchBox" action="https://basketball-stars.github.io"><input name="do" value="fSearch" type="hidden"><input type="search" autocomplete="off" placeholder="search games…" value="" name="word" title="Search for:"><button class="close" type="submit"></button></form>
+    </div>
+    <nav class="menu">
+        <div id="menuToggle">
+            <input type="checkbox" aria-label="Menu" />
+            <span></span>
+            <span></span>
+            <span></span>
+            <div id="scrollable">
+                <ul id="menu">
+                    <li><h2>Basketball Stars</h2></li>
+                    <li><img alt="Basketball Legends" height="30px" width="30px"  src="https://basketball-legends.github.io/images/basketball-legends.png">
+                        <a href="https://basketball-legends.github.io" title="Basketball Legends">Basketball Legends</a></li>
+            <li><img alt="Mahjong" height="30px" width="30px"  src="https://mahjongunblocked.github.io/images/mahjong.png">
+                        <a href="https://mahjongunblocked.github.io" title="Mahjong">Mahjong</a></li>
+            <li class="active"><img alt="Basketball Stars" height="30px" width="30px"  src="https://basketball-stars.github.io/images/basketball-stars.png">
+                        <a href="https://basketball-stars.github.io" title="Basketball Stars">Basketball Stars</a></li>
+                            </ul>
+            </div>
+        </div>
+    </nav>
+    <section class="gameArea">
+        <div class="col1 g"></div>
+        <div class="game">
+            <article>
+                <iframe title="Basketball Stars" loading="lazy" scrolling="0" id="game-iframe" class="game-iframe" src="https://hoopgames.github.io/games/basketball-stars/" allowfullscreen="" width="100%" height="624" frameborder="0" border="0"></iframe>
+                <div class="gameHead">
+                    <div class="nS">
+                        <h1>Basketball Stars Unblocked</h1>
+                    </div>
+                    <div class="zoom" id="fullscreen-btn" onclick="requestFullScreen()">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewbox="0 0 24 24">
+                            <path fill="#fff" d="M24 9h-2v-5h-7v-2h9v7zm-9 13v-2h7v-5h2v7h-9zm-15-7h2v5h7v2h-9v-7zm9-13v2h-7v5h-2v-7h9z" />
+                        </svg>
+                    </div>
+                </div>
+                <div class="text">
+                    <h2 id="gade">Game Description</h2>
+                    <p><strong>Basketball Stars</strong> is one of the most popular <strong>online basketball games</strong> where players compete in fast-paced 1v1 matches. Developed by Madpuffers, this game features realistic physics, smooth controls, and exciting gameplay. Whether you’re looking for a casual match or an intense tournament, <strong>Basketball Stars multiplayer</strong> mode keeps the competition exciting. The game offers various characters, power-ups, and game modes to enhance the basketball experience. If you are searching for fun and <strong>free basketball games to play</strong>, this is a great choice!</p>
+
+<p><strong>Game Controls</strong></p>
+
+<p>Mastering the controls is key to winning in <strong>Basketball Stars game online</strong>. Here are the basic controls:</p>
+
+<ul>
+	<li><strong>Arrow Keys</strong> – Move the player</li>
+	<li><strong>X Key</strong> – Steal the ball / Block</li>
+	<li><strong>Z Key</strong> – Super shot</li>
+	<li><strong>Spacebar</strong> – Shoot / Dunk</li>
+</ul>
+
+<p>For mobile users, the game features intuitive touch controls that allow you to dribble, shoot, and block with simple swipes and taps.</p>
+
+<p><strong>How to Play</strong></p>
+
+<p>Playing <strong>Basketball Stars unblocked</strong> is simple yet requires skill and strategy. The objective is to score more points than your opponent before time runs out. Follow these steps:</p>
+
+<ol>
+	<li>Choose between single-player or <strong>Basketball Stars multiplayer</strong> mode.</li>
+	<li>Select your favorite basketball player and customize them.</li>
+	<li>Use your dribbling, shooting, and blocking skills to outplay your opponent.</li>
+	<li>Utilize power-ups and special moves for an advantage.</li>
+	<li>Score as many points as possible before the timer expires.</li>
+</ol>
+
+<p><strong>Tips and Tricks</strong></p>
+
+<p>To become a top player in <strong>Basketball Stars 2</strong>, follow these expert tips:</p>
+
+<ul>
+	<li>Time your shots carefully to increase accuracy.</li>
+	<li>Use the <strong>Basketball Stars free play</strong> mode to practice before playing competitively.</li>
+	<li>Take advantage of power-ups for stronger shots and faster movement.</li>
+	<li>Stay defensive by blocking and stealing the ball effectively.</li>
+	<li>Experiment with different characters to find the one that suits your playstyle.</li>
+</ul>
+
+<p><strong>Game Platforms</strong></p>
+
+<p><strong>Basketball Stars</strong> is available on multiple platforms, making it accessible for everyone:</p>
+
+<ul>
+	<li><strong>PC &amp; Mac</strong> – Play on browsers without downloads.</li>
+	<li><strong>Mobile Devices</strong> – Available for both Android and iOS.</li>
+	<li><strong>Best basketball games for PC</strong> – It ranks among the top choices for basketball enthusiasts who enjoy competitive online gaming.</li>
+</ul>
+
+</main>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.0/jquery.min.js"></script>
+<script> $(".search, .close").click(function () {$(".top").toggleClass("active"), $(".searchBox").fadeToggle()});</script>
+<script>
+    function requestFullScreen() { var e = document.getElementById("game-iframe"), l = e.requestFullScreen || e.webkitRequestFullScreen || e.mozRequestFullScreen || e.msRequestFullScreen;
+        if (l) l.call(e); else if (void 0 !== window.ActiveXObject) { var t = new ActiveXObject("WScript.Shell"); null !== t && t.SendKeys("{F11}") } }</script>
+
+</body>
+</html>
