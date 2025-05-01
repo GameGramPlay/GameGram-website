@@ -42,13 +42,29 @@
 <body>
 
   <div class="title-bubble">Games List</div>
-
-  <div class="game-list">
-    <a href="games/snake.html" class="game-link" target="_blank">Snake Game</a>
-    <a href="games/ping-pong.html" class="game-link" target="_blank">Ping-pong Game</a>
-    <a href="games/fishes.html" class="game-link" target="_blank">Fishes Game</a>
-    <!-- Add more games as needed -->
+  <div class="game-grid" id="gameGrid">
+    <!-- Games will be loaded here -->
   </div>
+  <script>
+    // Automatically fetch games list
+    fetch('games/index.json')
+      .then(res => res.json())
+      .then(files => {
+        const container = document.getElementById('gameGrid');
+        files.forEach(file => {
+          const a = document.createElement('a');
+          a.href = `games/${file}`;
+          a.className = 'game-cube';
+          a.target = '_blank';
+          a.textContent = file.replace('.html', '').replace(/[-_]/g, ' ');
+          container.appendChild(a);
+        });
+      })
+      .catch(err => {
+        console.error("Error loading game list:", err);
+        document.getElementById('gameGrid').innerHTML = "<p>Failed to load games.</p>";
+      });
+  </script>
 
 </body>
 </html>
