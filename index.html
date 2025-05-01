@@ -46,8 +46,8 @@
     <!-- Games will be loaded here -->
   </div>
   <script>
-    // Automatically fetch games list
-    fetch('games/index.json')
+    const timestamp = new Date().getTime();
+    fetch(`games/index.json?t=${timestamp}`)
       .then(res => res.json())
       .then(files => {
         const container = document.getElementById('gameGrid');
@@ -61,8 +61,7 @@
         });
       })
       .catch(err => {
-        console.error("Error loading game list:", err);
-        document.getElementById('gameGrid').innerHTML = "<p>Failed to load games.</p>";
+        console.error('Could not load game list:', err);
       });
   </script>
 
