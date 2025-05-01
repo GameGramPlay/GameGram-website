@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://aehehe.github.io/GameGram-website/sitemap.xml
