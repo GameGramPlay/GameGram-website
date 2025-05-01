@@ -144,3 +144,31 @@ nav a.active {
   transform: scale(1.05);
 }
 
+.game-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 30px;
+  padding: 40px;
+  width: 90%;
+  max-width: 1000px;
+}
+
+.game-cube {
+  background: linear-gradient(to bottom right, #00acc1, #003344);
+  color: white;
+  text-decoration: none;
+  padding: 40px 20px;
+  text-align: center;
+  border-radius: 20px;
+  font-size: 18px;
+  font-weight: bold;
+  transition: transform 0.3s, background-color 0.3s;
+  box-shadow: 0 6px 15px rgba(0,0,0,0.3);
+}
+
+.game-cube:hover {
+  transform: scale(1.05);
+  background-color: #1de9b6;
+}
+
+
