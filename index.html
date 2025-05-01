@@ -46,25 +46,20 @@
     <!-- Games will be loaded here -->
   </div>
   <script>
-    // Automatically fetch games list
-    fetch('games/index.json')
-      .then(res => res.json())
-      .then(files => {
-        const container = document.getElementById('gameGrid');
-        files.forEach(file => {
-          const a = document.createElement('a');
-          a.href = `games/${file}`;
-          a.className = 'game-cube';
-          a.target = '_blank';
-          a.textContent = file.replace('.html', '').replace(/[-_]/g, ' ');
-          container.appendChild(a);
-        });
-      })
-      .catch(err => {
-        console.error("Error loading game list:", err);
-        document.getElementById('gameGrid').innerHTML = "<p>Failed to load games.</p>";
-      });
+    const gameCount = 20; // Change this to how many games you have
+    const container = document.getElementById('gameGrid');
+  
+    for (let i = 1; i <= gameCount; i++) {
+      const fileName = `game${i}.html`;
+      const a = document.createElement('a');
+      a.href = `games/${fileName}`;
+      a.className = 'game-cube';
+      a.target = '_blank';
+      a.textContent = `Game ${i}`;
+      container.appendChild(a);
+    }
   </script>
+
 
 </body>
 </html>
