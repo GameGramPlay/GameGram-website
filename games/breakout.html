@@ -6,21 +6,25 @@
   <title>GameGram - Breakout Game</title>
   <style>
     @import url("https://fonts.googleapis.com/css2?family=Balsamiq+Sans:wght@400;700&display=swap");
-
+  
     :root {
-      --background-color: #7f7fd5;
-      --background-secondary-color: #91eae4;
-      --canvas-color: #f0f0f0;
-      --text-color: rgba(255, 255, 255, 0.87);
-      --sidebar-color: #343457;
-      --button-color: #86a8e7;
-      --hover-color: #7db3e3;
+      --background-color: #5f6dcb; /* Slightly darker primary color for better contrast */
+      --background-secondary-color: #72f4f0; /* Brighter secondary color */
+      --canvas-color: #ffffff; /* Clean white canvas for game area */
+      --text-color: rgba(255, 255, 255, 0.87); /* Light text color for readability */
+      --sidebar-color: #2c2f6b; /* Darker sidebar to match primary color scheme */
+      --button-color: #7db3e3; /* Soft, light blue for buttons */
+      --hover-color: #6a98cc; /* Hover state slightly darker than button color */
+      --active-color: #5379a8; /* Darker active state for buttons */
+      --shadow-color: rgba(0, 0, 0, 0.2); /* Subtle shadow for depth */
     }
-
+  
     * {
       box-sizing: border-box;
+      margin: 0;
+      padding: 0;
     }
-
+  
     body {
       background-color: var(--background-color);
       background: linear-gradient(
@@ -35,51 +39,70 @@
       align-items: center;
       justify-content: center;
       min-height: 100vh;
-      margin: 0;
-    }
-
-    h1 {
-      font-size: 2.75rem;
+      padding: 2rem;
       color: var(--text-color);
     }
-
+  
+    h1 {
+      font-size: 3rem;
+      margin-bottom: 2rem;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+    }
+  
     canvas {
       background-color: var(--canvas-color);
       display: block;
-      border-radius: 5px;
+      border-radius: 8px;
       width: 800px;
-      max-width: 96%;
+      max-width: 95%;
+      box-shadow: 0 4px 8px var(--shadow-color);
+      border: 2px solid var(--background-secondary-color);
     }
-
+  
     .btn {
       cursor: pointer;
       border: 0;
-      padding: 0.625rem 1.25rem;
+      padding: 0.75rem 1.5rem;
       background-color: var(--button-color);
       color: var(--text-color);
-      border-radius: 5px;
+      border-radius: 8px;
       font-family: inherit;
-      font-size: 1rem;
+      font-size: 1.1rem;
+      transition: background-color 0.3s ease, transform 0.1s ease, box-shadow 0.2s ease;
+      box-shadow: 0 4px 6px var(--shadow-color);
+      display: inline-block;
+      margin: 0.5rem;
     }
-
+  
     .btn:focus {
-      outline: 0;
+      outline: none;
     }
-
+  
     .btn:hover {
       background-color: var(--hover-color);
+      box-shadow: 0 6px 10px var(--shadow-color);
     }
-
+  
     .btn:active {
+      background-color: var(--active-color);
       transform: scale(0.98);
     }
-
+  
     .rules-btn {
       position: absolute;
-      top: 1.875rem;
-      left: 1.875rem;
+      top: 1.5rem;
+      left: 1.5rem;
+      background-color: var(--button-color);
+      padding: 0.5rem 1rem;
+      border-radius: 5px;
+      box-shadow: 0 3px 6px var(--shadow-color);
+      transition: background-color 0.3s ease;
     }
-
+  
+    .rules-btn:hover {
+      background-color: var(--hover-color);
+    }
+  
     .rules {
       position: absolute;
       top: 0;
@@ -89,15 +112,35 @@
       min-height: 100vh;
       width: 400px;
       padding: 3rem;
-      line-height: 1.5;
+      line-height: 1.6;
       transform: translateX(-400px);
-      transition: transform 1s ease-in-out;
+      transition: transform 0.5s ease-in-out, opacity 0.3s ease;
+      opacity: 0;
     }
-
+  
     .rules.show {
       transform: translateX(0);
+      opacity: 1;
+    }
+  
+    /* Add some responsiveness */
+    @media (max-width: 768px) {
+      canvas {
+        width: 100%;
+        max-width: 100%;
+      }
+  
+      .rules {
+        width: 90%;
+        padding: 2rem;
+      }
+  
+      h1 {
+        font-size: 2.5rem;
+      }
     }
   </style>
+
 </head>
 <body>
   <h1>Breakout!</h1>
