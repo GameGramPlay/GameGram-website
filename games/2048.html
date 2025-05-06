@@ -237,8 +237,11 @@
 
       function combineColumn() {
         for (let i = 0; i < 12; i++) {
-          if (squares[i].innerHTML === squares[i + width].innerHTML) {
-            let combined = parseInt(squares[i].innerHTML) + parseInt(squares[i + width].innerHTML);
+          let current = parseInt(squares[i].innerHTML) || 0;
+          let below = parseInt(squares[i + width].innerHTML) || 0;
+      
+          if (current === below && current !== 0) {
+            let combined = current + below;
             squares[i].innerHTML = combined;
             squares[i + width].innerHTML = '';
             score += combined;
@@ -247,6 +250,7 @@
         }
         checkForWin();
       }
+
 
 
       function control(e) {
