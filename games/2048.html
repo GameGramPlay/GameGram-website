@@ -120,7 +120,7 @@
       function createBoard() {
         for (let i = 0; i < width * width; i++) {
           const square = document.createElement("div");
-          square.innerHTML = 0;
+          square.innerHTML = '';
           gridDisplay.appendChild(square);
           squares.push(square);
         }
