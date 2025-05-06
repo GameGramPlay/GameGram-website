@@ -130,13 +130,20 @@
       createBoard();
 
       function generate() {
-        const randomNumber = Math.floor(Math.random() * squares.length);
-        if (squares[randomNumber].innerHTML == 0) {
-          squares[randomNumber].innerHTML = 2;
-          square.innerHTML = newValue === 0 ? '' : newValue;
-          checkForGameOver();
-        } else generate();
+        const emptySquares = squares.filter(square => square.innerHTML === '');
+        if (emptySquares.length === 0) return;
+      
+        const randomSquare = emptySquares[Math.floor(Math.random() * emptySquares.length)];
+        randomSquare.innerHTML = '2';
+        randomSquare.classList.add('new-tile');
+        randomSquare.addEventListener('animationend', () => {
+          randomSquare.classList.remove('new-tile');
+        }, { once: true });
+
+      
+        checkForGameOver();
       }
+
 
       function moveRight() {
         for (let i = 0; i < 16; i++) {
