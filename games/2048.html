@@ -217,7 +217,7 @@
 
       function combineRow() {
         for (let i = 0; i < 15; i++) {
-          if (i % 4 !== 3 && squares[i].innerHTML !== '' && squares[i].innerHTML === squares[i + 1].innerHTML) {
+          if (squares[i].innerHTML === squares[i + 1].innerHTML) {
             let combined = parseInt(squares[i].innerHTML) + parseInt(squares[i + 1].innerHTML);
             squares[i].innerHTML = combined;
             squares[i + 1].innerHTML = '';
@@ -231,7 +231,7 @@
 
       function combineColumn() {
         for (let i = 0; i < 12; i++) {
-          if (squares[i].innerHTML !== '' && squares[i].innerHTML === squares[i + width].innerHTML) {
+          if (squares[i].innerHTML === squares[i + width].innerHTML) {
             let combined = parseInt(squares[i].innerHTML) + parseInt(squares[i + width].innerHTML);
             squares[i].innerHTML = combined;
             squares[i + width].innerHTML = '';
