@@ -6,60 +6,92 @@
   <style>
     body {
       background-color: #faf8ef;
+      font-family: "Clear Sans", "Helvetica Neue", Arial, sans-serif;
+      margin: 0;
       display: flex;
       justify-content: center;
-      font-family: "Clear Sans", "Helvetica Neue";
     }
+  
     h1 {
       font-size: 80px;
-      line-height: 0.7;
       color: #776e65;
-      margin: 0px;
+      margin: 0;
     }
+  
     .container {
-      width: 468px;
-      margin-top: 10px;
+      width: 500px;
+      margin-top: 30px;
     }
+  
     .info {
       display: flex;
       justify-content: space-between;
-      margin-bottom: 20px;
+      align-items: center;
     }
+  
+    .score-container {
+      background: #bbada0;
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 5px;
+      font-weight: bold;
+      font-size: 18px;
+      text-align: center;
+    }
+  
+    .score-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      color: #eee4da;
+    }
+  
+    #score {
+      font-size: 24px;
+    }
+  
+    #result {
+      margin-top: 10px;
+      font-size: 16px;
+      color: #776e65;
+    }
+  
     .grid {
-      display: flex;
-      flex-wrap: wrap;
-      width: 456px;
-      height: 456px;
-      background-color: #bbada0;
-      border: 7px solid #bbada0;
-      border-radius: 6px;
       margin-top: 20px;
+      width: 460px;
+      height: 460px;
+      background: #bbada0;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-gap: 15px;
+      padding: 15px;
+      border-radius: 6px;
     }
+  
     .grid div {
       width: 100px;
       height: 100px;
-      margin: 7px;
-      border-radius: 3px;
-      background-color: #eee4da;
-      color: #afa192;
+      background-color: #cdc1b4;
+      font-size: 45px;
+      color: #776e65;
       font-weight: bold;
-      text-align: center;
-      font-size: 60px;
-      line-height: 1.6;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border-radius: 5px;
+      transition: transform 0.2s ease, background-color 0.3s ease;
     }
-    .score-container {
-      text-align: center;
-      width: 70px;
-      height: 60px;
-      border-radius: 3px;
-      background-color: #8f7a66;
-      color: #ffffff;
+  
+    .new-tile {
+      animation: pop 0.3s ease;
     }
-    #score {
-      font-size: 30px;
-    }
-    .score-title {
-      font-size: 16px;
+  
+    @keyframes pop {
+      0% {
+        transform: scale(0.6);
+      }
+      100% {
+        transform: scale(1);
+      }
     }
   </style>
 </head>
