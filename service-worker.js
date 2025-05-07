@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gamegram-cache-v3'; // updated version
+const CACHE_NAME = 'gamegram-cache-v4'; // updated version
 const urlsToCache = [
   '/',
   '/index.html',
@@ -8,7 +8,9 @@ const urlsToCache = [
   '/icons/icon-512.png',
   '/features/index.html',
   '/about/index.html',
-  '/offline.html' // Fallback page for offline use
+  '/offline.html',
+  '/games/index.json',
+  '/games/2048.html' // Fallback page for offline use
 ];
 
 // Install event: Cache all the necessary files
