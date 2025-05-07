@@ -32,7 +32,25 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   event.respondWith(
-    caches.match(event.request)
-      .then(response => response || fetch(event.request))
+    caches.open(CACHE_NAME).then(cache => 
+      cache.match(event.request).then(cachedResponse => {
+        const fetchPromise = fetch(event.request)
+          .then(networkResponse => {
+            // Only cache valid responses (status 200 and basic type)
+            if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+              cache.put(event.request, networkResponse.clone());
+            }
+            return networkResponse;
+          })
+          .catch(() => {
+            // If fetch fails (e.g., offline), just return the cached response if available
+            return cachedResponse;
+          });
+
+        // Respond with cached version immediately, and update in background
+        return cachedResponse || fetchPromise;
+      })
+    )
   );
 });
+
