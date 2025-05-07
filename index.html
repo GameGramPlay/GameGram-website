@@ -14,15 +14,6 @@
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#6600cc">
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/service-worker.js')
-        .then(reg => console.log('Service worker registered:', reg))
-        .catch(err => console.error('Service worker registration failed:', err));
-    }
-  </script>
-  <script id="cid0020000407496477604" data-cfasync="false" async src="//st.chatango.com/js/gz/emb.js" style="width: 200px;height: 300px;">{"handle":"gamegramapp","arch":"js","styles":{"a":"6600cc","b":100,"c":"FFFFFF","d":"FFFFFF","k":"6600cc","l":"6600cc","m":"6600cc","n":"FFFFFF","p":"10","q":"6600cc","r":100,"cv":1,"cvfnt":"'Avant Garde', Avantgarde, 'Century Gothic', CenturyGothic, AppleGothic, sans-serif, sans-serif","cvfntsz":"15px","cvfntw":"lighter","cvbg":"6600cc","cvw":75,"cvh":30}}</script>
-
 </head>
 <body>
 
@@ -75,6 +66,17 @@
   <footer>
     <p>Games from <a href="https://github.com/Metroxe/one-html-page-challenge" target="_blank">One HTML Page Challenge</a></p>
   </footer>
-
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js')
+          .then(reg => console.log('Service worker registered:', reg))
+          .catch(err => console.error('Service worker registration failed:', err));
+      });
+    }
+  </script>
+  <script id="cid0020000407496477604" data-cfasync="false" async src="//st.chatango.com/js/gz/emb.js" style="width: 200px;height: 300px;">
+    {"handle":"gamegramapp","arch":"js","styles":{"a":"6600cc","b":100,"c":"FFFFFF","d":"FFFFFF","k":"6600cc","l":"6600cc","m":"6600cc","n":"FFFFFF","p":"10","q":"6600cc","r":100,"cv":1,"cvfnt":"'Avant Garde', Avantgarde, 'Century Gothic', CenturyGothic, AppleGothic, sans-serif, sans-serif","cvfntsz":"15px","cvfntw":"lighter","cvbg":"6600cc","cvw":75,"cvh":30}}
+  </script>
 </body>
 </html>
