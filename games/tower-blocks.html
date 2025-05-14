@@ -105,6 +105,22 @@
       #container.ended #score {
         transform: translatey(6vh) scale(1.5);
       }
+
+      #score-container {
+        position: absolute;
+        top: 20px;
+        width: 100%;
+        text-align: center;
+      }
+      #score-container #score {
+        font-size: 10vh;
+        color: #334;
+      }
+      #score-container #best-score {
+        font-size: 3vh;
+        color: #556;
+      }
+
       #container.ended .game-over * {
         opacity: 1;
         transform: translatey(0);
@@ -120,7 +136,11 @@
   <body>
     <div id="container">
       <div id="game"></div>
-      <div id="score">0</div>
+      <div id="score-container">
+        <div id="score">0</div>
+        <div id="best-score">Best: 0</div>
+      </div>
+
       <div id="instructions">
         Click (or press the spacebar) to place the block
       </div>
@@ -394,6 +414,10 @@
           this.stage = new Stage();
           this.mainContainer = document.getElementById("container");
           this.scoreContainer = document.getElementById("score");
+          this.bestScoreContainer = document.getElementById("best-score");
+          this.bestScore = parseInt(localStorage.getItem("bestScore") || "0");
+          this.bestScoreContainer.innerHTML = `Best: ${this.bestScore}`;
+
           this.startButton = document.getElementById("start-button");
           this.instructions = document.getElementById("instructions");
           this.scoreContainer.innerHTML = "0";
@@ -533,7 +557,15 @@
           if (lastBlock && lastBlock.state == lastBlock.STATES.MISSED) {
             return this.endGame();
           }
-          this.scoreContainer.innerHTML = String(this.blocks.length - 1);
+          const currentScore = this.blocks.length - 1;
+          this.scoreContainer.innerHTML = String(currentScore);
+          
+          if (currentScore > this.bestScore) {
+            this.bestScore = currentScore;
+            localStorage.setItem("bestScore", this.bestScore);
+            this.bestScoreContainer.innerHTML = `Best: ${this.bestScore}`;
+          }
+
           var newKidOnTheBlock = new Block(lastBlock);
           this.newBlocks.add(newKidOnTheBlock.mesh);
           this.blocks.push(newKidOnTheBlock);
