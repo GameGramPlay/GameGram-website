@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Video Uploader via PixelDrain</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 2rem;
+      background: #f9f9f9;
+    }
+    input, button {
+      margin: 10px 0;
+    }
+    #video-container {
+      margin-top: 20px;
+      display: none;
+    }
+    video {
+      width: 100%;
+      max-width: 720px;
+      height: auto;
+      border: 1px solid #ccc;
+    }
+  </style>
+</head>
+<body>
+  <h1>Upload and Watch Video (via PixelDrain)</h1>
+
+  <input type="file" id="fileInput" accept="video/*" />
+  <br>
+  <button onclick="uploadVideo()">Upload Video</button>
+
+  <p id="status"></p>
+
+  <div id="video-container">
+    <h3>Watch Uploaded Video:</h3>
+    <video controls id="videoPlayer"></video>
+    <p>
+      <a id="videoLink" href="" target="_blank">Open in PixelDrain</a>
+    </p>
+  </div>
+
+  <script>
+    async function uploadVideo() {
+      const fileInput = document.getElementById('fileInput');
+      const status = document.getElementById('status');
+      const videoContainer = document.getElementById('video-container');
+      const videoPlayer = document.getElementById('videoPlayer');
+      const videoLink = document.getElementById('videoLink');
+
+      if (!fileInput.files.length) {
+        status.textContent = "Please select a video file.";
+        return;
+      }
+
+      status.textContent = "Uploading...";
+      const formData = new FormData();
+      formData.append("file", fileInput.files[0]);
+
+      try {
+        const response = await fetch("https://pixeldrain.com/api/file", {
+          method: "POST",
+          body: formData
+        });
+        const data = await response.json();
+
+        if (data.success) {
+          const fileId = data.id;
+          const videoUrl = `https://pixeldrain.com/api/file/${fileId}`;
+          const pageUrl = `https://pixeldrain.com/u/${fileId}`;
+
+          status.textContent = "Upload successful!";
+          videoContainer.style.display = "block";
+          videoPlayer.src = videoUrl;
+          videoLink.href = pageUrl;
+          videoLink.textContent = pageUrl;
+        } else {
+          status.textContent = "Upload failed.";
+        }
+      } catch (err) {
+        status.textContent = "Error uploading file.";
+        console.error(err);
+      }
+    }
+  </script>
+</body>
+</html>
