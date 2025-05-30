@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Login/Signup with Firebase (Modular)</title>
+  <script type="module">
+    // Import Firebase modules
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+
+    // Your Firebase config
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    // Sign Up
+    window.signUp = async function () {
+      const email = document.getElementById("signup-email").value;
+      const password = document.getElementById("signup-password").value;
+      try {
+        await createUserWithEmailAndPassword(auth, email, password);
+        alert("Account created!");
+      } catch (error) {
+        alert(error.message);
+      }
+    };
+
+    // Log In
+    window.logIn = async function () {
+      const email = document.getElementById("login-email").value;
+      const password = document.getElementById("login-password").value;
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+      } catch (error) {
+        alert(error.message);
+      }
+    };
+
+    // Log Out
+    window.logOut = function () {
+      signOut(auth);
+    };
+
+    // Auth state listener
+    onAuthStateChanged(auth, (user) => {
+      const userInfo = document.getElementById("userInfo");
+      if (user) {
+        userInfo.innerHTML = `<p>Logged in as: ${user.email}</p>`;
+      } else {
+        userInfo.innerHTML = "<p>Not logged in.</p>";
+      }
+    });
+  </script>
+  <style>
+    body { font-family: Arial; max-width: 400px; margin: auto; padding: 2rem; }
+    input, button { display: block; margin: 10px 0; width: 100%; padding: 8px; }
+    #userInfo { margin-top: 20px; }
+  </style>
+</head>
+<body>
+
+<h2>Sign Up</h2>
+<input type="email" id="signup-email" placeholder="Email">
+<input type="password" id="signup-password" placeholder="Password">
+<button onclick="signUp()">Create Account</button>
+
+<h2>Login</h2>
+<input type="email" id="login-email" placeholder="Email">
+<input type="password" id="login-password" placeholder="Password">
+<button onclick="logIn()">Log In</button>
+<button onclick="logOut()">Log Out</button>
+
+<div id="userInfo"></div>
+
+</body>
+</html>
