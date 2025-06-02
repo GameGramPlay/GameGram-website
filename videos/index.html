@@ -2,10 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Light Blue Cloudinary Upload Gallery</title>
+  <title>Light Blue Supabase Upload Gallery</title>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap" rel="stylesheet" />
   <style>
-    /* Your provided style here (same as yours) */
     body {
       margin: 0;
       font-family: 'Orbitron', sans-serif;
@@ -217,33 +216,39 @@
   </style>
 </head>
 <body>
-  <h1 class="title-bubble">Light Blue Cloudinary Upload Gallery</h1>
+  <h1 class="title-bubble">Light Blue Supabase Upload Gallery</h1>
 
   <div class="upload-section" role="region" aria-label="Image upload and search controls">
-    <input type="file" id="uploadInput" accept="image/*" aria-label="Select image to upload" />
-    <input type="search" id="searchInput" placeholder="Search uploaded images..." aria-label="Search uploaded images" />
-    <button id="uploadBtn" disabled aria-disabled="true" aria-label="Upload selected image">Upload</button>
+    <input type="file" id="uploadInput" accept="image/*,video/*" aria-label="Select image or video to upload" multiple />
+    <input type="search" id="searchInput" placeholder="Search uploaded files..." aria-label="Search uploaded files" />
+    <button id="uploadBtn" disabled aria-disabled="true" aria-label="Upload selected files">Upload</button>
   </div>
 
   <div id="result" role="alert" aria-live="polite"></div>
 
-  <div class="gallery-band" id="galleryBand" aria-label="Uploaded Images Gallery"></div>
+  <div class="gallery-band" id="galleryBand" aria-label="Uploaded Files Gallery"></div>
 
-  <script>
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+    const SUPABASE_URL = "https://xtnaiqqtsbrrsddkanjk.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0bmFpcXF0c2JycnNkZGthbmprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4NDk0ODYsImV4cCI6MjA2NDQyNTQ4Nn0.UwC6WpD9DHNxAIkpfmcAgmrjkPLctccHlNUaVKIKlnM";
+    const BUCKET = "gamegram";
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
     const uploadBtn = document.getElementById('uploadBtn');
     const uploadInput = document.getElementById('uploadInput');
     const searchInput = document.getElementById('searchInput');
     const resultDiv = document.getElementById('result');
     const galleryBand = document.getElementById('galleryBand');
 
-    const CLOUD_NAME = 'dlkoeiz58'; // replace with your Cloudinary cloud name
-    const UPLOAD_PRESET = 'gamegram'; // replace with your unsigned upload preset name
-    const FOLDER = 'gamegram'; // folder for images
-
-    let images = [];
+    let filesToUpload = [];
+    let files = [];
 
     uploadInput.addEventListener('change', () => {
-      uploadBtn.disabled = !uploadInput.files.length;
+      filesToUpload = Array.from(uploadInput.files);
+      uploadBtn.disabled = filesToUpload.length === 0;
       uploadBtn.setAttribute('aria-disabled', uploadBtn.disabled);
       resultDiv.textContent = '';
     });
@@ -256,9 +261,9 @@
     function renderGallery(filter = '') {
       galleryBand.innerHTML = '';
 
-      const filtered = images.filter(img => img.name.toLowerCase().includes(filter));
+      const filtered = files.filter(file => file.name.toLowerCase().includes(filter));
       if (filtered.length === 0) {
-        galleryBand.innerHTML = '<p style="color:#004d40; text-align:center; padding: 20px; font-weight: 700;">No images found.</p>';
+        galleryBand.innerHTML = '<p style="color:#004d40; text-align:center; padding: 20px; font-weight: 700;">No files found.</p>';
         return;
       }
 
@@ -269,8 +274,18 @@
         item.tabIndex = 0;
 
         const img = document.createElement('img');
-        img.src = url;
         img.alt = name;
+
+        // Show thumbnail if image, else use a placeholder icon
+        if (/\.(jpe?g|png|gif|webp|avif|svg|bmp)$/i.test(name)) {
+          img.src = url;
+        } else {
+          // Placeholder icon for non-image files
+          img.src = 'https://cdn-icons-png.flaticon.com/512/136/136538.png';
+          img.style.objectFit = 'contain';
+          img.style.padding = '20px';
+          img.style.backgroundColor = '#b2ebf2';
+        }
 
         const caption = document.createElement('div');
         caption.className = 'caption';
@@ -292,33 +307,35 @@
       });
     }
 
-    async function fetchImages() {
-      // Cloudinary Admin API requires backend proxy or authentication,
-      // but Cloudinary provides a workaround using their JSON API for folders tagged with "folder" param.
-      // We'll use the Cloudinary JSON API to list images in the folder
-
-      const url = `https://res.cloudinary.com/${CLOUD_NAME}/image/list/${FOLDER}.json`;
+    async function fetchFiles() {
       try {
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`Fetch failed with status: ${res.status} ${res.statusText}`);
-        const data = await res.json();
+        const { data, error } = await supabase.storage.from(BUCKET).list('', {
+          limit: 100,
+          offset: 0,
+          sortBy: { column: 'name', order: 'asc' }
+        });
+        if (error) throw error;
 
-        images = data.resources.map(img => ({
-          url: img.secure_url,
-          name: img.public_id.split('/').pop() + '.' + img.format
+        // Get public URLs
+        const publicFiles = await Promise.all(data.map(async file => {
+          const url = supabase.storage.from(BUCKET).getPublicUrl(file.name).publicUrl;
+          return {
+            url,
+            name: file.name
+          };
         }));
 
+        files = publicFiles;
         renderGallery(searchInput.value.trim().toLowerCase());
       } catch (e) {
         console.error(e);
-        resultDiv.textContent = `Error loading images: ${e.message}`;
+        resultDiv.textContent = `Error loading files: ${e.message}`;
       }
     }
 
-    uploadBtn.addEventListener('click', () => {
-      const file = uploadInput.files[0];
-      if (!file) {
-        alert('Please select an image');
+    uploadBtn.addEventListener('click', async () => {
+      if (filesToUpload.length === 0) {
+        alert('Please select file(s) to upload');
         return;
       }
 
@@ -327,48 +344,45 @@
       uploadBtn.textContent = 'Uploading...';
       resultDiv.textContent = '';
 
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('upload_preset', UPLOAD_PRESET);
-      formData.append('folder', FOLDER);
+      try {
+        for (const file of filesToUpload) {
+          // Use a timestamp + original filename to avoid overwrite
+          const filePath = `${Date.now()}_${file.name}`;
 
-      fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/upload`, {
-        method: 'POST',
-        body: formData
-      })
-        .then(res => res.json())
-        .then(data => {
-          uploadBtn.disabled = false;
-          uploadBtn.setAttribute('aria-disabled', 'false');
-          uploadBtn.textContent = 'Upload';
-
-          if (data.secure_url) {
-            images.push({
-              url: data.secure_url,
-              name: data.original_filename + '.' + data.format
+          const { error: uploadError } = await supabase.storage
+            .from(BUCKET)
+            .upload(filePath, file, {
+              cacheControl: '3600',
+              upsert: false
             });
-            renderGallery(searchInput.value.trim().toLowerCase());
 
-            resultDiv.innerHTML = `<p style="color:#00796b; font-weight:700;">Upload successful! <a href="${data.secure_url}" target="_blank" rel="noopener noreferrer">View Image</a></p>`;
+          if (uploadError) throw uploadError;
 
-            uploadInput.value = '';
-            uploadBtn.disabled = true;
-            uploadBtn.setAttribute('aria-disabled', 'true');
-          } else {
-            resultDiv.textContent = 'Upload failed. Try again.';
-          }
-        })
-        .catch(err => {
-          console.error(err);
-          uploadBtn.disabled = false;
-          uploadBtn.setAttribute('aria-disabled', 'false');
-          uploadBtn.textContent = 'Upload';
-          resultDiv.textContent = 'Error uploading image.';
-        });
+          const publicUrl = supabase.storage.from(BUCKET).getPublicUrl(filePath).publicUrl;
+
+          files.push({ url: publicUrl, name: file.name });
+        }
+
+        renderGallery(searchInput.value.trim().toLowerCase());
+
+        resultDiv.innerHTML = `<p style="color:#00796b; font-weight:700;">Upload successful! <a href="#" onclick="return false;">Refresh gallery to see files</a></p>`;
+
+        uploadInput.value = '';
+        filesToUpload = [];
+        uploadBtn.disabled = true;
+        uploadBtn.setAttribute('aria-disabled', 'true');
+      } catch (error) {
+        console.error(error);
+        resultDiv.textContent = 'Error uploading files.';
+      } finally {
+        uploadBtn.textContent = 'Upload';
+        uploadBtn.disabled = false;
+        uploadBtn.setAttribute('aria-disabled', 'false');
+      }
     });
 
-    // Fetch images on page load
-    fetchImages();
+    // Initial fetch on load
+    fetchFiles();
   </script>
 </body>
 </html>
