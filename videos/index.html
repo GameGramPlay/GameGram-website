@@ -311,7 +311,7 @@
         renderGallery(searchInput.value.trim().toLowerCase());
       } catch (e) {
         console.error(e);
-        resultDiv.textContent = 'Error loading images.';
+        resultDiv.textContent = `Error loading images: ${e.message}`;
       }
     }
 
