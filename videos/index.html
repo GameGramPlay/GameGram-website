@@ -118,20 +118,21 @@
     #result {
       margin-top: 10px;
       font-size: 1.2rem;
-      min-height: 2rem;
+      min-height: 4rem;
+      max-height: 150px;
+      overflow-y: auto;
       color: #00796b;
       text-align: center;
       user-select: text;
       max-width: 700px;
       word-break: break-word;
+      padding: 10px 15px;
+      background: #b2ebf2;
+      border-radius: 15px;
+      box-shadow: inset 0 0 10px #00796b55;
     }
-    #result a {
-      color: #004d40;
-      font-weight: 700;
-      text-decoration: none;
-    }
-    #result a:hover {
-      text-decoration: underline;
+    #result p {
+      margin: 5px 0;
     }
     .gallery-band {
       margin-top: 30px;
@@ -219,161 +220,170 @@
   <h1 class="title-bubble">Light Blue Supabase Upload Gallery</h1>
 
   <div class="upload-section" role="region" aria-label="Image upload and search controls">
-    <input type="file" id="uploadInput" accept="image/*,video/*" aria-label="Select image or video to upload" multiple />
-    <input type="search" id="searchInput" placeholder="Search uploaded files..." aria-label="Search uploaded files" />
-    <button id="uploadBtn" disabled aria-disabled="true" aria-label="Upload selected files">Upload</button>
+    <input type="file" id="uploadInput" accept="image/*" aria-label="Select image to upload" multiple />
+    <input type="search" id="searchInput" placeholder="Search uploaded images..." aria-label="Search uploaded images" />
+    <button id="uploadBtn" disabled aria-disabled="true" aria-label="Upload selected image(s)">Upload</button>
   </div>
 
   <div id="result" role="alert" aria-live="polite"></div>
 
-  <div class="gallery-band" id="galleryBand" aria-label="Uploaded Files Gallery"></div>
+  <div class="gallery-band" id="galleryBand" aria-label="Uploaded Images Gallery"></div>
 
-  <script type="module">
-    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
-
-    const SUPABASE_URL = "https://xtnaiqqtsbrrsddkanjk.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0bmFpcXF0c2JycnNkZGthbmprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4NDk0ODYsImV4cCI6MjA2NDQyNTQ4Nn0.tnBTErE7rkCxyDVvGMR3Hv7zWgMpdYPY1rJiTeQGzeo";
-    const BUCKET = "gamegram";
-
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
     const uploadBtn = document.getElementById('uploadBtn');
     const uploadInput = document.getElementById('uploadInput');
     const searchInput = document.getElementById('searchInput');
     const resultDiv = document.getElementById('result');
     const galleryBand = document.getElementById('galleryBand');
 
-    let filesToUpload = [];
+    // Supabase config
+    const SUPABASE_URL = 'https://xtnaiqqtsbrrsddkanjk.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0bmFpcXF0c2JycnNkZGthbmprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4NDk0ODYsImV4cCI6MjA2NDQyNTQ4Nn0.tnBTErE7rkCxyDVvGMR3Hv7zWgMpdYPY1rJiTeQGzeo';
+    const BUCKET = 'images';
+
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
     let files = [];
+    let filesToUpload = [];
 
-    uploadInput.addEventListener('change', () => {
-      filesToUpload = Array.from(uploadInput.files);
-      uploadBtn.disabled = filesToUpload.length === 0;
-      uploadBtn.setAttribute('aria-disabled', uploadBtn.disabled);
-      resultDiv.textContent = '';
-    });
+    // Clear all logs in result div
+    function clearResultLogs() {
+      resultDiv.innerHTML = '';
+    }
 
-    searchInput.addEventListener('input', () => {
-      const query = searchInput.value.trim().toLowerCase();
-      renderGallery(query);
-    });
+    // Append a log message to result div (error = red text)
+    function appendResultLog(message, isError = false) {
+      const p = document.createElement('p');
+      p.textContent = message;
+      p.style.margin = '5px 0';
+      if (isError) {
+        p.style.color = '#b00020';
+        p.style.fontWeight = '700';
+      } else {
+        p.style.color = '#00796b';
+      }
+      resultDiv.appendChild(p);
+      // Scroll to bottom so latest messages visible
+      resultDiv.scrollTop = resultDiv.scrollHeight;
+    }
 
+    // Render gallery thumbnails filtered by search text
     function renderGallery(filter = '') {
       galleryBand.innerHTML = '';
-
-      const filtered = files.filter(file => file.name.toLowerCase().includes(filter));
-      if (filtered.length === 0) {
-        galleryBand.innerHTML = '<p style="color:#004d40; text-align:center; padding: 20px; font-weight: 700;">No files found.</p>';
+      if (files.length === 0) {
+        appendResultLog('No files to display.');
         return;
       }
-
-      filtered.forEach(({ url, name }) => {
+      const filtered = files.filter(f => f.name.toLowerCase().includes(filter));
+      if (filtered.length === 0) {
+        appendResultLog('No files match your search.');
+        return;
+      }
+      for (const file of filtered) {
         const item = document.createElement('div');
         item.className = 'gallery-item';
-        item.title = name;
         item.tabIndex = 0;
-
+        item.setAttribute('role', 'img');
+        item.setAttribute('aria-label', file.name);
         const img = document.createElement('img');
-        img.alt = name;
-
-        // Show thumbnail if image, else use a placeholder icon
-        if (/\.(jpe?g|png|gif|webp|avif|svg|bmp)$/i.test(name)) {
-          img.src = url;
-        } else {
-          // Placeholder icon for non-image files
-          img.src = 'https://cdn-icons-png.flaticon.com/512/136/136538.png';
-          img.style.objectFit = 'contain';
-          img.style.padding = '20px';
-          img.style.backgroundColor = '#b2ebf2';
-        }
-
+        img.src = file.url;
+        img.alt = file.name;
+        item.appendChild(img);
         const caption = document.createElement('div');
         caption.className = 'caption';
-        caption.textContent = name;
-
-        item.appendChild(img);
+        caption.textContent = file.name;
         item.appendChild(caption);
         galleryBand.appendChild(item);
-
-        item.addEventListener('click', () => {
-          window.open(url, '_blank', 'noopener');
-        });
-        item.addEventListener('keydown', e => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            window.open(url, '_blank', 'noopener');
-          }
-        });
-      });
+      }
     }
 
+    // Fetch file list from Supabase storage bucket and public URLs
     async function fetchFiles() {
+      clearResultLogs();
+      appendResultLog('Loading files...');
       try {
-        const { data, error } = await supabase.storage.from(BUCKET).list('', {
-          limit: 100,
-          offset: 0,
-          sortBy: { column: 'name', order: 'asc' }
+        const { data, error } = await supabase.storage.from(BUCKET).list('', { limit: 100 });
+        if (error) {
+          appendResultLog(`Error listing files: ${error.message}`, true);
+          files = [];
+          galleryBand.innerHTML = '';
+          return;
+        }
+        if (!data || data.length === 0) {
+          appendResultLog('No files found in the bucket.');
+          files = [];
+          galleryBand.innerHTML = '';
+          return;
+        }
+        appendResultLog(`Found ${data.length} file(s).`);
+        const publicFiles = data.map(file => {
+          const { publicUrl, error: urlError } = supabase.storage.from(BUCKET).getPublicUrl(file.name);
+          if (urlError) {
+            appendResultLog(`Failed to get public URL for ${file.name}: ${urlError.message}`, true);
+          }
+          return { url: publicUrl, name: file.name };
         });
-        if (error) throw error;
-
-        // Get public URLs
-        const publicFiles = await Promise.all(data.map(async file => {
-          const url = supabase.storage.from(BUCKET).getPublicUrl(file.name).publicUrl;
-          return {
-            url,
-            name: file.name
-          };
-        }));
-
         files = publicFiles;
         renderGallery(searchInput.value.trim().toLowerCase());
+        appendResultLog('Files loaded successfully.');
       } catch (e) {
-        console.error(e);
-        resultDiv.textContent = `Error loading files: ${e.message}`;
+        appendResultLog(`Error loading files: ${e.message}`, true);
+        galleryBand.innerHTML = '';
       }
     }
 
+    // When user selects files, enable upload button and store files
+    uploadInput.addEventListener('change', () => {
+      filesToUpload = Array.from(uploadInput.files);
+      if (filesToUpload.length > 0) {
+        appendResultLog(`${filesToUpload.length} file(s) selected.`);
+        uploadBtn.disabled = false;
+        uploadBtn.setAttribute('aria-disabled', 'false');
+      } else {
+        uploadBtn.disabled = true;
+        uploadBtn.setAttribute('aria-disabled', 'true');
+      }
+    });
+
+    // Upload button click handler
     uploadBtn.addEventListener('click', async () => {
+      clearResultLogs();
       if (filesToUpload.length === 0) {
-        alert('Please select file(s) to upload');
+        appendResultLog('Please select file(s) to upload', true);
         return;
       }
-
       uploadBtn.disabled = true;
       uploadBtn.setAttribute('aria-disabled', 'true');
       uploadBtn.textContent = 'Uploading...';
-      resultDiv.textContent = '';
 
       try {
         for (const file of filesToUpload) {
-          // Use a timestamp + original filename to avoid overwrite
-          const filePath = `${Date.now()}_${file.name}`;
-
-          const { error: uploadError } = await supabase.storage
-            .from(BUCKET)
-            .upload(filePath, file, {
-              cacheControl: '3600',
-              upsert: false
-            });
-
-          if (uploadError) throw uploadError;
-
-          const publicUrl = supabase.storage.from(BUCKET).getPublicUrl(filePath).publicUrl;
-
+          const timestamp = Date.now();
+          const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+          const filePath = `${timestamp}_${safeName}`;
+          appendResultLog(`Uploading ${file.name} as ${filePath}...`);
+          const { error: uploadError } = await supabase.storage.from(BUCKET).upload(filePath, file, { cacheControl: '3600', upsert: false });
+          if (uploadError) {
+            appendResultLog(`Error uploading ${file.name}: ${uploadError.message}`, true);
+            throw uploadError;
+          }
+          const { publicUrl, error: urlError } = supabase.storage.from(BUCKET).getPublicUrl(filePath);
+          if (urlError) {
+            appendResultLog(`Uploaded but failed to get public URL for ${file.name}: ${urlError.message}`, true);
+            continue;
+          }
           files.push({ url: publicUrl, name: file.name });
+          appendResultLog(`Uploaded ${file.name} successfully.`);
         }
-
         renderGallery(searchInput.value.trim().toLowerCase());
-
-        resultDiv.innerHTML = `<p style="color:#00796b; font-weight:700;">Upload successful! <a href="#" onclick="return false;">Refresh gallery to see files</a></p>`;
-
+        appendResultLog('All files uploaded successfully!');
         uploadInput.value = '';
         filesToUpload = [];
         uploadBtn.disabled = true;
         uploadBtn.setAttribute('aria-disabled', 'true');
       } catch (error) {
-        console.error(error);
-        resultDiv.textContent = 'Error uploading files.';
+        appendResultLog(`Upload error: ${error.message}`, true);
       } finally {
         uploadBtn.textContent = 'Upload';
         uploadBtn.disabled = false;
@@ -381,7 +391,13 @@
       }
     });
 
-    // Initial fetch on load
+    // Search input to filter gallery in real-time
+    searchInput.addEventListener('input', () => {
+      clearResultLogs();
+      renderGallery(searchInput.value.trim().toLowerCase());
+    });
+
+    // Initial load
     fetchFiles();
   </script>
 </body>
