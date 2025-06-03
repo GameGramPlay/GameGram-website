@@ -66,7 +66,7 @@
     input[type="file"]:focus {
       outline: 3px solid #1de9b6;
     }
-    input[type="search"] {
+    input[type="text"] {
       flex: 1 1 220px;
       padding: 10px 15px;
       border-radius: 15px;
@@ -78,15 +78,15 @@
       transition: all 0.3s ease;
       outline-offset: 2px;
     }
-    input[type="search"]::placeholder {
+    input[type="text"]::placeholder {
       color: #00796bcc;
       font-weight: 600;
     }
-    input[type="search"]:hover {
+    input[type="text"]:hover {
       border-color: #1de9b6;
       background: #b9f6ca;
     }
-    input[type="search"]:focus {
+    input[type="text"]:focus {
       border-color: #1de9b6;
       outline: 3px solid #1de9b6;
       background: #b9f6ca;
@@ -228,15 +228,7 @@
   <div id="result" role="alert" aria-live="polite"></div>
 
   <div class="gallery-band" id="galleryBand" aria-label="Uploaded Images Gallery"></div>
-  <div id="authSection" style="margin-bottom: 30px; text-align: center;">
-    <p id="userInfo" style="margin-bottom: 10px;"></p>
-    <input type="email" id="emailInput" placeholder="gamegram@gmail.com" style="padding: 10px; border-radius: 10px; border: 2px solid #00acc1;"/>
-    <button onclick="signInWithEmail()">Sign In with Email</button>
-    <button onclick="signInWithGitHub()">Sign In with GitHub</button>
-    <button id="logoutBtn" onclick="signOut()" style="display: none;">Logout</button>
-  </div>
-
-
+  
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     const uploadBtn = document.getElementById('uploadBtn');
@@ -244,9 +236,6 @@
     const searchInput = document.getElementById('searchInput');
     const resultDiv = document.getElementById('result');
     const galleryBand = document.getElementById('galleryBand');
-    const userInfo = document.getElementById('userInfo');
-    const emailInput = document.getElementById('emailInput');
-    const logoutBtn = document.getElementById('logoutBtn');
   
     // Supabase config
     const SUPABASE_URL = 'https://xtnaiqqtsbrrsddkanjk.supabase.co';
@@ -255,112 +244,43 @@
   
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   
-    let currentUser = null;
-  
-    // Handle OAuth redirect after GitHub login
-    async function handleRedirect() {
+    async function fetchFiles() {
+      clearResultLogs();
+      appendResultLog('Loading files...');
       try {
-        const { data, error } = await supabaseClient.auth.getSessionFromUrl();
+        const { data, error } = await supabaseClient.storage.from(BUCKET).list('images', { limit: 100, offset: 0, sortBy: { column: 'name', order: 'asc' } });
         if (error) {
-          console.warn('No OAuth session from URL or error:', error.message);
-        } else if (data?.session) {
-          currentUser = data.session.user;
-          updateUIForUser();
+          appendResultLog(`Error listing files: ${error.message}`, true);
+          galleryBand.innerHTML = '';
+          return;
         }
+        if (!data || data.length === 0) {
+          appendResultLog('No files found in the bucket.');
+          galleryBand.innerHTML = '';
+          return;
+        }
+        appendResultLog(`Found ${data.length} file(s).`);
+  
+        const publicFiles = await Promise.all(
+          data.map(async file => {
+            const { data: urlData, error: urlError } = supabaseClient.storage.from(BUCKET).getPublicUrl(`images/${file.name}`);
+            if (urlError) {
+              appendResultLog(`Failed to get public URL for ${file.name}: ${urlError.message}`, true);
+              return null;
+            }
+            return { url: urlData.publicUrl, name: file.name };
+          })
+        );
+  
+        files = publicFiles.filter(Boolean);
+        renderGallery(searchInput.value.trim().toLowerCase());
+        appendResultLog('Files loaded successfully.');
       } catch (e) {
-        console.error('Error handling OAuth redirect:', e.message);
+        appendResultLog(`Error loading files: ${e.message}`, true);
+        galleryBand.innerHTML = '';
       }
     }
-  
-    // Check existing session and update UI
-    async function checkAuth() {
-      const {
-        data: { session },
-        error
-      } = await supabaseClient.auth.getSession();
-  
-      if (error) {
-        console.error('Error checking session:', error.message);
-      }
-  
-      currentUser = session?.user || null;
-      updateUIForUser();
-    }
-  
-    function updateUIForUser() {
-      if (currentUser) {
-        userInfo.textContent = `Logged in as ${currentUser.email || currentUser.user_metadata?.full_name || currentUser.id}`;
-        logoutBtn.style.display = 'inline-block';
-        emailInput.style.display = 'none';
-        // Disable sign in buttons when logged in
-        document.querySelectorAll('#authSection button:not(#logoutBtn)').forEach(btn => btn.disabled = true);
-      } else {
-        userInfo.textContent = 'Not signed in';
-        logoutBtn.style.display = 'none';
-        emailInput.style.display = 'inline-block';
-        document.querySelectorAll('#authSection button:not(#logoutBtn)').forEach(btn => btn.disabled = false);
-      }
-    }
-  
-    async function signInWithEmail() {
-      const email = emailInput.value;
-      if (!email) return alert('Please enter your email address.');
-      const { error } = await supabaseClient.auth.signInWithOtp({ email });
-      if (error) {
-        appendResultLog(`Sign-in error: ${error.message}`, true);
-      } else {
-        appendResultLog('Check your email for the magic login link.');
-      }
-    }
-  
-    async function signInWithGitHub() {
-      const { error } = await supabaseClient.auth.signInWithOAuth({
-        provider: 'github',
-        options: { redirectTo: window.location.origin + window.location.pathname } // redirect back to current page without params
-      });
-      if (error) {
-        appendResultLog(`GitHub login error: ${error.message}`, true);
-      }
-    }
-  
-    async function signOut() {
-      await supabaseClient.auth.signOut();
-      currentUser = null;
-      updateUIForUser();
-      fetchFiles(); // refresh gallery for unauthenticated state
-    }
-  
-    supabaseClient.auth.onAuthStateChange((_event, session) => {
-      currentUser = session?.user || null;
-      updateUIForUser();
-    });
-  
-    // Initial page load
-    (async () => {
-      await handleRedirect();  // Process OAuth redirect if any
-      await checkAuth();       // Check existing session
-      fetchFiles();            // Load files
-    })();
-  
-    // === Gallery & Upload logic ===
-  
-    let files = [];
-    let filesToUpload = [];
-  
-    function clearResultLogs() {
-      resultDiv.innerHTML = '';
-    }
-  
-    function appendResultLog(message, isError = false) {
-      const p = document.createElement('p');
-      p.textContent = message;
-      p.style.margin = '5px 0';
-      p.style.color = isError ? '#b00020' : '#00796b';
-      p.style.fontWeight = isError ? '700' : 'normal';
-      resultDiv.appendChild(p);
-      resultDiv.scrollTop = resultDiv.scrollHeight;
-    }
-  
+
     function renderGallery(filter = '') {
       galleryBand.innerHTML = '';
       if (files.length === 0) {
@@ -389,70 +309,32 @@
         galleryBand.appendChild(item);
       }
     }
-  
-    async function fetchFiles() {
-      clearResultLogs();
-      appendResultLog('Loading files...');
-      try {
-        const { data, error } = await supabaseClient.storage.from(BUCKET).list('images', { limit: 100, offset: 0, sortBy: { column: 'name', order: 'asc' } });
-        if (error) {
-          appendResultLog(`Error listing files: ${error.message}`, true);
-          files = [];
-          galleryBand.innerHTML = '';
-          return;
-        }
-        if (!data || data.length === 0) {
-          appendResultLog('No files found in the bucket.');
-          files = [];
-          galleryBand.innerHTML = '';
-          return;
-        }
-        appendResultLog(`Found ${data.length} file(s).`);
-  
-        const publicFiles = await Promise.all(
-          data.map(async file => {
-            const { data: urlData, error: urlError } = supabaseClient.storage.from(BUCKET).getPublicUrl(`images/${file.name}`);
-            if (urlError) {
-              appendResultLog(`Failed to get public URL for ${file.name}: ${urlError.message}`, true);
-              return null;
-            }
-            return { url: urlData.publicUrl, name: file.name };
-          })
-        );
-  
-        files = publicFiles.filter(Boolean);
-        renderGallery(searchInput.value.trim().toLowerCase());
-        appendResultLog('Files loaded successfully.');
-      } catch (e) {
-        appendResultLog(`Error loading files: ${e.message}`, true);
-        galleryBand.innerHTML = '';
-      }
+
+    function clearResultLogs() {
+      resultDiv.innerHTML = '';
     }
-  
-    uploadInput.addEventListener('change', () => {
-      filesToUpload = Array.from(uploadInput.files);
-      if (filesToUpload.length > 0) {
-        appendResultLog(`${filesToUpload.length} file(s) selected.`);
-        uploadBtn.disabled = false;
-        uploadBtn.setAttribute('aria-disabled', 'false');
-      } else {
-        uploadBtn.disabled = true;
-        uploadBtn.setAttribute('aria-disabled', 'true');
-      }
-    });
-  
-    uploadBtn.addEventListener('click', async () => {
+
+    function appendResultLog(message, isError = false) {
+      const p = document.createElement('p');
+      p.textContent = message;
+      p.style.margin = '5px 0';
+      p.style.color = isError ? '#b00020' : '#00796b';
+      p.style.fontWeight = isError ? '700' : 'normal';
+      resultDiv.appendChild(p);
+      resultDiv.scrollTop = resultDiv.scrollHeight;
+    }
+
+    async function uploadFiles() {
       clearResultLogs();
-      if (filesToUpload.length === 0) {
+      if (uploadInput.files.length === 0) {
         appendResultLog('Please select file(s) to upload', true);
         return;
       }
       uploadBtn.disabled = true;
-      uploadBtn.setAttribute('aria-disabled', 'true');
       uploadBtn.textContent = 'Uploading...';
   
       try {
-        for (const file of filesToUpload) {
+        for (const file of uploadInput.files) {
           const timestamp = Date.now();
           const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
           const filePath = `images/${timestamp}_${safeName}`;
@@ -473,22 +355,30 @@
         renderGallery(searchInput.value.trim().toLowerCase());
         appendResultLog('All files uploaded successfully!');
         uploadInput.value = '';
-        filesToUpload = [];
-        uploadBtn.disabled = true;
-        uploadBtn.setAttribute('aria-disabled', 'true');
       } catch (error) {
         appendResultLog(`Upload error: ${error.message}`, true);
       } finally {
         uploadBtn.textContent = 'Upload';
         uploadBtn.disabled = false;
-        uploadBtn.setAttribute('aria-disabled', 'false');
+      }
+    }
+
+    uploadInput.addEventListener('change', () => {
+      if (uploadInput.files.length > 0) {
+        uploadBtn.disabled = false;
+      } else {
+        uploadBtn.disabled = true;
       }
     });
-  
+
+    uploadBtn.addEventListener('click', uploadFiles);
+
     searchInput.addEventListener('input', () => {
-      clearResultLogs();
       renderGallery(searchInput.value.trim().toLowerCase());
     });
+
+    // Initial load
+    fetchFiles();
   </script>
 
 </body>
