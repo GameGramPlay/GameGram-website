@@ -411,7 +411,7 @@
   
         const publicFiles = await Promise.all(
           data.map(async file => {
-            const { data: urlData, error: urlError } = supabaseClient.storage.from(BUCKET).getPublicUrl(file.name);
+            const { data: urlData, error: urlError } = supabaseClient.storage.from(BUCKET).getPublicUrl(`images/${file.name}`);
             if (urlError) {
               appendResultLog(`Failed to get public URL for ${file.name}: ${urlError.message}`, true);
               return null;
