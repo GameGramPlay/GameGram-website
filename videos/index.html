@@ -66,7 +66,7 @@
     input[type="file"]:focus {
       outline: 3px solid #1de9b6;
     }
-    input[type="text"] {
+    input[type="search"] {
       flex: 1 1 220px;
       padding: 10px 15px;
       border-radius: 15px;
@@ -78,15 +78,15 @@
       transition: all 0.3s ease;
       outline-offset: 2px;
     }
-    input[type="text"]::placeholder {
+    input[type="search"]::placeholder {
       color: #00796bcc;
       font-weight: 600;
     }
-    input[type="text"]:hover {
+    input[type="search"]:hover {
       border-color: #1de9b6;
       background: #b9f6ca;
     }
-    input[type="text"]:focus {
+    input[type="search"]:focus {
       border-color: #1de9b6;
       outline: 3px solid #1de9b6;
       background: #b9f6ca;
@@ -228,7 +228,15 @@
   <div id="result" role="alert" aria-live="polite"></div>
 
   <div class="gallery-band" id="galleryBand" aria-label="Uploaded Images Gallery"></div>
-  
+  <div id="authSection" style="margin-bottom: 30px; text-align: center;">
+    <p id="userInfo" style="margin-bottom: 10px;"></p>
+    <input type="email" id="emailInput" placeholder="gamegram@gmail.com" style="padding: 10px; border-radius: 10px; border: 2px solid #00acc1;"/>
+    <button onclick="signInWithEmail()">Sign In with Email</button>
+    <button onclick="signInWithGitHub()">Sign In with GitHub</button>
+    <button id="logoutBtn" onclick="signOut()" style="display: none;">Logout</button>
+  </div>
+
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     const uploadBtn = document.getElementById('uploadBtn');
@@ -236,6 +244,9 @@
     const searchInput = document.getElementById('searchInput');
     const resultDiv = document.getElementById('result');
     const galleryBand = document.getElementById('galleryBand');
+    const userInfo = document.getElementById('userInfo');
+    const emailInput = document.getElementById('emailInput');
+    const logoutBtn = document.getElementById('logoutBtn');
   
     // Supabase config
     const SUPABASE_URL = 'https://xtnaiqqtsbrrsddkanjk.supabase.co';
@@ -243,8 +254,8 @@
     const BUCKET = 'gamegram';
   
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-    let currentUser = null;Add commentMore actions
+  
+    let currentUser = null;
   
     // Handle OAuth redirect after GitHub login
     async function handleRedirect() {
@@ -386,11 +397,13 @@
         const { data, error } = await supabaseClient.storage.from(BUCKET).list('images', { limit: 100, offset: 0, sortBy: { column: 'name', order: 'asc' } });
         if (error) {
           appendResultLog(`Error listing files: ${error.message}`, true);
+          files = [];
           galleryBand.innerHTML = '';
           return;
         }
         if (!data || data.length === 0) {
           appendResultLog('No files found in the bucket.');
+          files = [];
           galleryBand.innerHTML = '';
           return;
         }
@@ -415,61 +428,31 @@
         galleryBand.innerHTML = '';
       }
     }
-
-    function renderGallery(filter = '') {
-      galleryBand.innerHTML = '';
-      if (files.length === 0) {
-        appendResultLog('No files to display.');
-        return;
+  
+    uploadInput.addEventListener('change', () => {
+      filesToUpload = Array.from(uploadInput.files);
+      if (filesToUpload.length > 0) {
+        appendResultLog(`${filesToUpload.length} file(s) selected.`);
+        uploadBtn.disabled = false;
+        uploadBtn.setAttribute('aria-disabled', 'false');
+      } else {
+        uploadBtn.disabled = true;
+        uploadBtn.setAttribute('aria-disabled', 'true');
       }
-      const filtered = files.filter(f => f.name.toLowerCase().includes(filter));
-      if (filtered.length === 0) {
-        appendResultLog('No files match your search.');
-        return;
-      }
-      for (const file of filtered) {
-        const item = document.createElement('div');
-        item.className = 'gallery-item';
-        item.tabIndex = 0;
-        item.setAttribute('role', 'img');
-        item.setAttribute('aria-label', file.name);
-        const img = document.createElement('img');
-        img.src = file.url;
-        img.alt = file.name;
-        item.appendChild(img);
-        const caption = document.createElement('div');
-        caption.className = 'caption';
-        caption.textContent = file.name;
-        item.appendChild(caption);
-        galleryBand.appendChild(item);
-      }
-    }
-
-    function clearResultLogs() {
-      resultDiv.innerHTML = '';
-    }
-
-    function appendResultLog(message, isError = false) {
-      const p = document.createElement('p');
-      p.textContent = message;
-      p.style.margin = '5px 0';
-      p.style.color = isError ? '#b00020' : '#00796b';
-      p.style.fontWeight = isError ? '700' : 'normal';
-      resultDiv.appendChild(p);
-      resultDiv.scrollTop = resultDiv.scrollHeight;
-    }
-
-    async function uploadFiles() {
+    });
+  
+    uploadBtn.addEventListener('click', async () => {
       clearResultLogs();
-      if (uploadInput.files.length === 0) {
+      if (filesToUpload.length === 0) {
         appendResultLog('Please select file(s) to upload', true);
         return;
       }
       uploadBtn.disabled = true;
+      uploadBtn.setAttribute('aria-disabled', 'true');
       uploadBtn.textContent = 'Uploading...';
   
       try {
-        for (const file of uploadInput.files) {
+        for (const file of filesToUpload) {
           const timestamp = Date.now();
           const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
           const filePath = `images/${timestamp}_${safeName}`;
@@ -490,30 +473,22 @@
         renderGallery(searchInput.value.trim().toLowerCase());
         appendResultLog('All files uploaded successfully!');
         uploadInput.value = '';
+        filesToUpload = [];
+        uploadBtn.disabled = true;
+        uploadBtn.setAttribute('aria-disabled', 'true');
       } catch (error) {
         appendResultLog(`Upload error: ${error.message}`, true);
       } finally {
         uploadBtn.textContent = 'Upload';
         uploadBtn.disabled = false;
-      }
-    }
-
-    uploadInput.addEventListener('change', () => {
-      if (uploadInput.files.length > 0) {
-        uploadBtn.disabled = false;
-      } else {
-        uploadBtn.disabled = true;
+        uploadBtn.setAttribute('aria-disabled', 'false');
       }
     });
-
-    uploadBtn.addEventListener('click', uploadFiles);
-
+  
     searchInput.addEventListener('input', () => {
+      clearResultLogs();
       renderGallery(searchInput.value.trim().toLowerCase());
     });
-
-    // Initial load
-    fetchFiles();
   </script>
 
 </body>
