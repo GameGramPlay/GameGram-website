@@ -228,6 +228,14 @@
   <div id="result" role="alert" aria-live="polite"></div>
 
   <div class="gallery-band" id="galleryBand" aria-label="Uploaded Images Gallery"></div>
+  <div id="authSection" style="margin-bottom: 30px; text-align: center;">
+    <p id="userInfo" style="margin-bottom: 10px;"></p>
+    <input type="email" id="emailInput" placeholder="gamegram@gmail.com" style="padding: 10px; border-radius: 10px; border: 2px solid #00acc1;"/>
+    <button onclick="signInWithEmail()">Sign In with Email</button>
+    <button onclick="signInWithGitHub()">Sign In with GitHub</button>
+    <button id="logoutBtn" onclick="signOut()" style="display: none;">Logout</button>
+  </div>
+
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
@@ -243,6 +251,64 @@
     const BUCKET = 'gamegram';
 
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let currentUser = null;
+    
+    async function checkAuth() {
+      const {
+        data: { session },
+        error
+      } = await supabaseClient.auth.getSession();
+    
+      if (session?.user) {
+        currentUser = session.user;
+        document.getElementById('userInfo').textContent = `Logged in as ${currentUser.email}`;
+        document.getElementById('logoutBtn').style.display = 'inline-block';
+        document.getElementById('emailInput').style.display = 'none';
+      } else {
+        document.getElementById('userInfo').textContent = 'Not signed in';
+        document.getElementById('logoutBtn').style.display = 'none';
+        document.getElementById('emailInput').style.display = 'inline-block';
+      }
+    
+      fetchFiles(); // Always call this after auth status
+    }
+    
+    async function signInWithEmail() {
+      const email = document.getElementById('emailInput').value;
+      if (!email) return alert('Enter your email');
+      const { error } = await supabaseClient.auth.signInWithOtp({ email });
+      if (error) {
+        appendResultLog(`Sign-in error: ${error.message}`, true);
+      } else {
+        appendResultLog('Check your email for the magic login link.');
+      }
+    }
+    
+    async function signInWithGitHub() {
+      const { error } = await supabaseClient.auth.signInWithOAuth({
+        provider: 'github',
+        options: { redirectTo: window.location.href }
+      });
+      if (error) {
+        appendResultLog(`GitHub login error: ${error.message}`, true);
+      }
+    }
+    
+    async function signOut() {
+      await supabaseClient.auth.signOut();
+      location.reload();
+    }
+    
+    supabaseClient.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        currentUser = session.user;
+        checkAuth();
+      }
+    });
+    
+    checkAuth();
+
 
     let files = [];
     let filesToUpload = [];
