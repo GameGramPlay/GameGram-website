@@ -394,7 +394,7 @@
       clearResultLogs();
       appendResultLog('Loading files...');
       try {
-        const { data, error } = await supabaseClient.storage.from(BUCKET).list('', { limit: 100, offset: 0, sortBy: { column: 'name', order: 'asc' } });
+        const { data, error } = await supabaseClient.storage.from(BUCKET).list('images', { limit: 100, offset: 0, sortBy: { column: 'name', order: 'asc' } });
         if (error) {
           appendResultLog(`Error listing files: ${error.message}`, true);
           files = [];
@@ -455,7 +455,7 @@
         for (const file of filesToUpload) {
           const timestamp = Date.now();
           const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
-          const filePath = `${timestamp}_${safeName}`;
+          const filePath = `images/${timestamp}_${safeName}`;
           appendResultLog(`Uploading ${file.name} as ${filePath}...`);
           const { error: uploadError } = await supabaseClient.storage.from(BUCKET).upload(filePath, file, { cacheControl: '3600', upsert: false });
           if (uploadError) {
