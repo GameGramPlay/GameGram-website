@@ -243,6 +243,141 @@
     const BUCKET = 'gamegram';
   
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    let currentUser = null;Add commentMore actions
+  
+    // Handle OAuth redirect after GitHub login
+    async function handleRedirect() {
+      try {
+        const { data, error } = await supabaseClient.auth.getSessionFromUrl();
+        if (error) {
+          console.warn('No OAuth session from URL or error:', error.message);
+        } else if (data?.session) {
+          currentUser = data.session.user;
+          updateUIForUser();
+        }
+      } catch (e) {
+        console.error('Error handling OAuth redirect:', e.message);
+      }
+    }
+  
+    // Check existing session and update UI
+    async function checkAuth() {
+      const {
+        data: { session },
+        error
+      } = await supabaseClient.auth.getSession();
+  
+      if (error) {
+        console.error('Error checking session:', error.message);
+      }
+  
+      currentUser = session?.user || null;
+      updateUIForUser();
+    }
+  
+    function updateUIForUser() {
+      if (currentUser) {
+        userInfo.textContent = `Logged in as ${currentUser.email || currentUser.user_metadata?.full_name || currentUser.id}`;
+        logoutBtn.style.display = 'inline-block';
+        emailInput.style.display = 'none';
+        // Disable sign in buttons when logged in
+        document.querySelectorAll('#authSection button:not(#logoutBtn)').forEach(btn => btn.disabled = true);
+      } else {
+        userInfo.textContent = 'Not signed in';
+        logoutBtn.style.display = 'none';
+        emailInput.style.display = 'inline-block';
+        document.querySelectorAll('#authSection button:not(#logoutBtn)').forEach(btn => btn.disabled = false);
+      }
+    }
+  
+    async function signInWithEmail() {
+      const email = emailInput.value;
+      if (!email) return alert('Please enter your email address.');
+      const { error } = await supabaseClient.auth.signInWithOtp({ email });
+      if (error) {
+        appendResultLog(`Sign-in error: ${error.message}`, true);
+      } else {
+        appendResultLog('Check your email for the magic login link.');
+      }
+    }
+  
+    async function signInWithGitHub() {
+      const { error } = await supabaseClient.auth.signInWithOAuth({
+        provider: 'github',
+        options: { redirectTo: window.location.origin + window.location.pathname } // redirect back to current page without params
+      });
+      if (error) {
+        appendResultLog(`GitHub login error: ${error.message}`, true);
+      }
+    }
+  
+    async function signOut() {
+      await supabaseClient.auth.signOut();
+      currentUser = null;
+      updateUIForUser();
+      fetchFiles(); // refresh gallery for unauthenticated state
+    }
+  
+    supabaseClient.auth.onAuthStateChange((_event, session) => {
+      currentUser = session?.user || null;
+      updateUIForUser();
+    });
+  
+    // Initial page load
+    (async () => {
+      await handleRedirect();  // Process OAuth redirect if any
+      await checkAuth();       // Check existing session
+      fetchFiles();            // Load files
+    })();
+  
+    // === Gallery & Upload logic ===
+  
+    let files = [];
+    let filesToUpload = [];
+  
+    function clearResultLogs() {
+      resultDiv.innerHTML = '';
+    }
+  
+    function appendResultLog(message, isError = false) {
+      const p = document.createElement('p');
+      p.textContent = message;
+      p.style.margin = '5px 0';
+      p.style.color = isError ? '#b00020' : '#00796b';
+      p.style.fontWeight = isError ? '700' : 'normal';
+      resultDiv.appendChild(p);
+      resultDiv.scrollTop = resultDiv.scrollHeight;
+    }
+  
+    function renderGallery(filter = '') {
+      galleryBand.innerHTML = '';
+      if (files.length === 0) {
+        appendResultLog('No files to display.');
+        return;
+      }
+      const filtered = files.filter(f => f.name.toLowerCase().includes(filter));
+      if (filtered.length === 0) {
+        appendResultLog('No files match your search.');
+        return;
+      }
+      for (const file of filtered) {
+        const item = document.createElement('div');
+        item.className = 'gallery-item';
+        item.tabIndex = 0;
+        item.setAttribute('role', 'img');
+        item.setAttribute('aria-label', file.name);
+        const img = document.createElement('img');
+        img.src = file.url;
+        img.alt = file.name;
+        item.appendChild(img);
+        const caption = document.createElement('div');
+        caption.className = 'caption';
+        caption.textContent = file.name;
+        item.appendChild(caption);
+        galleryBand.appendChild(item);
+      }
+    }
   
     async function fetchFiles() {
       clearResultLogs();
