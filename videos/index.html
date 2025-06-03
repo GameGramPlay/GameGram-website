@@ -244,39 +244,67 @@
     const searchInput = document.getElementById('searchInput');
     const resultDiv = document.getElementById('result');
     const galleryBand = document.getElementById('galleryBand');
-
+    const userInfo = document.getElementById('userInfo');
+    const emailInput = document.getElementById('emailInput');
+    const logoutBtn = document.getElementById('logoutBtn');
+  
     // Supabase config
     const SUPABASE_URL = 'https://xtnaiqqtsbrrsddkanjk.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0bmFpcXF0c2JycnNkZGthbmprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4NDk0ODYsImV4cCI6MjA2NDQyNTQ4Nn0.tnBTErE7rkCxyDVvGMR3Hv7zWgMpdYPY1rJiTeQGzeo';
     const BUCKET = 'gamegram';
-
+  
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
+  
     let currentUser = null;
-    
+  
+    // Handle OAuth redirect after GitHub login
+    async function handleRedirect() {
+      try {
+        const { data, error } = await supabaseClient.auth.getSessionFromUrl();
+        if (error) {
+          console.warn('No OAuth session from URL or error:', error.message);
+        } else if (data?.session) {
+          currentUser = data.session.user;
+          updateUIForUser();
+        }
+      } catch (e) {
+        console.error('Error handling OAuth redirect:', e.message);
+      }
+    }
+  
+    // Check existing session and update UI
     async function checkAuth() {
       const {
         data: { session },
         error
       } = await supabaseClient.auth.getSession();
-    
-      if (session?.user) {
-        currentUser = session.user;
-        document.getElementById('userInfo').textContent = `Logged in as ${currentUser.email}`;
-        document.getElementById('logoutBtn').style.display = 'inline-block';
-        document.getElementById('emailInput').style.display = 'none';
-      } else {
-        document.getElementById('userInfo').textContent = 'Not signed in';
-        document.getElementById('logoutBtn').style.display = 'none';
-        document.getElementById('emailInput').style.display = 'inline-block';
+  
+      if (error) {
+        console.error('Error checking session:', error.message);
       }
-    
-      fetchFiles(); // Always call this after auth status
+  
+      currentUser = session?.user || null;
+      updateUIForUser();
     }
-    
+  
+    function updateUIForUser() {
+      if (currentUser) {
+        userInfo.textContent = `Logged in as ${currentUser.email || currentUser.user_metadata?.full_name || currentUser.id}`;
+        logoutBtn.style.display = 'inline-block';
+        emailInput.style.display = 'none';
+        // Disable sign in buttons when logged in
+        document.querySelectorAll('#authSection button:not(#logoutBtn)').forEach(btn => btn.disabled = true);
+      } else {
+        userInfo.textContent = 'Not signed in';
+        logoutBtn.style.display = 'none';
+        emailInput.style.display = 'inline-block';
+        document.querySelectorAll('#authSection button:not(#logoutBtn)').forEach(btn => btn.disabled = false);
+      }
+    }
+  
     async function signInWithEmail() {
-      const email = document.getElementById('emailInput').value;
-      if (!email) return alert('Enter your email');
+      const email = emailInput.value;
+      if (!email) return alert('Please enter your email address.');
       const { error } = await supabaseClient.auth.signInWithOtp({ email });
       if (error) {
         appendResultLog(`Sign-in error: ${error.message}`, true);
@@ -284,57 +312,55 @@
         appendResultLog('Check your email for the magic login link.');
       }
     }
-    
+  
     async function signInWithGitHub() {
       const { error } = await supabaseClient.auth.signInWithOAuth({
         provider: 'github',
-        options: { redirectTo: window.location.href }
+        options: { redirectTo: window.location.origin + window.location.pathname } // redirect back to current page without params
       });
       if (error) {
         appendResultLog(`GitHub login error: ${error.message}`, true);
       }
     }
-    
+  
     async function signOut() {
       await supabaseClient.auth.signOut();
-      location.reload();
+      currentUser = null;
+      updateUIForUser();
+      fetchFiles(); // refresh gallery for unauthenticated state
     }
-    
+  
     supabaseClient.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        currentUser = session.user;
-        checkAuth();
-      }
+      currentUser = session?.user || null;
+      updateUIForUser();
     });
-    
-    checkAuth();
-
-
+  
+    // Initial page load
+    (async () => {
+      await handleRedirect();  // Process OAuth redirect if any
+      await checkAuth();       // Check existing session
+      fetchFiles();            // Load files
+    })();
+  
+    // === Gallery & Upload logic ===
+  
     let files = [];
     let filesToUpload = [];
-
-    // Clear all logs in result div
+  
     function clearResultLogs() {
       resultDiv.innerHTML = '';
     }
-
-    // Append a log message to result div (error = red text)
+  
     function appendResultLog(message, isError = false) {
       const p = document.createElement('p');
       p.textContent = message;
       p.style.margin = '5px 0';
-      if (isError) {
-        p.style.color = '#b00020';
-        p.style.fontWeight = '700';
-      } else {
-        p.style.color = '#00796b';
-      }
+      p.style.color = isError ? '#b00020' : '#00796b';
+      p.style.fontWeight = isError ? '700' : 'normal';
       resultDiv.appendChild(p);
-      // Scroll to bottom so latest messages visible
       resultDiv.scrollTop = resultDiv.scrollHeight;
     }
-
-    // Render gallery thumbnails filtered by search text
+  
     function renderGallery(filter = '') {
       galleryBand.innerHTML = '';
       if (files.length === 0) {
@@ -363,15 +389,12 @@
         galleryBand.appendChild(item);
       }
     }
-
-    // Fetch file list from Supabase storage bucket and public URLs
+  
     async function fetchFiles() {
       clearResultLogs();
       appendResultLog('Loading files...');
       try {
-        // Try listing files with a prefix if you want a folder, or '' for root
-        const prefix = '';  // or '15s55xl_0/' if you want files in that folder
-        const { data, error } = await supabaseClient.storage.from(BUCKET).list(prefix, { limit: 100, offset: 0, sortBy: { column: 'name', order: 'asc' } });
+        const { data, error } = await supabaseClient.storage.from(BUCKET).list('', { limit: 100, offset: 0, sortBy: { column: 'name', order: 'asc' } });
         if (error) {
           appendResultLog(`Error listing files: ${error.message}`, true);
           files = [];
@@ -385,15 +408,19 @@
           return;
         }
         appendResultLog(`Found ${data.length} file(s).`);
-    
-        const publicFiles = data.map(file => {
-          const { data: { publicUrl }, error: urlError } = supabaseClient.storage.from(BUCKET).getPublicUrl(file.name);
-          if (urlError) {
-            appendResultLog(`Failed to get public URL for ${file.name}: ${urlError.message}`, true);
-          }
-          return { url: publicUrl, name: file.name };
-        });
-        files = publicFiles;
+  
+        const publicFiles = await Promise.all(
+          data.map(async file => {
+            const { data: urlData, error: urlError } = supabaseClient.storage.from(BUCKET).getPublicUrl(file.name);
+            if (urlError) {
+              appendResultLog(`Failed to get public URL for ${file.name}: ${urlError.message}`, true);
+              return null;
+            }
+            return { url: urlData.publicUrl, name: file.name };
+          })
+        );
+  
+        files = publicFiles.filter(Boolean);
         renderGallery(searchInput.value.trim().toLowerCase());
         appendResultLog('Files loaded successfully.');
       } catch (e) {
@@ -401,9 +428,7 @@
         galleryBand.innerHTML = '';
       }
     }
-
-
-    // When user selects files, enable upload button and store files
+  
     uploadInput.addEventListener('change', () => {
       filesToUpload = Array.from(uploadInput.files);
       if (filesToUpload.length > 0) {
@@ -415,8 +440,7 @@
         uploadBtn.setAttribute('aria-disabled', 'true');
       }
     });
-
-    // Upload button click handler
+  
     uploadBtn.addEventListener('click', async () => {
       clearResultLogs();
       if (filesToUpload.length === 0) {
@@ -426,7 +450,7 @@
       uploadBtn.disabled = true;
       uploadBtn.setAttribute('aria-disabled', 'true');
       uploadBtn.textContent = 'Uploading...';
-
+  
       try {
         for (const file of filesToUpload) {
           const timestamp = Date.now();
@@ -438,12 +462,12 @@
             appendResultLog(`Error uploading ${file.name}: ${uploadError.message}`, true);
             throw uploadError;
           }
-          const { publicUrl, error: urlError } = supabaseClient.storage.from(BUCKET).getPublicUrl(filePath);
+          const { data: urlData, error: urlError } = supabaseClient.storage.from(BUCKET).getPublicUrl(filePath);
           if (urlError) {
             appendResultLog(`Uploaded but failed to get public URL for ${file.name}: ${urlError.message}`, true);
             continue;
           }
-          files.push({ url: publicUrl, name: file.name });
+          files.push({ url: urlData.publicUrl, name: file.name });
           appendResultLog(`Uploaded ${file.name} successfully.`);
         }
         renderGallery(searchInput.value.trim().toLowerCase());
@@ -460,15 +484,12 @@
         uploadBtn.setAttribute('aria-disabled', 'false');
       }
     });
-
-    // Search input to filter gallery in real-time
+  
     searchInput.addEventListener('input', () => {
       clearResultLogs();
       renderGallery(searchInput.value.trim().toLowerCase());
     });
-
-    // Initial load
-    fetchFiles();
   </script>
+
 </body>
 </html>
