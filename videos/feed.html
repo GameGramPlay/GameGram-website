@@ -1,0 +1,27 @@
+<!-- feed.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>GameGram Feed</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <h1 class="title-bubble">GameGram Feed (beta)</h1>
+  <div class="upload-section">
+    <input type="file" id="uploadInput" accept="image/*" multiple />
+    <input type="search" id="searchInput" placeholder="Search uploaded images..." />
+    <button id="uploadBtn" disabled>Upload</button>
+  </div>
+  <div id="result"></div>
+  <div class="gallery-band" id="galleryBand"></div>
+  <div id="authSection">
+    <p id="userInfo"></p>
+    <button id="logoutBtn" onclick="signOut()" style="display:none;">Logout</button>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="feed.js"></script>
+</body>
+</html>
