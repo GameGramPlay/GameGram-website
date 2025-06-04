@@ -1,85 +1,121 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Login/Signup with Firebase (Modular)</title>
-  <script type="module">
-    // Import Firebase modules
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
-
-    // Your Firebase config
-    const firebaseConfig = {
-      apiKey: "AIzaSyB-vIDt-_DXW5SUQG7u05Bh-fy2-fSH6X0",
-      authDomain: "gamegram-c2a20.firebaseapp.com",
-      projectId: "gamegram-c2a20",
-      storageBucket: "gamegram-c2a20.firebasestorage.app",
-      messagingSenderId: "343431167647",
-      appId: "1:343431167647:web:930946309100b867a22caa",
-      measurementId: "G-CS039Z7M01"
-    };
-
-    // Initialize Firebase
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-
-    // Sign Up
-    window.signUp = async function () {
-      const email = document.getElementById("signup-email").value;
-      const password = document.getElementById("signup-password").value;
-      try {
-        await createUserWithEmailAndPassword(auth, email, password);
-        alert("Account created!");
-      } catch (error) {
-        alert(error.message);
-      }
-    };
-
-    // Log In
-    window.logIn = async function () {
-      const email = document.getElementById("login-email").value;
-      const password = document.getElementById("login-password").value;
-      try {
-        await signInWithEmailAndPassword(auth, email, password);
-      } catch (error) {
-        alert(error.message);
-      }
-    };
-
-    // Log Out
-    window.logOut = function () {
-      signOut(auth);
-    };
-
-    // Auth state listener
-    onAuthStateChanged(auth, (user) => {
-      const userInfo = document.getElementById("userInfo");
-      if (user) {
-        userInfo.innerHTML = `<p>Logged in as: ${user.email}</p>`;
-      } else {
-        userInfo.innerHTML = "<p>Not logged in.</p>";
-      }
-    });
-  </script>
+  <meta charset="UTF-8" />
+  <title>Gamegram Login</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap" rel="stylesheet" />
   <style>
-    body { font-family: Arial; max-width: 400px; margin: auto; padding: 2rem; }
-    input, button { display: block; margin: 10px 0; width: 100%; padding: 8px; }
-    #userInfo { margin-top: 20px; }
+    body {
+      font-family: 'Orbitron', sans-serif;
+      background: linear-gradient(to right, #00e5ff, #1de9b6);
+      color: #003344;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .auth-container {
+      background: white;
+      padding: 40px;
+      border-radius: 20px;
+      box-shadow: 0 0 30px rgba(0, 172, 193, 0.4);
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+    }
+    h1 {
+      margin-bottom: 20px;
+      font-size: 24px;
+      color: #00796b;
+    }
+    input[type="email"] {
+      width: 100%;
+      padding: 12px;
+      margin: 15px 0;
+      border: 2px solid #00acc1;
+      border-radius: 12px;
+      font-size: 1rem;
+    }
+    button {
+      padding: 12px 25px;
+      margin: 10px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 30px;
+      cursor: pointer;
+      background-color: #00acc1;
+      color: white;
+      font-weight: bold;
+      box-shadow: 0 4px 12px rgba(0, 172, 193, 0.5);
+      transition: 0.3s;
+    }
+    button:hover {
+      background-color: #1de9b6;
+      box-shadow: 0 0 20px #1de9b6;
+    }
+    #status {
+      margin-top: 20px;
+      font-weight: bold;
+      color: #00695c;
+    }
   </style>
 </head>
 <body>
 
-<h2>Sign Up</h2>
-<input type="email" id="signup-email" placeholder="Email">
-<input type="password" id="signup-password" placeholder="Password">
-<button onclick="signUp()">Create Account</button>
+  <div class="auth-container">
+    <h1>Welcome to Gamegram</h1>
+    <p>Futuristic chat meets immersive gaming.</p>
 
-<h2>Login</h2>
-<input type="email" id="login-email" placeholder="Email">
-<input type="password" id="login-password" placeholder="Password">
-<button onclick="logIn()">Log In</button>
-<button onclick="logOut()">Log Out</button>
+    <input type="email" id="email" placeholder="Enter your email" />
+    <button onclick="signInWithEmail()">Email Login</button>
+    <button onclick="signInWithGitHub()">Login with GitHub</button>
 
-<div id="userInfo"></div>
+    <p id="status"></p>
+  </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const supabase = supabase.createClient(
+      'https://xtnaiqqtsbrrsddkanjk.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0bmFpcXF0c2JycnNkZGthbmprIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4NDk0ODYsImV4cCI6MjA2NDQyNTQ4Nn0.tnBTErE7rkCxyDVvGMR3Hv7zWgMpdYPY1rJiTeQGzeo'
+    );
+
+    // Auto redirect if already logged in
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        localStorage.setItem('gamegramUser', JSON.stringify(session.user));
+        window.location.href = 'feed.html';
+      }
+    });
+
+    async function signInWithEmail() {
+      const email = document.getElementById('email').value;
+      if (!email) return alert('Please enter an email');
+      const { error } = await supabase.auth.signInWithOtp({ email });
+      document.getElementById('status').textContent = error
+        ? 'Error: ' + error.message
+        : 'Check your email for a magic link.';
+    }
+
+    async function signInWithGitHub() {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'github',
+        options: {
+          redirectTo: window.location.href
+        }
+      });
+      if (error) alert('GitHub Login failed: ' + error.message);
+    }
+
+    // Handle redirect from GitHub
+    (async () => {
+      const { data, error } = await supabase.auth.getSessionFromUrl();
+      if (data?.session) {
+        localStorage.setItem('gamegramUser', JSON.stringify(data.session.user));
+        window.location.href = 'feed.html';
+      }
+    })();
+  </script>
 </body>
 </html>
