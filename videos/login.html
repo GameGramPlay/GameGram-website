@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Login | GameGram</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      font-family: 'Orbitron', sans-serif;
+      background-color: #e0f7fa;
+      color: #000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    h1 {
+      background-color: #00e5ff;
+      padding: 20px 40px;
+      border-radius: 30px;
+      font-size: 28px;
+      font-weight: bold;
+      margin-bottom: 30px;
+    }
+    .login-box {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      align-items: center;
+    }
+    input[type="email"], button {
+      padding: 10px 20px;
+      border-radius: 15px;
+      border: 2px solid #00acc1;
+      font-size: 1rem;
+    }
+    button {
+      background-color: #00acc1;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #1de9b6;
+    }
+  </style>
+</head>
+<body>
+  <h1>Login to GameGram</h1>
+  <div class="login-box">
+    <input type="email" id="emailInput" placeholder="gamegram@gmail.com" />
+    <button onclick="signInWithEmail()">Sign In with Email</button>
+    <button onclick="signInWithGitHub()">Sign In with GitHub</button>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const SUPABASE_URL = 'https://xtnaiqqtsbrrsddkanjk.supabase.co';
+    const SUPABASE_ANON_KEY = 'your_anon_key_here'; // Keep it same as before
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    async function signInWithEmail() {
+      const email = document.getElementById('emailInput').value;
+      if (!email) return alert('Please enter your email');
+      const { error } = await supabase.auth.signInWithOtp({ email });
+      if (error) alert('Sign-in error: ' + error.message);
+      else alert('Check your email for the magic login link.');
+    }
+
+    async function signInWithGitHub() {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'github',
+        options: { redirectTo: window.location.origin + '/feed.html' }
+      });
+      if (error) alert('GitHub login error: ' + error.message);
+    }
+  </script>
+</body>
+</html>
