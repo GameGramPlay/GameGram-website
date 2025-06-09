@@ -163,8 +163,8 @@
     const secondaryColor = getComputedStyle(document.documentElement).getPropertyValue("--sidebar-color");
 
     let score = 0;
-    const brickRowCount = 9;
-    const brickColumnCount = 5;
+    const brickRowCount = 10;
+    const brickColumnCount = 7;
 
     const heightRatio = 0.75;
     canvas.height = canvas.width * heightRatio;
@@ -175,7 +175,7 @@
       x: canvas.width / 2,
       y: canvas.height / 2,
       size: 10,
-      speed: 4,
+      speed: 5,
       dx: 4,
       dy: -4,
     };
@@ -183,8 +183,8 @@
     const paddle = {
       x: canvas.width / 2 - 40,
       y: canvas.height - 20,
-      w: 90,
-      h: 20,
+      w: 100,
+      h: 25,
       speed: 8,
       dx: 0,
     };
