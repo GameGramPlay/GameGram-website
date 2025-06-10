@@ -37,6 +37,12 @@
 
   <main>
     <h2>Games List</h2>
+
+    <!-- Search Bar -->
+    <div class="search-container">
+      <input type="text" id="searchInput" placeholder="Search games..." aria-label="Search games" />
+    </div>
+
     <div class="game-grid" id="gameGrid">
       <p id="loadingMessage">Loading games...</p>
     </div>
@@ -54,34 +60,58 @@
     <p>Games from <a href="https://github.com/Metroxe/one-html-page-challenge" target="_blank" rel="noopener">One HTML Page Challenge</a></p>
   </footer>
 
+  <!-- Game Fetch + Search -->
   <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      const timestamp = Date.now();
-      const grid = document.getElementById("gameGrid");
+    let allGames = [];
 
+    const renderGames = (games) => {
+      const grid = document.getElementById("gameGrid");
+      grid.innerHTML = "";
+
+      if (games.length === 0) {
+        grid.innerHTML = "<p>No games found.</p>";
+        return;
+      }
+
+      games.forEach(file => {
+        const a = document.createElement("a");
+        a.href = `games/${file}`;
+        a.className = "game-cube";
+        a.target = "_blank";
+        a.textContent = file.replace('.html', '').replace(/[-_]/g, ' ');
+        grid.appendChild(a);
+      });
+    };
+
+    const loadGames = () => {
+      const timestamp = Date.now();
       fetch(`games/index.json?t=${timestamp}`)
-        .then(res => {
-          if (!res.ok) throw new Error("Network response was not ok");
-          return res.json();
-        })
-        .then(files => {
-          grid.innerHTML = "";
-          files.forEach(file => {
-            const a = document.createElement("a");
-            a.href = `games/${file}`;
-            a.className = "game-cube";
-            a.target = "_blank";
-            a.textContent = file.replace(".html", "").replace(/[-_]/g, " ");
-            grid.appendChild(a);
-          });
+        .then(res => res.json())
+        .then(data => {
+          allGames = data;
+          renderGames(allGames);
         })
         .catch(err => {
           console.error("Could not load game list:", err);
-          grid.innerHTML = "<p>⚠️ Failed to load games. Please try again later.</p>";
+          document.getElementById("gameGrid").innerHTML = "<p>⚠️ Failed to load games.</p>";
         });
+    };
+
+    document.addEventListener("DOMContentLoaded", () => {
+      loadGames();
+
+      const searchInput = document.getElementById("searchInput");
+      searchInput.addEventListener("input", () => {
+        const query = searchInput.value.toLowerCase();
+        const filtered = allGames.filter(file =>
+          file.toLowerCase().includes(query)
+        );
+        renderGames(filtered);
+      });
     });
   </script>
 
+  <!-- Service Worker -->
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
@@ -92,6 +122,7 @@
     }
   </script>
 
+  <!-- Chat Widget -->
   <script id="cid0020000407496477604" data-cfasync="false" async src="//st.chatango.com/js/gz/emb.js" style="width: 200px;height: 300px;">
     {
       "handle": "gamegramapp",
