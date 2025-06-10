@@ -4,16 +4,18 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Gamegram – Play Web Games Instantly</title>
-  <meta name="bitmedia-site-verification" content="908ef0a98239d954fc5835e68d271c72" />
-  <link rel="icon" type="image/png" href="images/gamegram.png">
+
   <meta name="description" content="Gamegram is your hub for fast, fun web-based games. No installs, no delays. Just pure gaming!">
   <meta name="robots" content="index, follow">
   <meta name="author" content="Gamegram Team">
-  <link rel="canonical" href="https://aehehe.github.io/GameGram-website/">
-  <link rel="stylesheet" href="style.css" />
-  <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#6600cc">
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
+  <meta name="bitmedia-site-verification" content="908ef0a98239d954fc5835e68d271c72" />
+
+  <link rel="icon" type="image/png" href="images/gamegram.png" />
+  <link rel="canonical" href="https://aehehe.github.io/GameGram-website/" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet" />
 </head>
 <body>
 
@@ -36,48 +38,90 @@
   <main>
     <h2>Games List</h2>
     <div class="game-grid" id="gameGrid">
-      <!-- Games will load here -->
+      <p id="loadingMessage">Loading games...</p>
     </div>
   </main>
 
+  <iframe
+    data-aa="2392592"
+    src="//ad.a-ads.com/2392592?size=200x200"
+    style="width:200px; height:200px; border:0; padding:0; overflow:hidden; background-color:transparent;"
+    title="Advertisement"
+    loading="lazy">
+  </iframe>
+
+  <footer>
+    <p>Games from <a href="https://github.com/Metroxe/one-html-page-challenge" target="_blank" rel="noopener">One HTML Page Challenge</a></p>
+  </footer>
+
   <script>
-    const timestamp = new Date().getTime();
-    fetch(`games/index.json?t=${timestamp}`)
-      .then(res => res.json())
-      .then(files => {
-        const container = document.getElementById('gameGrid');
-        files.forEach(file => {
-          const a = document.createElement('a');
-          a.href = `games/${file}`;
-          a.className = 'game-cube';
-          a.target = '_blank';
-          a.textContent = file.replace('.html', '').replace(/[-_]/g, ' ');
-          container.appendChild(a);
+    document.addEventListener("DOMContentLoaded", () => {
+      const timestamp = Date.now();
+      const grid = document.getElementById("gameGrid");
+
+      fetch(`games/index.json?t=${timestamp}`)
+        .then(res => {
+          if (!res.ok) throw new Error("Network response was not ok");
+          return res.json();
+        })
+        .then(files => {
+          grid.innerHTML = "";
+          files.forEach(file => {
+            const a = document.createElement("a");
+            a.href = `games/${file}`;
+            a.className = "game-cube";
+            a.target = "_blank";
+            a.textContent = file.replace(".html", "").replace(/[-_]/g, " ");
+            grid.appendChild(a);
+          });
+        })
+        .catch(err => {
+          console.error("Could not load game list:", err);
+          grid.innerHTML = "<p>⚠️ Failed to load games. Please try again later.</p>";
         });
-      })
-      .catch(err => {
-        console.error('Could not load game list:', err);
-      });
+    });
   </script>
 
-  <iframe data-aa='2392592' src='//ad.a-ads.com/2392592?size=200x200' style='width:200px; height:200px; border:0px; padding:0; overflow:hidden; background-color: transparent;'></iframe>
-
-  <p></p>
-  <p></p>
-  <footer>
-    <p>Games from <a href="https://github.com/Metroxe/one-html-page-challenge" target="_blank">One HTML Page Challenge</a></p>
-  </footer>
   <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/service-worker.js')
-          .then(reg => console.log('Service worker registered:', reg))
-          .catch(err => console.error('Service worker registration failed:', err));
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("/service-worker.js")
+          .then(reg => console.log("Service worker registered:", reg))
+          .catch(err => console.error("Service worker registration failed:", err));
       });
     }
   </script>
+
   <script id="cid0020000407496477604" data-cfasync="false" async src="//st.chatango.com/js/gz/emb.js" style="width: 200px;height: 300px;">
-    {"handle":"gamegramapp","arch":"js","styles":{"a":"6600cc","b":100,"c":"FFFFFF","d":"FFFFFF","k":"6600cc","l":"6600cc","m":"6600cc","n":"FFFFFF","p":"10","q":"6600cc","r":100,"cv":1,"cvfnt":"'Avant Garde', Avantgarde, 'Century Gothic', CenturyGothic, AppleGothic, sans-serif, sans-serif","cvfntsz":"15px","cvfntw":"lighter","cvbg":"6600cc","cvw":75,"cvh":30}}
+    {
+      "handle": "gamegramapp",
+      "arch": "js",
+      "styles": {
+        "a": "6600cc",
+        "b": 100,
+        "c": "FFFFFF",
+        "d": "FFFFFF",
+        "k": "6600cc",
+        "l": "6600cc",
+        "m": "6600cc",
+        "n": "FFFFFF",
+        "p": "10",
+        "q": "6600cc",
+        "r": 100,
+        "cv": 1,
+        "cvfnt": "'Avant Garde', Avantgarde, 'Century Gothic', CenturyGothic, AppleGothic, sans-serif",
+        "cvfntsz": "15px",
+        "cvfntw": "lighter",
+        "cvbg": "6600cc",
+        "cvw": 75,
+        "cvh": 30
+      }
+    }
   </script>
+
+  <noscript>
+    <p style="text-align:center; color:red;">JavaScript is required to use Gamegram. Please enable JavaScript in your browser settings.</p>
+  </noscript>
+
 </body>
 </html>
