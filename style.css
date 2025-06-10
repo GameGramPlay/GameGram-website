@@ -171,4 +171,34 @@ nav a.active {
   background-color: #1de9b6;
 }
 
+/* Search Container */
+.search-container {
+  margin-top: 20px;
+  width: 90%;
+  max-width: 500px;
+}
+
+#searchInput {
+  width: 100%;
+  padding: 12px 18px;
+  font-size: 16px;
+  border: 2px solid #00acc1;
+  border-radius: 25px;
+  outline: none;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+#searchInput:focus {
+  border-color: #1de9b6;
+  box-shadow: 0 0 8px rgba(0, 229, 255, 0.6);
+}
+
+/* Fallback / Error Messages */
+#gameGrid p {
+  text-align: center;
+  font-size: 18px;
+  color: #00796b;
+}
+
+
 
