@@ -1,9 +1,9 @@
-/* Base Styles */
+/* --- Base Styles with neon gradient background & fade-in --- */
 body {
   margin: 0;
   font-family: 'Orbitron', sans-serif;
-  background: linear-gradient(135deg, #e0f7fa, #b2ebf2);
-  color: #000;
+  background: linear-gradient(135deg, #1a0033, #330066);
+  color: #ddd;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -11,21 +11,19 @@ body {
   transition: background 0.6s;
 }
 
-/* Title Bubble with shimmer effect */
+/* Title Bubble with glowing pulse + neon shimmer */
 .title-bubble {
-  background: linear-gradient(120deg, #00e5ff, #1de9b6);
-  display: inline-block;
-  padding: 18px 35px;
+  background: #5a00ff55;
   border-radius: 40px;
-  font-size: 28px;
-  font-weight: bold;
-  margin: 60px auto;
-  width: 50%;
-  letter-spacing: 2px;
-  text-align: center;
-  animation: fade-in-scale 0.8s ease-out, shimmer 3s infinite linear;
-  background-size: 200% 100%;
-  transition: background-color 0.3s, transform 0.3s;
+  padding: 15px 30px;
+  font-size: 1.7rem;
+  letter-spacing: 0.1em;
+  color: #bb86fc;
+  text-shadow:
+    0 0 10px #bb86fc,
+    0 0 20px #bb86fc;
+  animation: pulseGlow 3s ease-in-out infinite alternate, shimmer 4s linear infinite;
+  user-select: none;
   margin-bottom: 60px;
 }
 
@@ -34,12 +32,12 @@ body {
   100% { background-position: 200% 50%; }
 }
 
-.title-bubble:hover {
-  background-color: #1de9b6;
-  transform: scale(1.02);
+@keyframes pulseGlow {
+  0% { text-shadow: 0 0 10px #bb86fc; }
+  100% { text-shadow: 0 0 20px #bb86fc; }
 }
 
-/* Navigation */
+/* Navigation with subtle glow & hover scale */
 nav {
   margin-top: 30px;
   text-align: center;
@@ -49,51 +47,30 @@ nav {
 nav a {
   margin: 0 15px;
   text-decoration: none;
-  color: #00796b;
+  color: #aa77ffcc;
   font-weight: bold;
   font-size: 18px;
-  transition: color 0.3s, transform 0.2s;
-}
-
-nav a:hover {
-  color: #004d40;
-  transform: scale(1.1);
+  transition: color 0.3s, transform 0.2s, text-shadow 0.3s;
+  position: relative;
+  padding: 6px 10px;
+  border-radius: 6px;
 }
 
 nav a.active {
-  color: #000;
-  text-decoration: underline;
+  color: #fff;
+  box-shadow:
+    0 0 12px #bb86fc,
+    0 0 24px #bb86fc;
+  pointer-events: none;
 }
 
-/* Diamond Animation */
-.diamond {
-  width: 100px;
-  height: 100px;
-  background: linear-gradient(to bottom right, #003344, #00acc1);
-  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
-  margin: 40px auto;
-  animation: pulse 2s infinite ease-in-out;
+nav a:hover:not(.active) {
+  color: #ffccff;
+  text-shadow: 0 0 8px #ffccff;
+  transform: scale(1.1);
 }
 
-/* Feature Bubble */
-.feature-bubble {
-  background-color: #00e5ff;
-  padding: 15px 25px;
-  border-radius: 25px;
-  font-size: 18px;
-  margin: 12px auto;
-  width: fit-content;
-  transition: transform 0.2s, background-color 0.3s, box-shadow 0.3s;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.feature-bubble:hover {
-  background-color: #1de9b6;
-  transform: scale(1.05);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
-}
-
-/* Waveform Animation */
+/* Waveform bars: neon pulse & glow */
 .waveform {
   margin: 40px auto 0;
   display: flex;
@@ -103,18 +80,22 @@ nav a.active {
 }
 
 .bar {
-  width: 6px;
-  background-color: black;
-  margin: 0 3px;
-  animation: bounce 1.2s infinite ease-in-out;
+  width: 8px;
+  height: 30px;
+  background: #a178ff;
+  margin: 0 6px;
+  border-radius: 3px;
+  animation: wavePulse 1.5s ease-in-out infinite;
+  filter: drop-shadow(0 0 4px #a178ff);
 }
 
-.bar:nth-child(1) { animation-delay: 0s; }
-.bar:nth-child(2) { animation-delay: 0.1s; }
-.bar:nth-child(3) { animation-delay: 0.2s; }
-.bar:nth-child(4) { animation-delay: 0.3s; }
-.bar:nth-child(5) { animation-delay: 0.4s; }
-.bar:nth-child(6) { animation-delay: 0.5s; }
+.bar:nth-child(odd) {
+  animation-delay: 0s;
+}
+
+.bar:nth-child(even) {
+  animation-delay: 0.75s;
+}
 
 /* Games Grid */
 .game-grid {
@@ -126,130 +107,117 @@ nav a.active {
   max-width: 1000px;
 }
 
-/* Game Cubes with float hover */
+/* Game Cubes futuristic neon style + fade-in + hover */
 .game-cube {
-  background: linear-gradient(to bottom right, #00acc1, #003344);
-  color: white;
-  text-decoration: none;
-  padding: 40px 20px;
+  background: linear-gradient(135deg, #5d00ffcc 0%, #2e005fcc 100%);
+  border-radius: 16px;
+  padding: 18px 12px;
+  color: #eee;
   text-align: center;
-  border-radius: 20px;
-  font-size: 18px;
-  font-weight: bold;
-  transition: transform 0.4s ease, background-color 0.3s;
-  box-shadow: 0 6px 15px rgba(0,0,0,0.3);
+  font-weight: 600;
+  font-size: 1.1rem;
+  box-shadow:
+    0 0 14px #bb86fc,
+    inset 0 0 6px #aa77ff99;
+  text-transform: capitalize;
+  cursor: pointer;
+  transition: box-shadow 0.4s ease, transform 0.3s ease, color 0.3s ease;
+  user-select: none;
+  opacity: 0;
+  transform: translateY(18px);
+  animation: fadeInUp 0.6s ease forwards;
   position: relative;
   overflow: hidden;
 }
 
-.game-cube::after {
-  content: "";
-  position: absolute;
-  top: -100%;
-  left: -100%;
-  width: 200%;
-  height: 200%;
-  background: radial-gradient(circle, rgba(255,255,255,0.1) 10%, transparent 80%);
-  animation: hover-glow 3s linear infinite;
-  pointer-events: none;
+.game-cube:hover,
+.game-cube:focus {
+  box-shadow:
+    0 0 18px #cc88ff,
+    inset 0 0 12px #ddaaff;
+  transform: translateY(-6px) scale(1.05);
+  color: #fff;
+  outline: none;
 }
 
-@keyframes hover-glow {
-  0% { transform: translate(0, 0); }
-  100% { transform: translate(50%, 50%); }
+/* Loading spinner with neon glow */
+.loading-spinner {
+  width: 56px;
+  height: 56px;
+  border: 6px solid #6600cc33;
+  border-top: 6px solid #bb86fc;
+  border-radius: 50%;
+  animation: spin 1.2s linear infinite;
+  filter: drop-shadow(0 0 8px #bb86fc);
+  margin: 40px auto;
 }
 
-.game-cube:hover {
-  transform: translateY(-8px) scale(1.05);
-  background-color: #1de9b6;
-}
-
-/* Search */
-.search-container {
-  margin-top: 20px;
-  width: 90%;
-  max-width: 500px;
-}
-
+/* Search Input neon style */
 #searchInput {
   width: 100%;
   padding: 12px 18px;
   font-size: 16px;
-  border: 2px solid #00acc1;
+  border: 2px solid #6600cc;
   border-radius: 25px;
+  background: #2a0066;
+  color: #ddd;
   outline: none;
-  transition: border-color 0.3s, box-shadow 0.3s;
+  box-shadow: 0 0 10px #6600cc;
+  transition: border-color 0.3s, box-shadow 0.4s ease, background-color 0.3s;
 }
 
 #searchInput:focus {
-  border-color: #1de9b6;
-  box-shadow: 0 0 8px rgba(0, 229, 255, 0.6);
+  border-color: #bb86fc;
+  box-shadow:
+    0 0 16px #bb86fc,
+    0 0 28px #bb86fc;
+  background: #3a007f;
+  color: #fff;
+  font-weight: 600;
 }
 
-/* Game Link List (if used) */
-.game-list {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 60px;
+/* Footer link with subtle neon glow */
+footer a {
+  color: #bb86fc;
+  transition: color 0.25s ease, text-shadow 0.25s ease;
 }
 
-.game-link {
-  text-decoration: none;
-  background-color: #00e5ff;
-  padding: 12px 24px;
-  border-radius: 20px;
-  font-size: 20px;
-  color: #003344;
-  transition: transform 0.2s, background-color 0.3s;
-}
-
-.game-link:hover {
-  background-color: #1de9b6;
-  transform: scale(1.05);
-}
-
-/* Error Message / Fallback */
-#gameGrid p {
-  text-align: center;
-  font-size: 18px;
-  color: #00796b;
-}
-
-/* Spinner */
-.loading-spinner {
-  width: 48px;
-  height: 48px;
-  border: 5px solid rgba(0, 229, 255, 0.4);
-  border-top: 5px solid #00e5ff;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin: 60px auto;
+footer a:hover {
+  color: #fff;
+  text-shadow: 0 0 12px #bb86fc;
 }
 
 /* Animations */
-@keyframes bounce {
-  0%, 100% { height: 15px; }
-  50% { height: 50px; }
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes wavePulse {
+  0%, 100% {
+    height: 30px;
+    background-color: #a178ff;
+    filter: drop-shadow(0 0 4px #a178ff);
+  }
+  50% {
+    height: 52px;
+    background-color: #d3b3ff;
+    filter: drop-shadow(0 0 12px #d3b3ff);
+  }
+}
+
+@keyframes fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes fade-in {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes fade-in-scale {
-  from { opacity: 0; transform: scale(0.8); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-@keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
 }
