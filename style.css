@@ -200,5 +200,17 @@ nav a.active {
   color: #00796b;
 }
 
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 5px solid rgba(0, 229, 255, 0.4);
+  border-top: 5px solid #00e5ff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 60px auto;
+}
 
-
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
