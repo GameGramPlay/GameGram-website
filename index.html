@@ -64,9 +64,17 @@
   <script>
     let allGames = [];
 
+    const showSpinner = () => {
+      document.getElementById('loadingSpinner').style.display = 'block';
+    };
+
+    const hideSpinner = () => {
+      document.getElementById('loadingSpinner').style.display = 'none';
+    };
+
     const renderGames = (games) => {
       const grid = document.getElementById("gameGrid");
-      grid.innerHTML = "";
+      grid.innerHTML = ""; // clear all content
 
       if (games.length === 0) {
         grid.innerHTML = "<p>No games found.</p>";
@@ -84,15 +92,19 @@
     };
 
     const loadGames = () => {
+      showSpinner();
+
       const timestamp = Date.now();
       fetch(`games/index.json?t=${timestamp}`)
         .then(res => res.json())
         .then(data => {
           allGames = data;
+          hideSpinner();
           renderGames(allGames);
         })
         .catch(err => {
           console.error("Could not load game list:", err);
+          hideSpinner();
           document.getElementById("gameGrid").innerHTML = "<p>⚠️ Failed to load games.</p>";
         });
     };
@@ -111,12 +123,12 @@
       });
 
       document.addEventListener("keydown", (e) => {
-        // Focus search
+        // Focus search input with '/'
         if (e.key === '/' && document.activeElement !== searchInput) {
           e.preventDefault();
           searchInput.focus();
         }
-        // Clear + blur search
+        // Clear search and blur input with 'Escape'
         else if (e.key === 'Escape') {
           searchInput.value = "";
           searchInput.blur();
