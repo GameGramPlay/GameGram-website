@@ -44,7 +44,7 @@
     </div>
 
     <div class="game-grid" id="gameGrid">
-      <p id="loadingMessage">Loading games...</p>
+      <div id="loadingSpinner" class="loading-spinner"></div>
     </div>
   </main>
 
@@ -60,7 +60,7 @@
     <p>Games from <a href="https://github.com/Metroxe/one-html-page-challenge" target="_blank" rel="noopener">One HTML Page Challenge</a></p>
   </footer>
 
-  <!-- Game Fetch + Search -->
+  <!-- Game Fetch + Search + Keyboard -->
   <script>
     let allGames = [];
 
@@ -101,12 +101,27 @@
       loadGames();
 
       const searchInput = document.getElementById("searchInput");
+
       searchInput.addEventListener("input", () => {
         const query = searchInput.value.toLowerCase();
         const filtered = allGames.filter(file =>
           file.toLowerCase().includes(query)
         );
         renderGames(filtered);
+      });
+
+      document.addEventListener("keydown", (e) => {
+        // Focus search
+        if (e.key === '/' && document.activeElement !== searchInput) {
+          e.preventDefault();
+          searchInput.focus();
+        }
+        // Clear + blur search
+        else if (e.key === 'Escape') {
+          searchInput.value = "";
+          searchInput.blur();
+          renderGames(allGames);
+        }
       });
     });
   </script>
