@@ -67,6 +67,19 @@
     form { flex-direction: column; }
     button { width: 100%; }
   }
+  #savedPeersSection h3 {
+  color: #ff6f61;
+  margin-bottom: 0.5rem;
+  }
+  
+  #savedPeersSection button:hover {
+    background: #666;
+  }
+  
+  #savedPeersSection button:active {
+    background: #333;
+  }
+
 </style>
 </head>
 <body>
@@ -81,6 +94,17 @@
     <input type="text" id="connectToId" placeholder="Enter peer ID" required />
     <button type="submit">Connect</button>
   </form>
+
+  <!-- Place this inside <body> in your existing .container just after connectForm -->
+  <section id="savedPeersSection" aria-label="Saved peers">
+    <h3>Saved Peers</h3>
+    <form id="savePeerForm" style="display: flex; gap: 0.5rem;">
+      <input type="text" id="savePeerInput" placeholder="Add peer ID" required />
+      <button type="submit">Save</button>
+    </form>
+    <ul id="savedPeersList" style="margin-top: 0.75rem; list-style: none; padding-left: 1rem;"></ul>
+  </section>
+
 
   <form id="nickForm" autocomplete="off" spellcheck="false" aria-label="Change nickname form">
     <label for="nicknameInput">Your nickname:</label>
@@ -409,6 +433,82 @@
       alert('Failed to copy Peer ID.');
     });
   });
+
+  <!-- Add this JavaScript at the end of your existing <script> -->
+<script>
+  const savePeerForm = document.getElementById('savePeerForm');
+  const savePeerInput = document.getElementById('savePeerInput');
+  const savedPeersList = document.getElementById('savedPeersList');
+
+  function getSavedPeers() {
+    return JSON.parse(localStorage.getItem('savedPeers') || '[]');
+  }
+
+  function setSavedPeers(peers) {
+    localStorage.setItem('savedPeers', JSON.stringify(peers));
+  }
+
+  function renderSavedPeers() {
+    savedPeersList.innerHTML = '';
+    const peers = getSavedPeers();
+    if (peers.length === 0) {
+      const li = document.createElement('li');
+      li.textContent = '(No saved peers)';
+      li.style.color = '#777';
+      savedPeersList.appendChild(li);
+      return;
+    }
+    peers.forEach(pid => {
+      const li = document.createElement('li');
+      li.style.display = 'flex';
+      li.style.justifyContent = 'space-between';
+      li.style.alignItems = 'center';
+      li.style.padding = '0.3rem 0';
+      li.style.borderBottom = '1px solid #333';
+
+      const span = document.createElement('span');
+      span.textContent = pid;
+      span.style.cursor = 'pointer';
+      span.title = 'Click to autofill';
+      span.addEventListener('click', () => {
+        connectToIdInput.value = pid;
+      });
+
+      const delBtn = document.createElement('button');
+      delBtn.textContent = 'Delete';
+      delBtn.style.fontSize = '0.8rem';
+      delBtn.style.padding = '0.2rem 0.5rem';
+      delBtn.style.background = '#444';
+      delBtn.style.color = '#eee';
+      delBtn.style.border = 'none';
+      delBtn.style.borderRadius = '4px';
+      delBtn.style.cursor = 'pointer';
+      delBtn.addEventListener('click', () => {
+        const newPeers = getSavedPeers().filter(p => p !== pid);
+        setSavedPeers(newPeers);
+        renderSavedPeers();
+      });
+
+      li.appendChild(span);
+      li.appendChild(delBtn);
+      savedPeersList.appendChild(li);
+    });
+  }
+
+  savePeerForm.addEventListener('submit', e => {
+    e.preventDefault();
+    const pid = savePeerInput.value.trim();
+    if (!pid) return;
+    const peers = getSavedPeers();
+    if (!peers.includes(pid)) {
+      peers.push(pid);
+      setSavedPeers(peers);
+      renderSavedPeers();
+    }
+    savePeerInput.value = '';
+  });
+
+  renderSavedPeers(); // Load saved peers on start
 
 </script>
 </body>
