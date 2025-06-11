@@ -271,6 +271,7 @@
     peer.on('open', id => {
       localPeerId = id;
       peerIdSpan.textContent = id;
+      localStorage.setItem('peerId', id); // Save peer ID to localStorage
       addChatMessage('Your peer ID is: ' + id, 'System', true);
 
       // Check admin from fetched list
