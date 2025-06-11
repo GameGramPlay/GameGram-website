@@ -261,7 +261,7 @@
       }
     })
     .catch(err => {
-      addChatMessage('Could not load admin peers list, no admin privileges granted.', 'System', true);
+      addChatMessage(err, 'System', true);
     });
 
   // Create or recreate peer with optional saved ID
