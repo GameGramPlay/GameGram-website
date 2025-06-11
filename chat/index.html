@@ -244,7 +244,7 @@
   }
 
     // Fetch admin peers list from /peers.json on GitHub Pages
-  fetch('/peers.json')
+  fetch('peers.json')
     .then(res => {
       if (!res.ok) throw new Error('Failed to fetch admin peers');
       return res.json();
