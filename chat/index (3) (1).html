@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>P2P Node with PeerJS (Nicknames + Admin)</title>
+<style>
+  /* (Keep your existing styles as is, omitted here for brevity) */
+  @import url('https://fonts.googleapis.com/css2?family=Fira+Mono&display=swap');
+  /* Reset and base */
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 1.5rem;
+    background: #121212;
+    color: #e0e0e0;
+    font-family: 'Fira Mono', monospace;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+  h2 { margin-bottom: 1rem; font-weight: 700; text-align: center; letter-spacing: 0.05em; color: #ff6f61; }
+  #peerId { font-weight: 700; color: #61dafb; user-select: all; }
+  .container { max-width: 700px; margin: 0 auto; display: flex; flex-direction: column; gap: 1.5rem; }
+  form { display: flex; gap: 0.7rem; }
+  input[type="text"] {
+    flex: 1; padding: 0.5rem 0.75rem; font-size: 1rem; font-family: 'Fira Mono', monospace;
+    border: 2px solid #333; border-radius: 6px; background: #1f1f1f; color: #e0e0e0;
+    transition: border-color 0.3s ease;
+  }
+  input[type="text"]:focus { outline: none; border-color: #61dafb; background: #222; }
+  button {
+    background: #ff6f61; border: none; color: white; padding: 0 1rem;
+    font-family: 'Fira Mono', monospace; font-size: 1rem; font-weight: 700;
+    border-radius: 6px; cursor: pointer; transition: background-color 0.3s ease;
+  }
+  button:hover { background: #e2584b; }
+  button:active { background: #b5423a; }
+  #connectionsSection {
+    background: #1b1b1b; border-radius: 8px; padding: 1rem; box-shadow: 0 0 10px #ff6f61aa;
+  }
+  #connectionsSection > h3 { margin-top: 0; font-weight: 600; color: #ff6f61; }
+  #connCount { font-weight: 700; color: #61dafb; }
+  #connectionsList {
+    margin-top: 0.75rem; max-height: 120px; overflow-y: auto;
+    list-style: none; padding-left: 1rem;
+  }
+  #connectionsList li {
+    padding: 0.3rem 0; border-bottom: 1px solid #333; color: #ccc; user-select: text;
+  }
+  #chat {
+    background: #1a1a1a; color: #a3ffa3; font-family: 'Fira Mono', monospace;
+    border-radius: 8px; padding: 1rem; height: 260px; overflow-y: auto;
+    box-shadow: inset 0 0 10px #2f2;
+  }
+  #chat p {
+    margin: 0 0 0.4rem 0; line-height: 1.3;
+  }
+  #chat p:nth-child(odd) {
+    color: #7ff17f;
+  }
+  label {
+    font-weight: 600; color: #ff6f61; white-space: nowrap; align-self: center;
+  }
+  @media (max-width: 480px) {
+    body { padding: 1rem; }
+    #chat { height: 180px; }
+    form { flex-direction: column; }
+    button { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<h2>P2P Node with PeerJS (Nicknames + Admin)</h2>
+<div class="container">
+
+  <div>Your Peer ID: <span id="peerId" title="Click to copy">...</span></div>
+
+  <form id="connectForm" autocomplete="off" spellcheck="false" aria-label="Connect to peer form">
+    <label for="connectToId">Connect to peer ID:</label>
+    <input type="text" id="connectToId" placeholder="Enter peer ID" required />
+    <button type="submit">Connect</button>
+  </form>
+
+  <form id="nickForm" autocomplete="off" spellcheck="false" aria-label="Change nickname form">
+    <label for="nicknameInput">Your nickname:</label>
+    <input type="text" id="nicknameInput" placeholder="Enter your nickname" maxlength="20" />
+    <button type="submit">Change Nickname</button>
+  </form>
+
+  <section id="connectionsSection" aria-label="Connected peers">
+    <h3>Connected Peers (<span id="connCount">0</span>)</h3>
+    <ul id="connectionsList" tabindex="0" aria-live="polite"></ul>
+  </section>
+
+  <div id="chat" role="log" aria-live="polite" aria-relevant="additions"></div>
+
+  <form id="messageForm" autocomplete="off" spellcheck="false" aria-label="Send message form">
+    <input type="text" id="messageInput" placeholder="Type message here" autocomplete="off" />
+    <button type="submit">Send</button>
+  </form>
+
+</div>
+
+<script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+<script>
+  const peerIdSpan = document.getElementById('peerId');
+  const connectForm = document.getElementById('connectForm');
+  const connectToIdInput = document.getElementById('connectToId');
+  const connectionsList = document.getElementById('connectionsList');
+  const connCountSpan = document.getElementById('connCount');
+  const chatDiv = document.getElementById('chat');
+  const messageForm = document.getElementById('messageForm');
+  const messageInput = document.getElementById('messageInput');
+  const nickForm = document.getElementById('nickForm');
+  const nicknameInput = document.getElementById('nicknameInput');
+
+  let peer;
+  const connections = new Map(); // peerID -> connection object
+  const nicknames = new Map();   // peerID -> nickname
+  let localPeerId = null;
+  let localNickname = localStorage.getItem('nickname') || `User_${Math.floor(Math.random() * 1000)}`;
+  let isAdmin = false;
+  let adminPeerIds = new Set();
+
+  // Message types for structured communication
+  const MSG_TYPES = {
+    CHAT: 'chat',
+    NICKNAME: 'nickname',
+    KICK: 'kick',
+    ADMIN_ANNOUNCE: 'admin_announce'
+  };
+
+  // Add message to chat window with optional from name and special styling for admin/system
+  function addChatMessage(msg, from = 'System', isSystem = false) {
+    const p = document.createElement('p');
+    p.textContent = `[${from}] ${msg}`;
+    if (isSystem) p.style.fontStyle = 'italic';
+    chatDiv.appendChild(p);
+    chatDiv.scrollTop = chatDiv.scrollHeight;
+  }
+
+  // Update the list of connections showing nicknames and admin label
+  function updateConnectionsUI() {
+    connectionsList.innerHTML = '';
+    for (const [peerId, conn] of connections.entries()) {
+      const li = document.createElement('li');
+      const nick = nicknames.get(peerId) || peerId;
+      li.textContent = nick + (peerId === localPeerId ? " (You)" : "");
+      if (peerId === localPeerId && isAdmin) li.textContent += " [Admin]";
+      connectionsList.appendChild(li);
+    }
+    connCountSpan.textContent = connections.size;
+  }
+
+  // Broadcast a message object to all connected peers
+  function broadcastMessage(obj) {
+    connections.forEach(conn => {
+      if (conn.open) {
+        conn.send(obj);
+      }
+    });
+  }
+
+  // Handle incoming connection and setup data handlers
+  function handleConnection(conn) {
+    if (connections.has(conn.peer)) return; // prevent duplicates
+    connections.set(conn.peer, conn);
+
+    // Initially set nickname to peer ID until received from peer
+    nicknames.set(conn.peer, conn.peer);
+
+    updateConnectionsUI();
+    addChatMessage(`Connected to ${conn.peer}`, 'System', true);
+
+    // When connection opens, send your nickname and admin status
+    conn.on('open', () => {
+      conn.send({ type: MSG_TYPES.NICKNAME, nickname: localNickname });
+      if (isAdmin) {
+        conn.send({ type: MSG_TYPES.ADMIN_ANNOUNCE });
+      }
+    });
+
+    conn.on('data', data => {
+      if (typeof data === 'object' && data.type) {
+        switch (data.type) {
+          case MSG_TYPES.CHAT:
+            const fromNick = nicknames.get(conn.peer) || conn.peer;
+            addChatMessage(data.message, fromNick);
+            break;
+
+          case MSG_TYPES.NICKNAME:
+            nicknames.set(conn.peer, data.nickname || conn.peer);
+            updateConnectionsUI();
+            addChatMessage(`${data.nickname || conn.peer} changed nickname`, 'System', true);
+            break;
+
+          case MSG_TYPES.ADMIN_ANNOUNCE:
+            // If another peer announces admin, then local is not admin
+            if (conn.peer !== localPeerId) {
+              isAdmin = false;
+              updateConnectionsUI();
+            }
+            break;
+
+          case MSG_TYPES.KICK:
+            if (data.target === localPeerId) {
+              addChatMessage('You were kicked by admin.', 'System', true);
+              alert('You were kicked by the admin. Disconnecting...');
+              disconnectAll();
+            }
+            break;
+        }
+      } else {
+        // Fallback: treat as chat text
+        addChatMessage(data, nicknames.get(conn.peer) || conn.peer);
+      }
+    });
+
+    conn.on('close', () => {
+      connections.delete(conn.peer);
+      nicknames.delete(conn.peer);
+      updateConnectionsUI();
+      addChatMessage(`Disconnected from ${conn.peer}`, 'System', true);
+      if (connections.size === 0) {
+        // If no peers left, make self admin
+        isAdmin = true;
+        addChatMessage('You are now the admin (no peers connected).', 'System', true);
+        updateConnectionsUI();
+      }
+    });
+
+    conn.on('error', err => {
+      addChatMessage(`Error with ${conn.peer}: ${err}`, 'Error');
+    });
+  }
+
+  // Disconnect from all peers and reset
+  function disconnectAll() {
+    connections.forEach(conn => conn.close());
+    connections.clear();
+    nicknames.clear();
+    updateConnectionsUI();
+  }
+
+  // Fetch admin peers list from /peers.json on GitHub Pages
+  fetch('/peers.json')
+    .then(res => {
+      if (!res.ok) throw new Error('Failed to fetch admin peers');
+      return res.json();
+    })
+    .then(data => {
+      if (Array.isArray(data)) {
+        adminPeerIds = new Set(data);
+        // Check if localPeerId is already known and matches admin
+        if (localPeerId && adminPeerIds.has(localPeerId)) {
+          isAdmin = true;
+          addChatMessage('You are admin (peer ID matched admin list).', 'System', true);
+          updateConnectionsUI();
+        }
+      }
+    })
+    .catch(err => {
+      addChatMessage('Could not load admin peers list, no admin privileges granted.', 'System', true);
+    });
+
+  // Create or recreate peer with optional saved ID
+  function createPeer(id) {
+    peer = new Peer(id);
+
+    peer.on('open', id => {
+      localPeerId = id;
+      peerIdSpan.textContent = id;
+      addChatMessage('Your peer ID is: ' + id, 'System', true);
+
+      // Check admin from fetched list
+      if (adminPeerIds.has(id)) {
+        isAdmin = true;
+        addChatMessage('You are admin (peer ID matched admin list).', 'System', true);
+      } else {
+        isAdmin = false;
+      }
+
+      updateConnectionsUI();
+    });
+
+    peer.on('connection', conn => {
+      handleConnection(conn);
+    });
+
+    peer.on('error', err => {
+      addChatMessage('Peer error: ' + err, 'Error');
+      if (err.type === 'unavailable-id' || err.type === 'peer-unavailable') {
+        localStorage.removeItem('peerId');
+        createPeer(null);
+      }
+    });
+  }
+
+  createPeer(localStorage.getItem('peerId'));
+
+  // Connect to peer ID from form
+  connectForm.addEventListener('submit', e => {
+    e.preventDefault();
+    const targetId = connectToIdInput.value.trim();
+    if (!targetId) return;
+
+    if (connections.has(targetId)) {
+      alert('Already connected to ' + targetId);
+      return;
+    }
+
+    const conn = peer.connect(targetId);
+
+    conn.on('open', () => {
+      handleConnection(conn);
+      addChatMessage(`Connected to ${targetId}`, 'System', true);
+      // Send local nickname immediately
+      conn.send({ type: MSG_TYPES.NICKNAME, nickname: localNickname });
+      if (isAdmin) {
+        conn.send({ type: MSG_TYPES.ADMIN_ANNOUNCE });
+      }
+    });
+
+    conn.on('error', err => {
+      addChatMessage(`Connection error to ${targetId}: ${err}`, 'Error');
+    });
+
+    connectToIdInput.value = '';
+  });
+
+  // Change nickname form
+  nickForm.addEventListener('submit', e => {
+    e.preventDefault();
+    const newNick = nicknameInput.value.trim();
+    if (!newNick) {
+      alert('Nickname cannot be empty');
+      return;
+    }
+    localNickname = newNick;
+    localStorage.setItem('nickname', newNick);
+    addChatMessage(`You changed your nickname to "${newNick}"`, 'System', true);
+    updateConnectionsUI();
+    // Broadcast nickname change
+    broadcastMessage({ type: MSG_TYPES.NICKNAME, nickname: newNick });
+    nicknameInput.value = '';
+  });
+
+  // Send chat message to all
+  messageForm.addEventListener('submit', e => {
+    e.preventDefault();
+    const msg = messageInput.value.trim();
+    if (!msg) return;
+
+    // Admin command: kick <nickname>
+    if (isAdmin && msg.startsWith('/kick ')) {
+      const targetNick = msg.slice(6).trim();
+      if (!targetNick) {
+        addChatMessage('Usage: /kick <nickname>', 'Admin', true);
+        messageInput.value = '';
+        return;
+      }
+      // Find peer ID by nickname
+      let targetPeerId = null;
+      for (const [pid, nick] of nicknames.entries()) {
+        if (nick === targetNick) {
+          targetPeerId = pid;
+          break;
+        }
+      }
+      if (targetPeerId) {
+        addChatMessage(`Kicking ${targetNick}`, 'Admin', true);
+        // Send kick message to target peer only
+        const targetConn = connections.get(targetPeerId);
+        if (targetConn && targetConn.open) {
+          targetConn.send({ type: MSG_TYPES.KICK, target: targetPeerId });
+          // Also close connection locally
+          targetConn.close();
+          connections.delete(targetPeerId);
+          nicknames.delete(targetPeerId);
+          updateConnectionsUI();
+        }
+      } else {
+        addChatMessage(`No peer with nickname "${targetNick}" found.`, 'Admin', true);
+      }
+      messageInput.value = '';
+      return;
+    }
+
+    if (connections.size === 0) {
+      addChatMessage('No peers connected to send message.', 'System', true);
+      messageInput.value = '';
+      return;
+    }
+
+    // Send chat message to all
+    broadcastMessage({ type: MSG_TYPES.CHAT, message: msg });
+    addChatMessage(msg, localNickname);
+    messageInput.value = '';
+  });
+
+  // Clicking peerId copies to clipboard
+  peerIdSpan.addEventListener('click', () => {
+    if (!localPeerId) return;
+    navigator.clipboard.writeText(localPeerId).then(() => {
+      addChatMessage('Peer ID copied to clipboard.', 'System', true);
+    }).catch(() => {
+      alert('Failed to copy Peer ID.');
+    });
+  });
+
+</script>
+</body>
+</html>
