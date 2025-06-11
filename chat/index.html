@@ -243,7 +243,7 @@
     updateConnectionsUI();
   }
 
-  // Fetch admin peers list from /peers.json on GitHub Pages
+    // Fetch admin peers list from /peers.json on GitHub Pages
   fetch('/peers.json')
     .then(res => {
       if (!res.ok) throw new Error('Failed to fetch admin peers');
@@ -252,7 +252,6 @@
     .then(data => {
       if (Array.isArray(data)) {
         adminPeerIds = new Set(data);
-        // Check if localPeerId is already known and matches admin
         if (localPeerId && adminPeerIds.has(localPeerId)) {
           isAdmin = true;
           addChatMessage('You are admin (peer ID matched admin list).', 'System', true);
@@ -261,8 +260,9 @@
       }
     })
     .catch(err => {
-      addChatMessage(err, 'System', true);
+      addChatMessage('Error fetching /peers.json: ' + err.message, 'System', true);
     });
+
 
   // Create or recreate peer with optional saved ID
   function createPeer(id) {
