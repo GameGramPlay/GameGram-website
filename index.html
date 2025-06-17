@@ -36,10 +36,37 @@
     <div class="bar"></div><div class="bar"></div><div class="bar"></div>
   </section>
 
-  <div id="visitor-counter" class="feature-bubble">
-    <p>Visitors right now: <span id="live-visitors">0</span></p>
-    <p>Total visitors all time: <span id="total-visitors">0</span></p>
+  <div id="visitor-counter" class="feature-bubble" aria-label="Visitor Counter">
+    <!-- SVG visitor counter will be injected here -->
   </div>
+  <script>
+    // Increment localStorage visit count per device/browser
+    const VISITOR_KEY = 'gamegram-visitor-count';
+    let count = parseInt(localStorage.getItem(VISITOR_KEY)) || 0;
+    count++;
+    localStorage.setItem(VISITOR_KEY, count);
+  
+    // Create SVG badge with your custom style
+    const svg = `
+      <svg width="220" height="60" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Visitor count">
+        <defs>
+          <linearGradient id="grad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#00e5ff" />
+            <stop offset="100%" stop-color="#1de9b6" />
+          </linearGradient>
+        </defs>
+        <rect rx="30" ry="30" width="220" height="60" fill="url(#grad)" />
+        <text x="110" y="38" font-family="Orbitron, monospace, sans-serif" font-weight="700" font-size="24" fill="#003344" text-anchor="middle" alignment-baseline="middle">
+          Visits: ${count}
+        </text>
+      </svg>
+    `;
+  
+    // Inject SVG into the visitor-counter div
+    document.getElementById('visitor-counter').innerHTML = svg;
+  </script>
+
+
 
   <main>
     <h2>Games List</h2>
@@ -143,58 +170,6 @@
       });
     });
   </script>
-
-  <script>
-    (function() {
-      const domain = encodeURIComponent(window.location.hostname);
-      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      const page_path = window.location.pathname;
-      const page_title = document.title;
-      const referrer = document.referrer;
-  
-      // Extract search query if coming from a search engine
-      let search_query = '';
-      if (referrer) {
-        try {
-          const url = new URL(referrer);
-          if (url.hostname.includes('google.com')) {
-            search_query = url.searchParams.get('q') || '';
-          } else if (url.hostname.includes('bing.com')) {
-            search_query = url.searchParams.get('q') || '';
-          } else if (url.hostname.includes('yahoo.com')) {
-            search_query = url.searchParams.get('p') || '';
-          } else if (url.hostname.includes('duckduckgo.com')) {
-            search_query = url.searchParams.get('q') || '';
-          }
-        } catch (e) {
-          // Invalid URL, ignore
-        }
-      }
-  
-      fetch('https://visitor.6developer.com/visit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          domain, 
-          timezone,
-          page_path,
-          page_title,
-          referrer,
-          search_query
-        })
-      })
-      .then(response => response.json())
-      .then(data => {
-        console.log('Visitor count:', data);
-        // Display the total count on your page
-        if (document.getElementById('visitor-count')) {
-          document.getElementById('visitor-count').textContent = data.totalCount;
-        }
-      })
-      .catch(error => console.error('Error:', error));
-    })();
-  </script>
-
 
   <!-- Service Worker -->
   <script>
