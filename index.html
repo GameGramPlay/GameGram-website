@@ -147,35 +147,59 @@
         }
       });
     });
-
-    const liveVisitorsSpan = document.getElementById('live-visitors');
-    const totalVisitorsSpan = document.getElementById('total-visitors');
-    
-    // CountAPI namespace and key — customize for your site
-    const NAMESPACE = 'gamegramplay';
-    const KEY = 'visitor_count';
-    
-    // Increment total visitors (one-time)
-    fetch(`https://api.countapi.xyz/hit/${NAMESPACE}/${KEY}`)
-      .then(res => res.json())
-      .then(data => {
-        totalVisitorsSpan.textContent = data.value;
-      });
-    
-    // Show total visitors immediately
-    fetch(`https://api.countapi.xyz/get/${NAMESPACE}/${KEY}`)
-      .then(res => res.json())
-      .then(data => {
-        totalVisitorsSpan.textContent = data.value;
-      });
-    
-    // For live visitors — CountAPI does NOT track live visitors natively
-    // So we fake a rough "live visitor" count by showing how many visitors hit in last minute
-    // This requires a backend or is not reliable in CountAPI alone.
-    // Alternative: Just show total visitors as a fallback
-    liveVisitorsSpan.textContent = 'N/A'; // or just show total visitors for now
-
   </script>
+
+  <script>
+  (function() {
+    const domain = encodeURIComponent(window.location.hostname);
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const page_path = window.location.pathname;
+    const page_title = document.title;
+    const referrer = document.referrer;
+
+    // Extract search query if coming from a search engine
+    let search_query = '';
+    if (referrer) {
+      try {
+        const url = new URL(referrer);
+        if (url.hostname.includes('google.com')) {
+          search_query = url.searchParams.get('q') || '';
+        } else if (url.hostname.includes('bing.com')) {
+          search_query = url.searchParams.get('q') || '';
+        } else if (url.hostname.includes('yahoo.com')) {
+          search_query = url.searchParams.get('p') || '';
+        } else if (url.hostname.includes('duckduckgo.com')) {
+          search_query = url.searchParams.get('q') || '';
+        }
+      } catch (e) {
+        // Invalid URL, ignore
+      }
+    }
+
+    fetch('https://visitor.6developer.com/visit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        domain, 
+        timezone,
+        page_path,
+        page_title,
+        referrer,
+        search_query
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      console.log('Visitor count:', data);
+      // Display the total count on your page
+      if (document.getElementById('visitor-count')) {
+        document.getElementById('visitor-count').textContent = data.totalCount;
+      }
+    })
+    .catch(error => console.error('Error:', error));
+  })();
+</script>
+
 
   <!-- Service Worker -->
   <script>
