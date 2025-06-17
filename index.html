@@ -147,6 +147,34 @@
         }
       });
     });
+
+    const liveVisitorsSpan = document.getElementById('live-visitors');
+    const totalVisitorsSpan = document.getElementById('total-visitors');
+    
+    // CountAPI namespace and key — customize for your site
+    const NAMESPACE = 'gamegramplay';
+    const KEY = 'visitor_count';
+    
+    // Increment total visitors (one-time)
+    fetch(`https://api.countapi.xyz/hit/${NAMESPACE}/${KEY}`)
+      .then(res => res.json())
+      .then(data => {
+        totalVisitorsSpan.textContent = data.value;
+      });
+    
+    // Show total visitors immediately
+    fetch(`https://api.countapi.xyz/get/${NAMESPACE}/${KEY}`)
+      .then(res => res.json())
+      .then(data => {
+        totalVisitorsSpan.textContent = data.value;
+      });
+    
+    // For live visitors — CountAPI does NOT track live visitors natively
+    // So we fake a rough "live visitor" count by showing how many visitors hit in last minute
+    // This requires a backend or is not reliable in CountAPI alone.
+    // Alternative: Just show total visitors as a fallback
+    liveVisitorsSpan.textContent = 'N/A'; // or just show total visitors for now
+
   </script>
 
   <!-- Service Worker -->
