@@ -294,3 +294,34 @@ nav a.active {
   100% { transform: rotate(360deg); }
 }
 
+
+#visitor-counter {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  width: 180px;
+  padding: 15px 20px;
+  background: linear-gradient(135deg, #00acc1, #003344);
+  color: white;
+  font-size: 16px;
+  font-weight: 700;
+  border-radius: 20px;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3);
+  text-align: center;
+  user-select: none;
+  z-index: 1000;
+  font-family: 'Orbitron', monospace;
+  animation: pop-in 0.7s ease forwards;
+}
+
+#visitor-counter p {
+  margin: 6px 0;
+}
+
+#visitor-counter span {
+  color: #00e5ff;
+  font-weight: 900;
+  font-size: 20px;
+  text-shadow: 0 0 8px #00e5ffcc;
+}
+
