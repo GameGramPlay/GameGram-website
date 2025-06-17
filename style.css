@@ -295,33 +295,41 @@ nav a.active {
 }
 
 
-#visitor-counter {
-  position: fixed;
-  top: 20px;
-  left: 20px;
-  width: 180px;
-  padding: 15px 20px;
-  background: linear-gradient(135deg, #00acc1, #003344);
-  color: white;
-  font-size: 16px;
-  font-weight: 700;
-  border-radius: 20px;
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.3);
+#visitor-count {
+  background: linear-gradient(120deg, #00e5ff, #1de9b6);
+  color: #003344;
+  font-family: 'Orbitron', sans-serif;
+  font-weight: bold;
+  font-size: 22px;
+  padding: 16px 40px;
+  border-radius: 40px;
+  box-shadow: 0 6px 16px rgba(0, 229, 255, 0.4);
+  width: fit-content;
+  margin: 40px auto 60px;
   text-align: center;
+  letter-spacing: 2px;
+  animation: fade-in-scale 0.8s ease-out, shimmer 3s infinite linear;
+  background-size: 200% 100%;
+  transition: background-color 0.3s, transform 0.3s, box-shadow 0.3s;
+  cursor: default;
   user-select: none;
-  z-index: 1000;
-  font-family: 'Orbitron', monospace;
-  animation: pop-in 0.7s ease forwards;
 }
 
-#visitor-counter p {
-  margin: 6px 0;
+#visitor-count:hover {
+  background-color: #1de9b6;
+  box-shadow: inset 0 0 12px rgba(0, 229, 255, 0.8), 0 8px 20px rgba(0, 229, 255, 0.4);
+  transform: scale(1.05);
 }
 
-#visitor-counter span {
-  color: #00e5ff;
-  font-weight: 900;
-  font-size: 20px;
-  text-shadow: 0 0 8px #00e5ffcc;
+/* Animations from your style */
+@keyframes shimmer {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
 }
+
+@keyframes fade-in-scale {
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1); }
+}
+
 
