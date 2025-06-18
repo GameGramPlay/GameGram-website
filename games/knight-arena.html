@@ -1,63 +1,64 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta http-equiv="X-UA-Compatible" content="IE=edge" />
-<title>BitLife</title>
-<style>
-    body {
-        margin: 0; /* Remove default margin */
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Knight Arena</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+      background: black;
     }
-    iframe {      
-        display: block;  /* iframes are inline by default */   
-        height: 100vh;  /* Set height to 100% of the viewport height */   
-        width: 100vw;  /* Set width to 100% of the viewport width */     
-        border: none; /* Remove default border */
-        background: lightyellow; /* Just for styling */
+
+    iframe {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+      border: none;
+      background: #000;
     }
-</style>
+  </style>
 </head>
 <body>
-    <iframe id="gameIframe" src="https://www.pacogames.com/multiplayer/knight-arena-io"></iframe>
-    <style>
-        body {
-            background-image: linear-gradient(to left, violet, indigo, blue, green, yellow, orange, red);
-        }
-    </style>
-    <script>
-        const iframe = document.getElementById('gameIframe');
+  <iframe id="gameIframe" src="https://www.pacogames.com/multiplayer/knight-arena-io"></iframe>
 
-        // Prevent the page from redirecting entirely
-        window.addEventListener('beforeunload', (event) => {
-            event.preventDefault();
-            event.returnValue = ''; // Required for most browsers to show a confirmation dialog
-        });
-    </script>
+  <script>
+    // Optional: prevent reloads from closing the game
+    window.addEventListener('beforeunload', (event) => {
+      event.preventDefault();
+      event.returnValue = '';
+    });
+
+    // Optional: dynamic tab disguise
+    document.addEventListener("DOMContentLoaded", function() {
+      const favicon = document.querySelector("link[rel='icon']") || document.createElement("link");
+      favicon.rel = "icon";
+      document.head.appendChild(favicon);
+
+      const storedPreset = localStorage.getItem("selectedTabPreset") || "default";
+
+      switch (storedPreset) {
+        case "google":
+          document.title = "Google";
+          favicon.href = "https://www.google.com/favicon.ico";
+          break;
+        case "classroom":
+          document.title = "Google Classroom";
+          favicon.href = "https://www.gstatic.com/classroom/logo_square_rounded.svg";
+          break;
+        case "vocabulary":
+          document.title = "Vocabulary.com";
+          favicon.href = "https://www.vocabulary.com/favicon.ico";
+          break;
+        default:
+          document.title = "GameGram";
+          favicon.href = "favicon.ico";
+      }
+    });
+  </script>
 </body>
-<script>
-  document.addEventListener("DOMContentLoaded", function() {
-    const favicon = document.querySelector("link[rel='icon']") || document.createElement("link");
-    favicon.rel = "icon";
-    document.head.appendChild(favicon);
-
-    const storedPreset = localStorage.getItem("selectedTabPreset") || "default";
-
-    switch (storedPreset) {
-      case "google":
-        document.title = "Google";
-        favicon.href = "https://www.google.com/favicon.ico";
-        break;
-      case "classroom":
-        document.title = "Google Classroom";
-        favicon.href = "https://www.gstatic.com/classroom/logo_square_rounded.svg";
-        break;
-      case "vocabulary":
-        document.title = "Vocabulary.com";
-        favicon.href = "https://www.vocabulary.com/favicon.ico";
-        break;
-      default:
-        document.title = "GameGram";
-        favicon.href = "favicon.ico";
-    }
-  });
-</script>
 </html>
