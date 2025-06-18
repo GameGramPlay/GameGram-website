@@ -38,48 +38,15 @@
 
   <p></p>
   <p></p>
-  <!-- Load Orbitron font -->
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet" />
-  
   <div id="visitor-counter" class="feature-bubble" aria-label="Visitor Counter">
-    <!-- Your custom SVG will be injected here -->
+    <img 
+      src="https://profile-counter.glitch.me/GameGramPlay/count.svg" 
+      alt="Visitor count badge" 
+      width="220" 
+      height="60" 
+      style="border-radius: 30px;" 
+    />
   </div>
-  
-  <script>
-    const counterUrl = "https://profile-counter.glitch.me/MetrisVailore/count.svg";
-  
-    // Fetch the Glitch-generated SVG and extract the visit number
-    fetch(counterUrl)
-      .then(res => res.text())
-      .then(svgText => {
-        // Match number inside the SVG (very basic, assumes Glitch outputs the count as text)
-        const countMatch = svgText.match(/>(\d+)</);
-        const count = countMatch ? countMatch[1] : '0';
-  
-        // Create your custom styled SVG with the count
-        const customSvg = `
-          <svg width="220" height="60" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Visitor count">
-            <defs>
-              <linearGradient id="grad" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stop-color="#00e5ff" />
-                <stop offset="100%" stop-color="#1de9b6" />
-              </linearGradient>
-            </defs>
-            <rect rx="30" ry="30" width="220" height="60" fill="url(#grad)" />
-            <text x="110" y="38" font-family="Orbitron, monospace, sans-serif" font-weight="700" font-size="24" fill="#003344" text-anchor="middle" alignment-baseline="middle">
-              Visits: ${count}
-            </text>
-          </svg>
-        `;
-  
-        // Inject the custom SVG
-        document.getElementById('visitor-counter').innerHTML = customSvg;
-      })
-      .catch(err => {
-        console.error('Failed to fetch visitor count:', err);
-      });
-  </script>
-
 
   <main>
     <h2>Games List</h2>
