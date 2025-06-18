@@ -332,4 +332,26 @@ nav a.active {
   to { opacity: 1; transform: scale(1); }
 }
 
+#paginationControls {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+#paginationControls button {
+  padding: 8px 14px;
+  border: none;
+  border-radius: 6px;
+  background: #357ABD;
+  color: white;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+#paginationControls button:disabled {
+  background: #999;
+  cursor: default;
+}
+
 
