@@ -76,6 +76,8 @@
   <!-- Game Fetch + Search + Keyboard -->
   <script>
     let allGames = [];
+    let currentPage = 1;
+    const gamesPerPage = 24;
   
     const showSpinner = () => {
       document.getElementById('loadingSpinner').style.display = 'block';
@@ -85,16 +87,28 @@
       document.getElementById('loadingSpinner').style.display = 'none';
     };
   
-    const renderGames = (games) => {
+    const renderGames = (games, page = 1) => {
       const grid = document.getElementById("gameGrid");
+      const pagination = document.getElementById("paginationControls");
+      const pageInfo = document.getElementById("pageInfo");
+      const prevBtn = document.getElementById("prevPage");
+      const nextBtn = document.getElementById("nextPage");
+  
       grid.innerHTML = "";
   
       if (games.length === 0) {
         grid.innerHTML = "<p>No games found.</p>";
+        pagination.style.display = "none";
         return;
       }
   
-      games.forEach(game => {
+      const totalPages = Math.ceil(games.length / gamesPerPage);
+      currentPage = Math.min(Math.max(page, 1), totalPages);
+  
+      const start = (currentPage - 1) * gamesPerPage;
+      const pageGames = games.slice(start, start + gamesPerPage);
+  
+      pageGames.forEach(game => {
         const a = document.createElement("a");
         a.href = game.fullUrl;
         a.className = "game-cube";
@@ -102,226 +116,229 @@
         a.textContent = game.name;
         grid.appendChild(a);
       });
+  
+      pagination.style.display = "flex";
+      pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+      prevBtn.disabled = currentPage === 1;
+      nextBtn.disabled = currentPage === totalPages;
     };
   
     const loadLocalGames = () => {
       return fetch(`games/index.json?t=${Date.now()}`)
         .then(res => res.json())
-        .then(data => {
-          return data.map(file => ({
+        .then(data =>
+          data.map(file => ({
             name: file.replace('.html', '').replace(/[-_]/g, ' '),
             fullUrl: `games/${file}`,
             source: 'local'
-          }));
-        });
+          }))
+        );
     };
   
     const loadSeraphGames = () => {
-      // Static JSON array of Seraph games
-      const seraphList = [
-        "slope/index.html",
-        "subwaysurfers/index.html",
-        "flappybird/index.html",
-        "papaspizzaria/index.html",
-        "papasburgeria/index.html",
-        "supermario64/index.html",
-        "run3/index.html",
-        "bitlife/index.html",
-        "crossyroad/index.html",
-        "minecraft/index.html",
-        "cookieclicker/index.html",
-        "templerun2/index.html",
-        "ducklife4/index.html",
-        "chromedino/index.html",
-        "jetpackjoyride/index.html",
-        "retrobowl/index.html",
-        "fruitninja/index.html",
-        "doodlejump/index.html",
-        "2048/index.html",
-        "tetris/index.html",
-        "fancypantsadventure/index.html",
-        "happywheels/index.html",
-        "papashotdoggeria/index.html",
-        "paperio2/index.html",
-        "superhot/index.html",
-        "bindingofisaac/index.html",
-        "townscaper/index.html",
-        "tunnelrush/index.html",
-        "themehotel/index.html",
-        "escapingtheprison/index.html",
-        "stealingthediamond/index.html",
-        "infiltratingtheairship/index.html",
-        "fleeingthecomplex/index.html",
-        "impossiblequiz/index.html",
-        "solitaire/index.html",
-        "drifthunters/index.html",
-        "vex6/index.html",
-        "amongusfangame/index.html",
-        "edgesurf/index.html",
-        "motox3m/index.html",
-        "fnaf1/index.html",
-        "fnaf2/index.html",
-        "fnaf3/index.html",
-        "fnaf4/index.html",
-        "riddleschool/index.html",
-        "riddleschool2/index.html",
-        "riddleschool3/index.html",
-        "riddleschool4/index.html",
-        "riddleschool5/index.html",
-        "riddletransfer/index.html",
-        "riddletransfer2/index.html",
-        "driftboss/index.html",
-        "fridaynightfunkin/index.html",
-        "pacman/index.html",
-        "papaspancakeria/index.html",
-        "rooftopsnipers/index.html",
-        "baldibasics/index.html",
-        "bobtherobber2/index.html",
-        "minesweeper/index.html",
-        "pokemonemerald/index.html",
-        "pokemonfirered/index.html",
-        "supermariobros/index.html",
-        "supermariokart/index.html",
-        "supermarioworld/index.html",
-        "thereisnogame/index.html",
-        "worldshardestgame/index.html",
-        "castlevania/index.html",
-        "donkeykong/index.html",
-        "drmario/index.html",
-        "metroid/index.html",
-        "supermariobros2/index.html",
-        "supermariobros3/index.html",
-        "legendofzelda/index.html",
-        "warioware/index.html",
-        "yoshisisland/index.html",
-        "donkeykongland/index.html",
-        "kirbysdreamland/index.html",
-        "supermarioland/index.html",
-        "dogeminer/index.html",
-        "tanukisunset/index.html",
-        "aquaparkslides/index.html",
-        "colorswitch/index.html",
-        "papasfreezeria/index.html",
-        "btd/index.html",
-        "btd2/index.html",
-        "btd3/index.html",
-        "btd4/index.html",
-        "bomberman/index.html",
-        "fireemblem/index.html",
-        "iceclimber/index.html",
-        "mariokartsupercircuit/index.html",
-        "pokemonleafgreen/index.html",
-        "pokemonruby/index.html",
-        "pokemonsapphire/index.html",
-        "superstarsaga/index.html",
-        "adofai/index.html",
-        "supersmashflash/index.html",
-        "supermeatboy/index.html",
-        "stickmanhook/index.html",
-        "defendthetank/index.html",
-        "sortthecourt/index.html",
-        "thisistheonlylevel/index.html",
-        "run/index.html",
-        "run2/index.html",
-        "battleships/index.html",
-        "breakingthebank/index.html",
-        "ducklife/index.html",
-        "ducklife2/index.html",
-        "ducklife3/index.html",
-        "linerider/index.html",
-        "mariocombat/index.html",
-        "raftwars2/index.html",
-        "spaceinvaders/index.html",
-        "animalcrossing/index.html",
-        "mariokartds/index.html",
-        "newsupermariobros/index.html",
-        "nintendogs/index.html",
-        "supermario64ds/index.html",
-        "gunmayhem/index.html",
-        "learntofly/index.html",
-        "rooftopsnipers2/index.html",
-        "fireboyandwatergirl/index.html",
-        "chibiknight/index.html",
-        "clusterrush/index.html",
-        "doodledefender/index.html",
-        "learntofly2/index.html",
-        "papasscooperia/index.html",
-        "papassushiria/index.html",
-        "papaswingeria/index.html",
-        "raftwars/index.html",
-        "unfairmario/index.html",
-        "boxingphysics2/index.html",
-        "aceattorney/index.html",
-        "metalgearsolid/index.html",
-        "mother3/index.html",
-        "pokemondiamond/index.html",
-        "pokemonplatinum/index.html",
-        "pokemonsoulsilver/index.html",
-        "advancewars/index.html",
-        "banjopilot/index.html",
-        "supermonkeyballjr/index.html",
-        "impossiblequiz2/index.html",
-        "papasdonuteria/index.html",
-        "fancypantsadventure2/index.html",
-        "tinyfishing/index.html",
-        "bigredbutton/index.html",
-        "achievementunlocked/index.html",
-        "kirbymassattack/index.html",
-        "sonicadvance/index.html",
-        "wormsworldparty/index.html",
-        "badicecream/index.html",
-        "badicecream2/index.html",
-        "badicecream3/index.html",
-        "adventurecapitalist/index.html",
-        "monkeymart/index.html",
-        "doom64/index.html",
-        "banjokazooie/index.html",
-        "donkeykong64/index.html",
-        "f-zero/index.html",
-        "kirby64/index.html",
-        "mariokart64/index.html",
-        "marioparty/index.html",
-        "marioparty2/index.html",
-        "ocarinaoftime/index.html",
-        "starfox64/index.html",
-        "supersmashbros/index.html",
-        "streetfighter2/index.html",
-        "getawayshootout/index.html",
-        "rabbit-samurai/index.html",
-        "mariopartyds/index.html",
-        "professorlayton/index.html",
-        "scribblenauts/index.html",
-        "advancewars2/index.html",
-        "harvestmoon/index.html",
-        "mariotennis/index.html",
-        "megamanzero/index.html",
-        "mysterydungeon/index.html",
-        "pokemounbound/index.html",
-        "papascheeseria/index.html",
-        "papascupcakeria/index.html",
-        "papasbakeria/index.html",
-        "papaspastaria/index.html",
-        "gunmayhem2/index.html",
-        "gunmayhemredux/index.html",
-        "achievementunlocked2/index.html",
-        "achievementunlocked3/index.html",
-        "factoryballs/index.html",
-        "skywire/index.html",
-        "supermarioflash/index.html",
-        "goldensun/index.html",
-        "metroidfusion/index.html",
-        "dbzsupersonicwarriors/index.html",
-        "warioland4/index.html",
-        "ducklife5/index.html",
-        "learntofly3/index.html",
-        "bloxors/index.html",
-        "electricman2/index.html",
-        "portal/index.html",
-        "portal2/index.html",
-        "skywire2/index.html",
-        "du/index.html"
-      ];
-
+        const seraphList = [
+          "slope/index.html",
+          "subwaysurfers/index.html",
+          "flappybird/index.html",
+          "papaspizzaria/index.html",
+          "papasburgeria/index.html",
+          "supermario64/index.html",
+          "run3/index.html",
+          "bitlife/index.html",
+          "crossyroad/index.html",
+          "minecraft/index.html",
+          "cookieclicker/index.html",
+          "templerun2/index.html",
+          "ducklife4/index.html",
+          "chromedino/index.html",
+          "jetpackjoyride/index.html",
+          "retrobowl/index.html",
+          "fruitninja/index.html",
+          "doodlejump/index.html",
+          "2048/index.html",
+          "tetris/index.html",
+          "fancypantsadventure/index.html",
+          "happywheels/index.html",
+          "papashotdoggeria/index.html",
+          "paperio2/index.html",
+          "superhot/index.html",
+          "bindingofisaac/index.html",
+          "townscaper/index.html",
+          "tunnelrush/index.html",
+          "themehotel/index.html",
+          "escapingtheprison/index.html",
+          "stealingthediamond/index.html",
+          "infiltratingtheairship/index.html",
+          "fleeingthecomplex/index.html",
+          "impossiblequiz/index.html",
+          "solitaire/index.html",
+          "drifthunters/index.html",
+          "vex6/index.html",
+          "amongusfangame/index.html",
+          "edgesurf/index.html",
+          "motox3m/index.html",
+          "fnaf1/index.html",
+          "fnaf2/index.html",
+          "fnaf3/index.html",
+          "fnaf4/index.html",
+          "riddleschool/index.html",
+          "riddleschool2/index.html",
+          "riddleschool3/index.html",
+          "riddleschool4/index.html",
+          "riddleschool5/index.html",
+          "riddletransfer/index.html",
+          "riddletransfer2/index.html",
+          "driftboss/index.html",
+          "fridaynightfunkin/index.html",
+          "pacman/index.html",
+          "papaspancakeria/index.html",
+          "rooftopsnipers/index.html",
+          "baldibasics/index.html",
+          "bobtherobber2/index.html",
+          "minesweeper/index.html",
+          "pokemonemerald/index.html",
+          "pokemonfirered/index.html",
+          "supermariobros/index.html",
+          "supermariokart/index.html",
+          "supermarioworld/index.html",
+          "thereisnogame/index.html",
+          "worldshardestgame/index.html",
+          "castlevania/index.html",
+          "donkeykong/index.html",
+          "drmario/index.html",
+          "metroid/index.html",
+          "supermariobros2/index.html",
+          "supermariobros3/index.html",
+          "legendofzelda/index.html",
+          "warioware/index.html",
+          "yoshisisland/index.html",
+          "donkeykongland/index.html",
+          "kirbysdreamland/index.html",
+          "supermarioland/index.html",
+          "dogeminer/index.html",
+          "tanukisunset/index.html",
+          "aquaparkslides/index.html",
+          "colorswitch/index.html",
+          "papasfreezeria/index.html",
+          "btd/index.html",
+          "btd2/index.html",
+          "btd3/index.html",
+          "btd4/index.html",
+          "bomberman/index.html",
+          "fireemblem/index.html",
+          "iceclimber/index.html",
+          "mariokartsupercircuit/index.html",
+          "pokemonleafgreen/index.html",
+          "pokemonruby/index.html",
+          "pokemonsapphire/index.html",
+          "superstarsaga/index.html",
+          "adofai/index.html",
+          "supersmashflash/index.html",
+          "supermeatboy/index.html",
+          "stickmanhook/index.html",
+          "defendthetank/index.html",
+          "sortthecourt/index.html",
+          "thisistheonlylevel/index.html",
+          "run/index.html",
+          "run2/index.html",
+          "battleships/index.html",
+          "breakingthebank/index.html",
+          "ducklife/index.html",
+          "ducklife2/index.html",
+          "ducklife3/index.html",
+          "linerider/index.html",
+          "mariocombat/index.html",
+          "raftwars2/index.html",
+          "spaceinvaders/index.html",
+          "animalcrossing/index.html",
+          "mariokartds/index.html",
+          "newsupermariobros/index.html",
+          "nintendogs/index.html",
+          "supermario64ds/index.html",
+          "gunmayhem/index.html",
+          "learntofly/index.html",
+          "rooftopsnipers2/index.html",
+          "fireboyandwatergirl/index.html",
+          "chibiknight/index.html",
+          "clusterrush/index.html",
+          "doodledefender/index.html",
+          "learntofly2/index.html",
+          "papasscooperia/index.html",
+          "papassushiria/index.html",
+          "papaswingeria/index.html",
+          "raftwars/index.html",
+          "unfairmario/index.html",
+          "boxingphysics2/index.html",
+          "aceattorney/index.html",
+          "metalgearsolid/index.html",
+          "mother3/index.html",
+          "pokemondiamond/index.html",
+          "pokemonplatinum/index.html",
+          "pokemonsoulsilver/index.html",
+          "advancewars/index.html",
+          "banjopilot/index.html",
+          "supermonkeyballjr/index.html",
+          "impossiblequiz2/index.html",
+          "papasdonuteria/index.html",
+          "fancypantsadventure2/index.html",
+          "tinyfishing/index.html",
+          "bigredbutton/index.html",
+          "achievementunlocked/index.html",
+          "kirbymassattack/index.html",
+          "sonicadvance/index.html",
+          "wormsworldparty/index.html",
+          "badicecream/index.html",
+          "badicecream2/index.html",
+          "badicecream3/index.html",
+          "adventurecapitalist/index.html",
+          "monkeymart/index.html",
+          "doom64/index.html",
+          "banjokazooie/index.html",
+          "donkeykong64/index.html",
+          "f-zero/index.html",
+          "kirby64/index.html",
+          "mariokart64/index.html",
+          "marioparty/index.html",
+          "marioparty2/index.html",
+          "ocarinaoftime/index.html",
+          "starfox64/index.html",
+          "supersmashbros/index.html",
+          "streetfighter2/index.html",
+          "getawayshootout/index.html",
+          "rabbit-samurai/index.html",
+          "mariopartyds/index.html",
+          "professorlayton/index.html",
+          "scribblenauts/index.html",
+          "advancewars2/index.html",
+          "harvestmoon/index.html",
+          "mariotennis/index.html",
+          "megamanzero/index.html",
+          "mysterydungeon/index.html",
+          "pokemounbound/index.html",
+          "papascheeseria/index.html",
+          "papascupcakeria/index.html",
+          "papasbakeria/index.html",
+          "papaspastaria/index.html",
+          "gunmayhem2/index.html",
+          "gunmayhemredux/index.html",
+          "achievementunlocked2/index.html",
+          "achievementunlocked3/index.html",
+          "factoryballs/index.html",
+          "skywire/index.html",
+          "supermarioflash/index.html",
+          "goldensun/index.html",
+          "metroidfusion/index.html",
+          "dbzsupersonicwarriors/index.html",
+          "warioland4/index.html",
+          "ducklife5/index.html",
+          "learntofly3/index.html",
+          "bloxors/index.html",
+          "electricman2/index.html",
+          "portal/index.html",
+          "portal2/index.html",
+          "skywire2/index.html",
+          "du/index.html"
+        ];
   
       return Promise.resolve(
         seraphList.map(file => ({
@@ -334,15 +351,13 @@
   
     const loadGames = async () => {
       showSpinner();
-  
       try {
         const [localGames, seraphGames] = await Promise.all([
           loadLocalGames(),
           loadSeraphGames()
         ]);
-  
         allGames = [...localGames, ...seraphGames];
-        renderGames(allGames);
+        renderGames(allGames, 1);
       } catch (err) {
         console.error("Failed to load game lists:", err);
         document.getElementById("gameGrid").innerHTML = "<p>⚠️ Failed to load games.</p>";
@@ -355,13 +370,29 @@
       loadGames();
   
       const searchInput = document.getElementById("searchInput");
+      const prevBtn = document.getElementById("prevPage");
+      const nextBtn = document.getElementById("nextPage");
+  
+      const getFilteredGames = () => {
+        const query = searchInput.value.toLowerCase();
+        return allGames.filter(game => game.name.toLowerCase().includes(query));
+      };
   
       searchInput.addEventListener("input", () => {
-        const query = searchInput.value.toLowerCase();
-        const filtered = allGames.filter(game =>
-          game.name.toLowerCase().includes(query)
-        );
-        renderGames(filtered);
+        currentPage = 1;
+        renderGames(getFilteredGames(), currentPage);
+      });
+  
+      prevBtn.addEventListener("click", () => {
+        if (currentPage > 1) {
+          currentPage--;
+          renderGames(getFilteredGames(), currentPage);
+        }
+      });
+  
+      nextBtn.addEventListener("click", () => {
+        currentPage++;
+        renderGames(getFilteredGames(), currentPage);
       });
   
       document.addEventListener("keydown", (e) => {
@@ -371,12 +402,12 @@
         } else if (e.key === 'Escape') {
           searchInput.value = "";
           searchInput.blur();
-          renderGames(allGames);
+          currentPage = 1;
+          renderGames(allGames, currentPage);
         }
       });
     });
   </script>
-
 
   <!-- Service Worker -->
   <script>
