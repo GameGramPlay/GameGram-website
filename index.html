@@ -76,73 +76,106 @@
   <!-- Game Fetch + Search + Keyboard -->
   <script>
     let allGames = [];
-
+  
     const showSpinner = () => {
       document.getElementById('loadingSpinner').style.display = 'block';
     };
-
+  
     const hideSpinner = () => {
       document.getElementById('loadingSpinner').style.display = 'none';
     };
-
+  
     const renderGames = (games) => {
       const grid = document.getElementById("gameGrid");
-      grid.innerHTML = ""; // clear all content
-
+      grid.innerHTML = "";
+  
       if (games.length === 0) {
         grid.innerHTML = "<p>No games found.</p>";
         return;
       }
-
-      games.forEach(file => {
+  
+      games.forEach(game => {
         const a = document.createElement("a");
-        a.href = `games/${file}`;
+        a.href = game.fullUrl;
         a.className = "game-cube";
         a.target = "_blank";
-        a.textContent = file.replace('.html', '').replace(/[-_]/g, ' ');
+        a.textContent = game.name;
         grid.appendChild(a);
       });
     };
-
-    const loadGames = () => {
-      showSpinner();
-
-      const timestamp = Date.now();
-      fetch(`games/index.json?t=${timestamp}`)
+  
+    const loadLocalGames = () => {
+      return fetch(`games/index.json?t=${Date.now()}`)
         .then(res => res.json())
         .then(data => {
-          allGames = data;
-          hideSpinner();
-          renderGames(allGames);
-        })
-        .catch(err => {
-          console.error("Could not load game list:", err);
-          hideSpinner();
-          document.getElementById("gameGrid").innerHTML = "<p>⚠️ Failed to load games.</p>";
+          return data.map(file => ({
+            name: file.replace('.html', '').replace(/[-_]/g, ' '),
+            fullUrl: `games/${file}`,
+            source: 'local'
+          }));
         });
     };
-
+  
+    const loadSeraphGames = () => {
+      // Static JSON array of Seraph games
+      const seraphList = [
+        "bitlife/index.html",
+        "osumania/index.html",
+        "slope/index.html",
+        "subwaysurfers/index.html",
+        "supermario64/index.html",
+        "gettingoverit/index.html",
+        "1v1lol/index.html",
+        "retrobowl/index.html"
+        // ➕ Add more as needed from full JSON list
+      ];
+  
+      return Promise.resolve(
+        seraphList.map(file => ({
+          name: file.replace('/index.html', '').replace(/[-_]/g, ' '),
+          fullUrl: `https://definitelynotblocked.vercel.app/games/${file}`,
+          source: 'seraph'
+        }))
+      );
+    };
+  
+    const loadGames = async () => {
+      showSpinner();
+  
+      try {
+        const [localGames, seraphGames] = await Promise.all([
+          loadLocalGames(),
+          loadSeraphGames()
+        ]);
+  
+        allGames = [...localGames, ...seraphGames];
+        renderGames(allGames);
+      } catch (err) {
+        console.error("Failed to load game lists:", err);
+        document.getElementById("gameGrid").innerHTML = "<p>⚠️ Failed to load games.</p>";
+      } finally {
+        hideSpinner();
+      }
+    };
+  
     document.addEventListener("DOMContentLoaded", () => {
       loadGames();
-
+  
       const searchInput = document.getElementById("searchInput");
-
+  
       searchInput.addEventListener("input", () => {
         const query = searchInput.value.toLowerCase();
-        const filtered = allGames.filter(file =>
-          file.toLowerCase().includes(query)
+        const filtered = allGames.filter(game =>
+          game.name.toLowerCase().includes(query)
         );
         renderGames(filtered);
       });
-
+  
       document.addEventListener("keydown", (e) => {
-        // Focus search input with '/'
         if (e.key === '/' && document.activeElement !== searchInput) {
           e.preventDefault();
           searchInput.focus();
-        }
-        // Clear search and blur input with 'Escape'
-        else if (e.key === 'Escape') {
+        } else if (e.key === 'Escape') {
           searchInput.value = "";
           searchInput.blur();
           renderGames(allGames);
@@ -150,6 +183,7 @@
       });
     });
   </script>
+
 
   <!-- Service Worker -->
   <script>
