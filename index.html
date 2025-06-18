@@ -352,20 +352,41 @@
   
     const loadGames = async () => {
       showSpinner();
+    
       try {
         const [localGames, seraphGames] = await Promise.all([
           loadLocalGames(),
           loadSeraphGames()
         ]);
+    
         allGames = [...localGames, ...seraphGames];
+    
+        if (!Array.isArray(allGames) || allGames.length === 0) {
+          throw new Error("No games were returned from sources.");
+        }
+    
         renderGames(allGames, 1);
       } catch (err) {
-        console.error("Failed to load game lists:", err);
-        document.getElementById("gameGrid").innerHTML = "<p>⚠️ Failed to load games.</p>";
+        console.error("⚠️ Error loading games:");
+        console.error("Message:", err.message || err);
+        console.error("Stack Trace:", err.stack || "No stack trace");
+    
+        const grid = document.getElementById("gameGrid");
+        grid.innerHTML = `
+          <p style="color: red;"><strong>⚠️ Failed to load games.</strong></p>
+          <p>Error: ${err.message || err}</p>
+          <p>Check the browser console (F12) for more information.</p>
+          <ul style="font-size: 0.9em;">
+            <li>Is <code>games/index.json</code> available?</li>
+            <li>Are CORS settings or hosting issues preventing fetch?</li>
+            <li>Is the <code>seraphList</code> defined properly?</li>
+          </ul>
+        `;
       } finally {
         hideSpinner();
       }
     };
+
   
     document.addEventListener("DOMContentLoaded", () => {
       loadGames();
