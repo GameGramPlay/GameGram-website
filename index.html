@@ -16,9 +16,46 @@
   <link rel="manifest" href="/manifest.json" />
   <link rel="stylesheet" href="style.css?v=4" />
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet" />
+    <!-- Popup Modal -->
+  <div id="popup" class="popup-overlay">
+    <div class="popup-window">
+      <span class="close-button" id="closePopup">&times;</span>
+      <h2>Welcome to Gamegram!</h2>
+      <p>Advertise on our website, with long time players! @aehehe3805mg@ahbs.ae</p>
+    </div>
+  </div>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const popup = document.getElementById("popup");
+      const closeBtn = document.getElementById("closePopup");
+  
+      // Show popup after 1 second
+      setTimeout(() => {
+        popup.style.display = "flex";
+      }, 1000);
+  
+      // Close popup when "×" is clicked
+      closeBtn.addEventListener("click", () => {
+        popup.style.display = "none";
+      });
+  
+      // Close popup when clicking outside the window
+      popup.addEventListener("click", (e) => {
+        if (e.target === popup) {
+          popup.style.display = "none";
+        }
+      });
+  
+      // Close popup on Escape key
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          popup.style.display = "none";
+        }
+      });
+    });
+  </script>
 </head>
 <body>
-
   <nav>
     <a href="index.html" class="active">Home</a>
     <a href="chat/">Chat</a>
