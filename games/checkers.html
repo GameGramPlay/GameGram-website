@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Embedded Checkers with Utility Functions</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      text-align: center;
+    }
+    #game-container {
+      position: relative;
+      display: inline-block;
+      margin-top: 20px;
+    }
+    iframe {
+      border: 2px solid #333;
+      width: 800px;
+      height: 600px;
+    }
+    .controls {
+      margin-top: 10px;
+    }
+    .controls button {
+      margin: 0 5px;
+      padding: 8px 16px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Checkers - Embedded via iframe</h1>
+
+  <div class="controls">
+    <button id="refresh-btn">Refresh Game</button>
+    <button id="fullscreen-btn">Toggle Fullscreen</button>
+    <button id="resize-btn">Toggle Size</button>
+  </div>
+
+  <div id="game-container">
+    <iframe id="checkers-iframe"
+      src="https://buddyboardgames.com/checkers"
+      allowfullscreen>
+    </iframe>
+  </div>
+
+  <script>
+    const iframe = document.getElementById('checkers-iframe');
+    const refreshBtn = document.getElementById('refresh-btn');
+    const fullscreenBtn = document.getElementById('fullscreen-btn');
+    const resizeBtn = document.getElementById('resize-btn');
+    let isFullscreen = false;
+    let isLarge = false;
+
+    // Refresh the iframe to restart the game
+    refreshBtn.addEventListener('click', () => {
+      iframe.src = iframe.src;
+    });
+
+    // Toggle fullscreen mode
+    fullscreenBtn.addEventListener('click', () => {
+      const container = document.getElementById('game-container');
+      if (!isFullscreen) {
+        if (container.requestFullscreen) {
+          container.requestFullscreen();
+        } else if (container.webkitRequestFullscreen) {
+          container.webkitRequestFullscreen();
+        }
+        isFullscreen = true;
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) {
+          document.webkitExitFullscreen();
+        }
+        isFullscreen = false;
+      }
+    });
+
+    // Toggle between default size and a larger size
+    resizeBtn.addEventListener('click', () => {
+      if (!isLarge) {
+        iframe.style.width = '100%';
+        iframe.style.height = '90vh';
+        isLarge = true;
+      } else {
+        iframe.style.width = '800px';
+        iframe.style.height = '600px';
+        isLarge = false;
+      }
+    });
+  </script>
+
+</body>
+</html>
