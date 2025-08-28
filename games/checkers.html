@@ -2,40 +2,78 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Embedded Checkers with Utility Functions</title>
+  <title>GameGram | Checkers with friends</title>
   <style>
+    /* Background: Sand to Dark Blue Gradient */
     body {
-      font-family: Arial, sans-serif;
-      padding: 20px;
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(to bottom right, #fceabb, #2b5876);
+      color: #fff;
       text-align: center;
+      padding: 40px 20px;
     }
+
+    h1 {
+      font-size: 2.5em;
+      margin-bottom: 20px;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
+    }
+
     #game-container {
       position: relative;
       display: inline-block;
-      margin-top: 20px;
+      margin-top: 30px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+      border-radius: 12px;
+      overflow: hidden;
+      border: 3px solid #ffffff55;
     }
+
     iframe {
-      border: 2px solid #333;
       width: 800px;
       height: 600px;
+      border: none;
     }
+
     .controls {
-      margin-top: 10px;
+      margin-top: 20px;
     }
+
     .controls button {
-      margin: 0 5px;
-      padding: 8px 16px;
+      background: linear-gradient(135deg, #3a6186, #89253e);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-size: 1em;
+      margin: 0 8px;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+      transition: transform 0.2s, background 0.3s;
+    }
+
+    .controls button:hover {
+      background: linear-gradient(135deg, #314755, #26a0da);
+      transform: scale(1.05);
+    }
+
+    @media (max-width: 850px) {
+      iframe {
+        width: 100%;
+        height: 70vh;
+      }
     }
   </style>
 </head>
 <body>
 
-  <h1>Checkers - Embedded via iframe</h1>
+  <h1>GameGram | Checkers</h1>
 
   <div class="controls">
-    <button id="refresh-btn">Refresh Game</button>
-    <button id="fullscreen-btn">Toggle Fullscreen</button>
-    <button id="resize-btn">Toggle Size</button>
+    <button id="refresh-btn">🔄 Refresh Game</button>
+    <button id="fullscreen-btn">🖥️ Fullscreen</button>
+    <button id="resize-btn">📐 Toggle Size</button>
   </div>
 
   <div id="game-container">
