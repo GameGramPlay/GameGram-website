@@ -99,7 +99,6 @@ body[data-msgstyle="compact"] .msg .text { font-size:12px; line-height:1.2; }
 
 /* Smooth message animations for new messages only */
 .msg.new { 
-  opacity:0; 
   transform:translateY(5px); 
   transition:all 0.25s ease; 
 }
