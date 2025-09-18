@@ -26,7 +26,6 @@ debugPanel.className = "hidden p-2 border-t mt-2 text-xs font-mono bg-black text
 settingsModal.appendChild(debugPanel);
 
 let nickname = "", nickColor = "#ffffff", status = "online";
-let roomName = "lobby";                 // default
 let peer;                               // PeerJS Peer instance
 const peers = new Map();                // peerId => DataConnection
 const knownPeers = new Set();           // discovered peers
