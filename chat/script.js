@@ -222,6 +222,7 @@ function addMsg(nick,text,time,color,id,save=true){
       <span class="reactBtn">👍</span>
       <span class="reactBtn">❤️</span>
     </div>`;
+  setTimeout(()=>div.classList.add('show'),10); // fade-in animation
   messagesEl.appendChild(div);
   messagesEl.scrollTop=messagesEl.scrollHeight;
 
