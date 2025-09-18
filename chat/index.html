@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>GameGram Lobby Chat</title>
+  <title>Lobby Chat</title>
   <style>
     :root {
       font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -13,8 +13,16 @@
       --text: #dcddde;
       --muted: #72767d;
     }
-    body { margin:0; background:var(--bg); color:var(--text); display:flex; justify-content:center; }
-    .chat { display:flex; flex-direction:column; height:100vh; width:100%; max-width:800px; }
+    body { margin:0; background:var(--bg); color:var(--text); display:flex; height:100vh; }
+    .sidebar { width:220px; background:var(--panel); display:flex; flex-direction:column; }
+    .sidebar h2 { padding:12px; font-size:14px; text-transform:uppercase; color:var(--muted); margin:0; }
+    #userList { flex:1; overflow-y:auto; padding:8px; }
+    .user { margin:4px 0; font-size:14px; font-weight:500; }
+    .settings { padding:8px; border-top:1px solid #202225; }
+    .settings label { display:block; margin:4px 0; font-size:13px; color:var(--muted); }
+    .settings input { width:100%; margin-top:2px; }
+
+    .chat { flex:1; display:flex; flex-direction:column; }
     header { background:var(--panel); padding:12px; font-weight:bold; text-align:center; }
     #messages { flex:1; overflow-y:auto; padding:12px; }
     .msg { margin-bottom:10px; }
@@ -23,17 +31,43 @@
     .msg .nickname { font-weight:600; margin-right:6px; }
     .system { text-align:center; font-size:12px; color:var(--muted); margin:8px 0; }
     footer { background:var(--panel); padding:12px; display:flex; gap:8px; }
-    input { flex:1; padding:8px; border:none; border-radius:4px; background:#40444b; color:var(--text); }
+    input[type=text] { flex:1; padding:8px; border:none; border-radius:4px; background:#40444b; color:var(--text); }
     button { padding:8px 12px; border:none; border-radius:4px; background:var(--accent); color:white; cursor:pointer; }
     button:hover { background:#4752c4; }
+
+    /* Login screen */
+    #login { position:fixed; inset:0; background:var(--bg); display:flex; align-items:center; justify-content:center; }
+    #login .box { background:var(--panel); padding:20px; border-radius:8px; width:300px; }
+    #login h1 { margin-top:0; font-size:20px; }
+    #login input, #login button { width:100%; margin-top:10px; }
   </style>
 </head>
 <body>
+
+  <!-- Login overlay -->
+  <div id="login">
+    <div class="box">
+      <h1>Enter Lobby</h1>
+      <input id="nickInput" placeholder="Nickname" />
+      <button id="loginBtn">Join</button>
+    </div>
+  </div>
+
+  <!-- App -->
+  <div class="sidebar">
+    <h2>Online</h2>
+    <div id="userList"></div>
+    <div class="settings">
+      <label>Nickname Color
+        <input type="color" id="nickColor" value="#ffffff" />
+      </label>
+    </div>
+  </div>
   <div class="chat">
-    <header>GameGram Lobby Chat</header>
+    <header>Public Lobby Chat</header>
     <div id="messages"></div>
     <footer>
-      <input id="input" placeholder="Type a message..." />
+      <input id="input" type="text" placeholder="Type a message..." />
       <button id="send">Send</button>
     </footer>
   </div>
@@ -44,15 +78,28 @@
     const messagesEl=document.getElementById('messages');
     const input=document.getElementById('input');
     const sendBtn=document.getElementById('send');
+    const userListEl=document.getElementById('userList');
+    const login=document.getElementById('login');
+    const nickInput=document.getElementById('nickInput');
+    const loginBtn=document.getElementById('loginBtn');
+    const nickColorInput=document.getElementById('nickColor');
 
-    let nickname=prompt("Enter your nickname:") || "Guest"+Math.floor(Math.random()*1000);
+    let nickname="";
+    let nickColor="#ffffff";
 
-    // One fixed host ID for everyone
+    // Networking
     const hostId="public-lobby-host";
     let role, peer, conn;
     const conns=new Set();
+    let users={}; // {peerId:{nick,color}}
 
-    startAsRandomPeerAndTryConnectToHost();
+    loginBtn.onclick=()=>{
+      nickname=nickInput.value.trim()||"Guest"+Math.floor(Math.random()*1000);
+      login.style.display='none';
+      startAsRandomPeerAndTryConnectToHost();
+    };
+
+    nickColorInput.oninput=()=>{nickColor=nickColorInput.value;};
 
     function startAsRandomPeerAndTryConnectToHost(){
       role=null;
@@ -62,9 +109,7 @@
         tryConnectToHost();
       });
       peer.on('connection', incoming=>{
-        incoming.on('open',()=>{
-          incoming.send({type:'system',text:'Spectator connected'});
-        });
+        incoming.on('open',()=>{ incoming.send({type:'system',text:'Spectator connected'}); });
       });
     }
 
@@ -78,75 +123,68 @@
         setupConn(conn);
         sendJoin();
       });
-      setTimeout(()=>{ if(!connected){
-        try{attempt.close();}catch(e){}
-        try{peer.destroy();}catch(e){}
-        startAsHost();
-      }},2500);
+      setTimeout(()=>{ if(!connected){ try{attempt.close();}catch(e){} try{peer.destroy();}catch(e){} startAsHost(); }},2500);
     }
 
     function startAsHost(){
       role='host';
       peer=new Peer(hostId);
-      peer.on('open',()=>{
-        addSystem(`Hosting public lobby as ${nickname}`);
-        sendJoin();
-      });
+      peer.on('open',()=>{ addSystem(`Hosting public lobby as ${nickname}`); sendJoin(); });
       peer.on('connection',c=>{
         conns.add(c);
         setupConn(c);
         addSystem('A user joined');
         broadcast({type:'system',text:`${timestamp()} – A user joined`});
+        // send current user list
+        c.send({type:'userlist',users});
       });
     }
 
     function setupConn(c){
       c.on('data',d=>{
         if(d.type==='chat'){
-          addMsg(d.nickname,d.text,d.time);
+          addMsg(d.nickname,d.text,d.time,d.color);
           if(role==='host') broadcast(d,c);
         } else if(d.type==='system'){
           addSystem(d.text);
         } else if(d.type==='join'){
+          users[c.peer]={nick:d.nickname,color:d.color};
+          updateUserList();
           addSystem(`${d.time} – ${d.nickname} joined`);
           if(role==='host') broadcast(d,c);
+        } else if(d.type==='userlist'){
+          users=d.users; updateUserList();
         }
       });
-      c.on('close',()=>{conns.delete(c); addSystem(`${timestamp()} – A user left`); if(role==='host') broadcast({type:'system',text:`${timestamp()} – A user left`}); });
-      c.on('error',err=>{conns.delete(c); console.warn(err);});
+      c.on('close',()=>{conns.delete(c); delete users[c.peer]; updateUserList(); addSystem(`${timestamp()} – A user left`); if(role==='host') broadcast({type:'system',text:`${timestamp()} – A user left`}); });
+      c.on('error',err=>{conns.delete(c); delete users[c.peer]; updateUserList(); console.warn(err);});
     }
 
-    function broadcast(data,except){
-      conns.forEach(c=>{if(c!==except && c.open) c.send(data);});
-    }
+    function broadcast(data,except){ conns.forEach(c=>{if(c!==except && c.open)c.send(data);}); }
 
     function sendMsg(){
-      const text=input.value.trim();
-      if(!text)return;
-      input.value='';
-      const data={type:'chat',nickname,text,time:timestamp()};
-      addMsg(nickname,text,data.time);
-      if(role==='host') broadcast(data);
-      else if(conn&&conn.open) conn.send(data);
+      const text=input.value.trim(); if(!text)return; input.value='';
+      const data={type:'chat',nickname,text,time:timestamp(),color:nickColor};
+      addMsg(nickname,text,data.time,nickColor);
+      if(role==='host') broadcast(data); else if(conn&&conn.open) conn.send(data);
     }
 
     function sendJoin(){
-      const data={type:'join',nickname,time:timestamp()};
-      if(role==='host') broadcast(data);
+      const data={type:'join',nickname,color:nickColor,time:timestamp()};
+      if(role==='host'){ users[peer.id]={nick:nickname,color:nickColor}; updateUserList(); broadcast(data);} 
       else if(conn&&conn.open) conn.send(data);
     }
 
     sendBtn.onclick=sendMsg;
     input.addEventListener('keypress',e=>{if(e.key==='Enter')sendMsg();});
 
-    function addMsg(nick,text,time){
+    function addMsg(nick,text,time,color){
       const div=document.createElement('div');
       div.className='msg';
-      div.innerHTML=`<div class="meta"><span class="nickname">${nick}</span> <span>${time}</span></div><div class="text">${escapeHtml(text)}</div>`;
+      div.innerHTML=`<div class="meta"><span class="nickname" style="color:${color}">${nick}</span> <span>${time}</span></div><div class="text">${escapeHtml(text)}</div>`;
       messagesEl.appendChild(div);
       messagesEl.scrollTop=messagesEl.scrollHeight;
     }
-
     function addSystem(text){
       const div=document.createElement('div');
       div.className='system';
@@ -155,14 +193,23 @@
       messagesEl.scrollTop=messagesEl.scrollHeight;
     }
 
+    function updateUserList(){
+      userListEl.innerHTML="";
+      Object.values(users).forEach(u=>{
+        const div=document.createElement('div');
+        div.className='user';
+        div.style.color=u.color;
+        div.textContent=u.nick;
+        userListEl.appendChild(div);
+      });
+    }
+
     function timestamp(){
       const d=new Date();
       return d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
     }
 
-    function escapeHtml(s){
-      return s.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
-    }
+    function escapeHtml(s){ return s.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
   </script>
 </body>
 </html>
