@@ -25,84 +25,89 @@ let chatHistory=[];
 const hostId="public-lobby-host";
 
 /* ---------------- LocalStorage ---------------- */
-window.onload=()=>{
-  nickname=localStorage.getItem("nickname")||"";
-  nickColor=localStorage.getItem("nickColor")||"#ffffff";
-  status=localStorage.getItem("status")||"online";
+window.onload = () => {
+  nickname = localStorage.getItem("nickname") || "";
+  nickColor = localStorage.getItem("nickColor") || "#ffffff";
+  status = localStorage.getItem("status") || "online";
 
-  document.getElementById("meName").textContent=nickname||"Guest";
-  document.getElementById("meStatus").textContent=`(${status})`;
+  document.getElementById("meName").textContent = nickname || "Guest";
+  document.getElementById("meStatus").textContent = `(${status})`;
 
-  nickColorInput.value=nickColor;
-  statusSelect.value=status;
+  nickColorInput.value = nickColor;
+  statusSelect.value = status;
 
-  const theme=localStorage.getItem("theme")||"dark";
-  document.body.dataset.theme=theme;
-  themeSelect.value=theme;
+  const theme = localStorage.getItem("theme") || "dark";
+  document.body.dataset.theme = theme;
+  themeSelect.value = theme;
 
-  const msgStyle=localStorage.getItem("msgStyle")||"cozy";
-  document.body.dataset.msgstyle=msgStyle;
-  msgStyleSelect.value=msgStyle;
+  const msgStyle = localStorage.getItem("msgStyle") || "cozy";
+  document.body.dataset.msgstyle = msgStyle;
+  msgStyleSelect.value = msgStyle;
 
-  const fontSize=localStorage.getItem("fontSize")||"14";
-  fontSizeInput.value=fontSize;
-  messagesEl.style.fontSize=fontSize+"px";
+  const fontSize = localStorage.getItem("fontSize") || "14";
+  fontSizeInput.value = fontSize;
+  messagesEl.style.fontSize = fontSize+"px";
+
+  // Load stored chat history
+  const storedHistory = JSON.parse(localStorage.getItem("chatHistory") || "[]");
+  storedHistory.forEach(m => addMsg(m.nick, m.text, m.time, m.color, m.id, false));
+  chatHistory = storedHistory;
 };
 
 /* ---------------- Login ---------------- */
-loginBtn.onclick=()=>{
-  nickname=nickInput.value.trim()||"Guest"+Math.floor(Math.random()*1000);
-  localStorage.setItem("nickname",nickname);
-  document.getElementById("meName").textContent=nickname;
+loginBtn.onclick = () => {
+  nickname = nickInput.value.trim() || "Guest"+Math.floor(Math.random()*1000);
+  localStorage.setItem("nickname", nickname);
+  document.getElementById("meName").textContent = nickname;
   login.style.display='none';
   startAsRandomPeerAndTryConnectToHost();
 };
 
 /* ---------------- Settings modal ---------------- */
-settingsBtn.onclick=()=>{
-  nickInputSettings.value=nickname;
+settingsBtn.onclick = () => {
+  nickInputSettings.value = nickname;
   settingsModal.classList.remove("hidden");
 };
-closeSettings.onclick=()=>settingsModal.classList.add("hidden");
+closeSettings.onclick = () => settingsModal.classList.add("hidden");
 
-nickInputSettings.onchange=e=>{
-  nickname=e.target.value.trim()||nickname;
-  localStorage.setItem("nickname",nickname);
-  document.getElementById("meName").textContent=nickname;
+nickInputSettings.onchange = e => {
+  nickname = e.target.value.trim() || nickname;
+  localStorage.setItem("nickname", nickname);
+  document.getElementById("meName").textContent = nickname;
   sendJoin();
 };
-nickColorInput.oninput=e=>{
-  nickColor=e.target.value;
-  localStorage.setItem("nickColor",nickColor);
+nickColorInput.oninput = e => {
+  nickColor = e.target.value;
+  localStorage.setItem("nickColor", nickColor);
   sendJoin();
 };
-statusSelect.onchange=e=>{
-  status=e.target.value;
-  localStorage.setItem("status",status);
-  document.getElementById("meStatus").textContent=`(${status})`;
+statusSelect.onchange = e => {
+  status = e.target.value;
+  localStorage.setItem("status", status);
+  document.getElementById("meStatus").textContent = `(${status})`;
   sendJoin();
 };
-fontSizeInput.oninput=e=>{
-  messagesEl.style.fontSize=e.target.value+"px";
-  localStorage.setItem("fontSize",e.target.value);
+fontSizeInput.oninput = e => {
+  messagesEl.style.fontSize = e.target.value+"px";
+  localStorage.setItem("fontSize", e.target.value);
 };
-themeSelect.onchange=e=>{
-  document.body.dataset.theme=e.target.value;
-  localStorage.setItem("theme",e.target.value);
+themeSelect.onchange = e => {
+  document.body.dataset.theme = e.target.value;
+  localStorage.setItem("theme", e.target.value);
 };
-msgStyleSelect.onchange=e=>{
-  document.body.dataset.msgstyle=e.target.value;
-  localStorage.setItem("msgStyle",e.target.value);
+msgStyleSelect.onchange = e => {
+  document.body.dataset.msgstyle = e.target.value;
+  localStorage.setItem("msgStyle", e.target.value);
 };
 
 /* ---------------- Networking ---------------- */
 function startAsRandomPeerAndTryConnectToHost(){
-  peer=new Peer();
-  peer.on('open',id=>{
+  peer = new Peer();
+  peer.on('open', id => {
     addSystem(`Connected as ${nickname}`);
     tryConnectToHost();
   });
-  peer.on('connection',incoming=>{
+  peer.on('connection', incoming => {
     conns.add(incoming);
     setupConn(incoming);
   });
@@ -110,8 +115,8 @@ function startAsRandomPeerAndTryConnectToHost(){
 
 function tryConnectToHost(){
   let connected=false;
-  const attempt=peer.connect(hostId,{reliable:true});
-  attempt.on('open',()=>{
+  const attempt = peer.connect(hostId,{reliable:true});
+  attempt.on('open', ()=>{
     connected=true;
     role='client';
     conn=attempt;
@@ -119,37 +124,44 @@ function tryConnectToHost(){
     setupConn(conn);
     sendJoin();
   });
-  setTimeout(()=>{ if(!connected){ try{attempt.close();}catch(e){} try{peer.destroy();}catch(e){} startAsHost(); }},2000);
+  setTimeout(()=>{
+    if(!connected){ try{attempt.close();}catch(e){} try{peer.destroy();}catch(e){} startAsHost(); }
+  }, 2000);
 }
 
 function startAsHost(){
   role='host';
-  peer=new Peer(hostId);
+  peer = new Peer(hostId);
   peer.on('open',()=>{ addSystem(`Hosting lobby as ${nickname}`); sendJoin(); });
-  peer.on('connection',c=>{
+  peer.on('connection', c => {
     conns.add(c);
     setupConn(c);
-    c.send({type:'userlist',users});
-    c.send({type:'history',history:chatHistory});
+    c.send({ type: 'userlist', users });
+    c.send({ type: 'history', history: chatHistory });
   });
 }
 
 function setupConn(c){
-  c.on('data',d=>{
+  c.on('data', d => {
     if(d.type==='chat'){
-      addMsg(d.nickname,d.text,d.time,d.color,d.id);
+      addMsg(d.nickname, d.text, d.time, d.color, d.id);
       if(role==='host') broadcast(d,c);
-    } else if(d.type==='system'){
+    }
+    else if(d.type==='system'){
       addSystem(d.text);
-    } else if(d.type==='join'){
-      users[c.peer]={nick:d.nickname,color:d.color,status:d.status};
+    }
+    else if(d.type==='join'){
+      users[c.peer] = {nick:d.nickname,color:d.color,status:d.status};
       updateUserList();
       if(role==='host') broadcast(d,c);
-    } else if(d.type==='userlist'){
+    }
+    else if(d.type==='userlist'){
       users=d.users; updateUserList();
-    } else if(d.type==='history'){
-      d.history.forEach(m=>addMsg(m.nick,m.text,m.time,m.color,m.id));
-    } else if(d.type==='reaction'){
+    }
+    else if(d.type==='history'){
+      d.history.forEach(m=>addMsg(m.nick, m.text, m.time, m.color, m.id));
+    }
+    else if(d.type==='reaction'){
       const msg=chatHistory.find(m=>m.id===d.id);
       if(msg){
         if(!msg.reactions[d.emoji]) msg.reactions[d.emoji]=[];
@@ -157,25 +169,37 @@ function setupConn(c){
         renderReactions(d.id,msg.reactions);
       }
     }
+    else if(d.type==='resync-request'){
+      if(role==='host'){
+        c.send({ type:'userlist', users });
+        const lastIndex = chatHistory.findIndex(m=>m.id===d.lastId);
+        const newMessages = lastIndex>=0 ? chatHistory.slice(lastIndex+1) : chatHistory;
+        if(newMessages.length) c.send({ type:'history', history:newMessages });
+      }
+    }
   });
-  c.on('close',()=>{conns.delete(c); delete users[c.peer]; updateUserList();});
-  c.on('error',err=>{conns.delete(c); delete users[c.peer]; updateUserList(); console.warn(err);});
+
+  c.on('close', ()=>{conns.delete(c); delete users[c.peer]; updateUserList();});
+  c.on('error', err => {conns.delete(c); delete users[c.peer]; updateUserList(); console.warn(err);});
 }
 
-function broadcast(data,except){ conns.forEach(c=>{if(c!==except && c.open)c.send(data);}); }
+function broadcast(data, except){
+  conns.forEach(c=>{if(c!==except && c.open) c.send(data);});
+}
 
 /* ---------------- Chat ---------------- */
 function sendMsg(){
-  const text=input.value.trim(); if(!text)return; input.value='';
+  const text=input.value.trim(); if(!text) return; input.value='';
   const id=Date.now()+"-"+Math.random();
-  const data={type:'chat',nickname,text,time:timestamp(),color:nickColor,id};
-  addMsg(nickname,text,data.time,nickColor,id);
+  const data={type:'chat', nickname, text, time:timestamp(), color:nickColor, id};
+  addMsg(nickname, text, data.time, nickColor, id);
   if(role==='host') broadcast(data); else if(conn&&conn.open) conn.send(data);
 }
 sendBtn.onclick=sendMsg;
-input.addEventListener('keypress',e=>{if(e.key==='Enter')sendMsg();});
+input.addEventListener('keypress', e=>{if(e.key==='Enter') sendMsg();});
 
-function addMsg(nick,text,time,color,id){
+function addMsg(nick,text,time,color,id,save=true){
+  if(messagesEl.querySelector(`.msg[data-id="${id}"]`)) return;
   const div=document.createElement('div');
   div.className='msg';
   div.dataset.id=id;
@@ -192,10 +216,13 @@ function addMsg(nick,text,time,color,id){
     </div>`;
   messagesEl.appendChild(div);
   messagesEl.scrollTop=messagesEl.scrollHeight;
-  chatHistory.push({id,nick,text,time,color,reactions:{}});
-  div.querySelectorAll('.reactBtn').forEach(btn=>{
-    btn.onclick=()=>reactToMsg(id,btn.textContent);
-  });
+
+  div.querySelectorAll('.reactBtn').forEach(btn=>{ btn.onclick=()=>reactToMsg(id, btn.textContent); });
+
+  if(save){
+    chatHistory.push({id,nick,text,time,color,reactions:{}});
+    localStorage.setItem("chatHistory", JSON.stringify(chatHistory));
+  }
 }
 
 function addSystem(text){
@@ -248,5 +275,12 @@ function renderReactions(id,reactions){
 function sendJoin(){
   const data={type:'join',nickname,color:nickColor,status,time:timestamp()};
   if(role==='host'){ users[peer.id]={nick:nickname,color:nickColor,status}; updateUserList(); broadcast(data);}
-  else if(conn&&conn.open) conn.send(data);
+  else if(conn && conn.open) conn.send(data);
 }
+
+/* ---------------- Background Resync ---------------- */
+setInterval(() => {
+  if(role==='client' && conn && conn.open){
+    conn.send({ type:'resync-request', lastId: chatHistory.length ? chatHistory[chatHistory.length-1].id : null });
+  }
+}, 15000);
