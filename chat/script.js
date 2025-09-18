@@ -105,15 +105,32 @@ msgStyleSelect.onchange = e => {
 
 /* ---------------- Networking ---------------- */
 function startAsRandomPeerAndTryConnectToHost() {
-    peer = new Peer();
+    // Use PeerJS public cloud server
+    peer = new Peer(undefined, {
+        host: 'peerjs.com',
+        port: 443,
+        secure: true,
+        config: {
+            'iceServers': [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:global.stun.twilio.com:3478?transport=udp' }
+            ]
+        }
+    });
+
     peer.on('open', id => {
         addSystem(`Connected as ${nickname} (${id})`);
         tryConnectToHost();
     });
+
     peer.on('connection', incoming => {
         conns.add(incoming);
         setupConn(incoming);
     });
+
+    // Optional: auto-connect to known peers from localStorage for faster multi-device connection
+    const known = JSON.parse(localStorage.getItem("knownPeers") || "[]");
+    known.forEach(pid => { if(pid !== peer.id) tryConnectToKnownPeer(pid); });
 }
 
 function tryConnectToHost() {
@@ -126,19 +143,19 @@ function tryConnectToHost() {
         conns.add(conn);
         setupConn(conn);
         sendJoin();
+        saveKnownPeer(hostId);
     });
     attempt.on('error', () => {
-        // fallback to host if connection fails
         if (!connected) {
-            try { attempt.close(); } catch (e) { }
-            try { peer.destroy(); } catch (e) { }
+            try { attempt.close(); } catch (e) {}
+            try { peer.destroy(); } catch (e) {}
             startAsHost();
         }
     });
     setTimeout(() => {
         if (!connected) {
-            try { attempt.close(); } catch (e) { }
-            try { peer.destroy(); } catch (e) { }
+            try { attempt.close(); } catch (e) {}
+            try { peer.destroy(); } catch (e) {}
             startAsHost();
         }
     }, 2000);
@@ -146,15 +163,20 @@ function tryConnectToHost() {
 
 function startAsHost() {
     role = 'host';
-    peer = new Peer(hostId);
+    peer = new Peer(hostId, {
+        host: 'peerjs.com',
+        port: 443,
+        secure: true
+    });
+
     peer.on('open', () => {
         addSystem(`Hosting lobby as ${nickname}`);
         sendJoin();
     });
+
     peer.on('connection', c => {
         conns.add(c);
         setupConn(c);
-        // send user list + full chat history
         c.on('open', () => {
             c.send({ type: 'userlist', users });
             c.send({ type: 'history', history: chatHistory });
@@ -162,64 +184,23 @@ function startAsHost() {
     });
 }
 
-function setupConn(c) {
-    c.on('data', d => {
-        switch (d.type) {
-            case 'chat':
-                if (role === 'host') broadcast(d);
-                addMsg(d.nickname, d.text, d.time, d.color, d.id);
-                break;
-            case 'system':
-                addSystem(d.text);
-                break;
-            case 'join':
-                users[c.peer] = { nick: d.nickname, color: d.color, status: d.status };
-                updateUserList();
-                if (role === 'host') broadcast(d);
-                break;
-            case 'userlist':
-                users = d.users; updateUserList();
-                break;
-            case 'history':
-                d.history.forEach(m => addMsg(m.nick, m.text, m.time, m.color, m.id));
-                break;
-            case 'reaction':
-                const msg = chatHistory.find(m => m.id === d.id);
-                if (msg) {
-                    if (!msg.reactions[d.emoji]) msg.reactions[d.emoji] = [];
-                    if (!msg.reactions[d.emoji].includes(d.user)) msg.reactions[d.emoji].push(d.user);
-                    renderReactions(d.id, msg.reactions);
-                    localStorage.setItem("chatHistory", JSON.stringify(chatHistory));
-                }
-                break;
-            case 'resync-request':
-                if (role === 'host') {
-                    c.send({ type: 'userlist', users });
-                    const lastIndex = chatHistory.findIndex(m => m.id === d.lastId);
-                    const newMessages = lastIndex >= 0 ? chatHistory.slice(lastIndex + 1) : chatHistory;
-                    if (newMessages.length) c.send({ type: 'history', history: newMessages });
-                }
-                break;
-        }
-    });
-
-    c.on('close', () => {
-        conns.delete(c);
-        delete users[c.peer];
-        updateUserList();
-    });
-    c.on('error', err => {
-        conns.delete(c);
-        delete users[c.peer];
-        updateUserList();
-        console.warn(err);
-    });
+/* ---------------- Utility: remember known peers ---------------- */
+function saveKnownPeer(peerId) {
+    let known = JSON.parse(localStorage.getItem("knownPeers") || "[]");
+    if (!known.includes(peerId)) {
+        known.push(peerId);
+        localStorage.setItem("knownPeers", JSON.stringify(known));
+    }
 }
 
-function broadcast(data, except) {
-    conns.forEach(c => {
-        if (c.open && c !== except) c.send(data);
+function tryConnectToKnownPeer(peerId) {
+    const attempt = peer.connect(peerId, { reliable: true });
+    attempt.on('open', () => {
+        conns.add(attempt);
+        setupConn(attempt);
+        saveKnownPeer(peerId);
     });
+    attempt.on('error', () => { /* ignore failed attempt */ });
 }
 
 /* ---------------- Chat ---------------- */
@@ -303,7 +284,9 @@ function timestamp() {
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-function escapeHtml(s) { return s.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])); }
+function escapeHtml(s) { 
+    return s.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])); 
+}
 
 /* ---------------- Reactions ---------------- */
 function reactToMsg(id, emoji) {
@@ -332,8 +315,11 @@ function renderReactions(id, reactions) {
 /* ---------------- Join ---------------- */
 function sendJoin() {
     const data = { type: 'join', nickname, color: nickColor, status, time: timestamp() };
-    if (role === 'host') { users[peer.id] = { nick: nickname, color: nickColor, status }; updateUserList(); broadcast(data); }
-    else if (conn && conn.open) conn.send(data);
+    if (role === 'host') { 
+        users[peer.id] = { nick: nickname, color: nickColor, status }; 
+        updateUserList(); 
+        broadcast(data); 
+    } else if (conn && conn.open) conn.send(data);
 }
 
 /* ---------------- Background Resync ---------------- */
@@ -342,3 +328,59 @@ setInterval(() => {
         conn.send({ type: 'resync-request', lastId: chatHistory.length ? chatHistory[chatHistory.length - 1].id : null });
     }
 }, 15000);
+
+/* ---------------- Connection Setup ---------------- */
+function setupConn(c) {
+    c.on('data', d => {
+        switch (d.type) {
+            case 'chat':
+                if (role === 'host') broadcast(d);
+                addMsg(d.nickname, d.text, d.time, d.color, d.id);
+                break;
+            case 'system':
+                addSystem(d.text);
+                break;
+            case 'join':
+                users[c.peer] = { nick: d.nickname, color: d.color, status: d.status };
+                updateUserList();
+                if (role === 'host') broadcast(d);
+                break;
+            case 'userlist':
+                users = d.users; updateUserList();
+                break;
+            case 'history':
+                d.history.forEach(m => addMsg(m.nick, m.text, m.time, m.color, m.id));
+                break;
+            case 'reaction':
+                const msg = chatHistory.find(m => m.id === d.id);
+                if (msg) {
+                    if (!msg.reactions[d.emoji]) msg.reactions[d.emoji] = [];
+                    if (!msg.reactions[d.emoji].includes(d.user)) msg.reactions[d.emoji].push(d.user);
+                    renderReactions(d.id, msg.reactions);
+                    localStorage.setItem("chatHistory", JSON.stringify(chatHistory));
+                }
+                break;
+            case 'resync-request':
+                if (role === 'host') {
+                    c.send({ type: 'userlist', users });
+                    const lastIndex = chatHistory.findIndex(m => m.id === d.lastId);
+                    const newMessages = lastIndex >= 0 ? chatHistory.slice(lastIndex + 1) : chatHistory;
+                    if (newMessages.length) c.send({ type: 'history', history: newMessages });
+                }
+                break;
+        }
+    });
+
+    c.on('close', () => { conns.delete(c); delete users[c.peer]; updateUserList(); });
+    c.on('error', err => { conns.delete(c); delete users[c.peer]; updateUserList(); console.warn(err); });
+}
+
+/* ---------------- Broadcast ---------------- */
+function broadcast(data, except) {
+    conns.forEach(c => {
+        if (c.open && c !== except) c.send(data);
+    });
+}
+
+
+ 
