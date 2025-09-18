@@ -206,31 +206,43 @@ function sendMsg(){
 sendBtn.onclick=sendMsg;
 input.addEventListener('keypress', e=>{if(e.key==='Enter') sendMsg();});
 
-function addMsg(nick,text,time,color,id,save=true){
-  if(messagesEl.querySelector(`.msg[data-id="${id}"]`)) return;
-  const div=document.createElement('div');
-  div.className='msg';
-  div.dataset.id=id;
-  div.innerHTML=`
-    <div class="meta">
-      <span class="nickname" style="color:${color}">${nick}</span> <span>${time}</span>
-    </div>
-    <div class="text">${escapeHtml(text)}</div>
-    <div class="reactions"></div>
-    <div class="reaction-bar">
-      <span class="reactBtn">😊</span>
-      <span class="reactBtn">👍</span>
-      <span class="reactBtn">❤️</span>
-    </div>`;
-  setTimeout(()=>div.classList.add('show'),10); // fade-in animation
-  messagesEl.appendChild(div);
-  messagesEl.scrollTop=messagesEl.scrollHeight;
+function addMsg(nick, text, time, color, id, save=true){
+  let div = messagesEl.querySelector(`.msg[data-id="${id}"]`);
+  if(!div){
+    div = document.createElement('div');
+    div.className='msg';
+    div.dataset.id=id;
+    div.innerHTML=`
+      <div class="meta">
+        <span class="nickname" style="color:${color}">${nick}</span> <span>${time}</span>
+      </div>
+      <div class="text">${escapeHtml(text)}</div>
+      <div class="reactions"></div>
+      <div class="reaction-bar">
+        <span class="reactBtn">😊</span>
+        <span class="reactBtn">👍</span>
+        <span class="reactBtn">❤️</span>
+      </div>`;
+    setTimeout(()=>div.classList.add('show'),10); // fade-in animation
+    messagesEl.appendChild(div);
+    messagesEl.scrollTop=messagesEl.scrollHeight;
 
-  div.querySelectorAll('.reactBtn').forEach(btn=>{ btn.onclick=()=>reactToMsg(id, btn.textContent); });
+    div.querySelectorAll('.reactBtn').forEach(btn=>{
+      btn.onclick=()=>reactToMsg(id, btn.textContent);
+    });
+  } else {
+    // If message already exists, just update text/nick/color if needed
+    div.querySelector('.nickname').style.color = color;
+    div.querySelector('.nickname').textContent = nick;
+    div.querySelector('.text').innerHTML = escapeHtml(text);
+  }
 
   if(save){
-    chatHistory.push({id,nick,text,time,color,reactions:{}});
-    localStorage.setItem("chatHistory", JSON.stringify(chatHistory));
+    // Avoid duplicating in chatHistory
+    if(!chatHistory.find(m=>m.id===id)){
+      chatHistory.push({id,nick,text,time,color,reactions:{}});
+      localStorage.setItem("chatHistory", JSON.stringify(chatHistory));
+    }
   }
 }
 
