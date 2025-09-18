@@ -6,6 +6,7 @@ const sendBtn = document.getElementById('send');
 const userListEl = document.getElementById('userList');
 const login = document.getElementById('login');
 const nickInput = document.getElementById('nickInput');
+const roomInput = document.getElementById('roomInput'); // <-- add this input in HTML
 const loginBtn = document.getElementById('loginBtn');
 
 const settingsBtn = document.getElementById("settingsBtn");
@@ -25,9 +26,10 @@ debugPanel.className = "hidden p-2 border-t mt-2 text-xs font-mono bg-black text
 settingsModal.appendChild(debugPanel);
 
 let nickname = "", nickColor = "#ffffff", status = "online";
-let peer;                                // PeerJS Peer instance
-const peers = new Map();                 // peerId => DataConnection
-const knownPeers = new Set();            // discovered peers
+let roomName = "lobby";                 // default
+let peer;                               // PeerJS Peer instance
+const peers = new Map();                // peerId => DataConnection
+const knownPeers = new Set();           // discovered peers
 let chatHistory = [];
 let users = {};
 let debugEnabled = true;
@@ -61,12 +63,14 @@ window.onload = () => {
   nickname = localStorage.getItem("nickname") || "";
   nickColor = localStorage.getItem("nickColor") || "#ffffff";
   status = localStorage.getItem("status") || "online";
+  roomName = localStorage.getItem("roomName") || "lobby";
 
   document.getElementById("meName").textContent = nickname || "Guest";
   document.getElementById("meStatus").textContent = `(${status})`;
 
   nickColorInput.value = nickColor;
   statusSelect.value = status;
+  roomInput.value = roomName;
 
   const theme = localStorage.getItem("theme") || "dark";
   document.body.dataset.theme = theme;
@@ -91,7 +95,9 @@ window.onload = () => {
 // ---------- Login ----------
 loginBtn.onclick = () => {
   nickname = nickInput.value.trim() || "Guest" + Math.floor(Math.random() * 1000);
+  roomName = roomInput.value.trim() || "lobby";
   localStorage.setItem("nickname", nickname);
+  localStorage.setItem("roomName", roomName);
   document.getElementById("meName").textContent = nickname;
   login.style.display = 'none';
   startPeerWithFallbacks();
@@ -135,6 +141,9 @@ msgStyleSelect.onchange = e => {
 };
 
 // ---------- PeerJS startup with host fallbacks ----------
+function makePeerId() {
+  return `${roomName}-${Math.random().toString(36).substr(2, 9)}`;
+}
 function startPeerWithFallbacks() {
   addSystem("Starting PeerJS client — trying public cloud endpoints...");
   tryPeerHostsSequentially(PEERJS_HOSTS.slice(), 0);
@@ -174,9 +183,9 @@ function tryPeerHostsSequentially(hosts, attemptIndex) {
 }
 function startPeerWithOptions(opts, callback) {
   try { if (peer && !peer.destroyed) peer.destroy(); } catch {}
-  peer = new Peer(undefined, opts);
+  peer = new Peer(makePeerId(), opts);
   peer.on('open', id => {
-    addSystem(`Connected as ${nickname} (${id})`);
+    addSystem(`Connected as ${nickname} (${id}) in room [${roomName}]`);
     logDebug("Peer open", id);
     const known = JSON.parse(localStorage.getItem("knownPeers") || "[]");
     known.forEach(pid => { if (pid !== id) connectToPeer(pid); });
@@ -213,7 +222,7 @@ function setupConn(conn) {
     saveKnownPeer(conn.peer);
     conn.send({ type: 'join', id: peer.id, nickname, color: nickColor, status });
     conn.send({ type: 'history', history: chatHistory });
-    conn.send({ type: 'peerlist', peers: Array.from(knownPeers) });
+    conn.send({ type: 'peerlist', peers: Array.from(knownPeers).concat([peer.id]) });
   });
   conn.on('data', data => {
     logDebug(`Data from ${conn.peer}`, data);
@@ -221,7 +230,14 @@ function setupConn(conn) {
       case 'chat': handleIncomingMsg(data); break;
       case 'join': handlePeerJoin(data); break;
       case 'history': syncHistory(data.history); break;
-      case 'peerlist': (data.peers||[]).forEach(p => { if (p!==peer.id && !peers.has(p)) connectToPeer(p); }); break;
+      case 'peerlist':
+        (data.peers||[]).forEach(p => {
+          if (p!==peer.id && !peers.has(p)) {
+            knownPeers.add(p);
+            connectToPeer(p);
+          }
+        });
+        break;
       case 'reaction': handleReaction(data); break;
     }
   });
@@ -287,7 +303,6 @@ function reactToMsg(id, emoji) {
   renderReactions(id, msg.reactions);
   localStorage.setItem("chatHistory", JSON.stringify(chatHistory));
 
-  // broadcast reaction to everyone else
   broadcast({ type: 'reaction', id, emoji, user: nickname });
 }
 function handleReaction(data) {
@@ -357,7 +372,6 @@ function sendJoin() {
   updateUserList();
 }
 
-
 function timestamp() {
   return new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
 }
@@ -368,6 +382,13 @@ function saveKnownPeer(peerId) {
   let known = JSON.parse(localStorage.getItem("knownPeers")||"[]");
   if(!known.includes(peerId)) { known.push(peerId); localStorage.setItem("knownPeers", JSON.stringify(known)); }
 }
+
+// ---------- Periodic Gossip ----------
+setInterval(() => {
+  if (peer && peer.open) {
+    broadcast({ type: 'peerlist', peers: Array.from(knownPeers).concat([peer.id]) });
+  }
+}, 20000);
 
 setInterval(() => {
   if (peer && peer.open) {
