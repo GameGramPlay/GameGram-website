@@ -89,3 +89,27 @@ button:hover { background:#4752c4; }
 /* Message styles */
 body[data-msgstyle="compact"] .msg { margin-bottom:4px; }
 body[data-msgstyle="compact"] .msg .text { font-size:12px; line-height:1.2; }
+
+/* Big join button */
+.big-btn { 
+  width:100%; padding:15px; font-size:18px; border:none; border-radius:8px; 
+  background:#5865f2; color:#fff; cursor:pointer; transition:0.2s;
+}
+.big-btn:hover { background:#4752c4; }
+
+/* Smooth message animations */
+.msg { opacity:0; transform:translateY(5px); transition:all 0.25s ease; }
+.msg.show { opacity:1; transform:translateY(0); }
+
+/* Reactions appear on hover */
+.msg:hover .reaction-bar { display:flex; }
+
+/* Rounded message bubbles */
+.msg .text { background:#2f3136; padding:6px 10px; border-radius:8px; display:inline-block; }
+
+/* Sidebar hover effect */
+.user:hover { background:rgba(255,255,255,0.05); border-radius:4px; padding:2px 4px; cursor:pointer; }
+
+/* Smooth scroll */
+#messages { scroll-behavior:smooth; }
+
