@@ -52,6 +52,9 @@ window.onload = () => {
   const storedHistory = JSON.parse(localStorage.getItem("chatHistory") || "[]");
   storedHistory.forEach(m => addMsg(m.nick, m.text, m.time, m.color, m.id, false));
   chatHistory = storedHistory;
+
+  // Render reactions
+  storedHistory.forEach(m => renderReactions(m.id, m.reactions || {}));
 };
 
 /* ---------------- Login ---------------- */
@@ -136,6 +139,7 @@ function startAsHost(){
   peer.on('connection', c => {
     conns.add(c);
     setupConn(c);
+    // send user list + full chat history
     c.send({ type: 'userlist', users });
     c.send({ type: 'history', history: chatHistory });
   });
@@ -143,39 +147,43 @@ function startAsHost(){
 
 function setupConn(c){
   c.on('data', d => {
-    if(d.type==='chat'){
-      addMsg(d.nickname, d.text, d.time, d.color, d.id);
-      if(role==='host') broadcast(d,c);
-    }
-    else if(d.type==='system'){
-      addSystem(d.text);
-    }
-    else if(d.type==='join'){
-      users[c.peer] = {nick:d.nickname,color:d.color,status:d.status};
-      updateUserList();
-      if(role==='host') broadcast(d,c);
-    }
-    else if(d.type==='userlist'){
-      users=d.users; updateUserList();
-    }
-    else if(d.type==='history'){
-      d.history.forEach(m=>addMsg(m.nick, m.text, m.time, m.color, m.id));
-    }
-    else if(d.type==='reaction'){
-      const msg=chatHistory.find(m=>m.id===d.id);
-      if(msg){
-        if(!msg.reactions[d.emoji]) msg.reactions[d.emoji]=[];
-        if(!msg.reactions[d.emoji].includes(d.user)) msg.reactions[d.emoji].push(d.user);
-        renderReactions(d.id,msg.reactions);
-      }
-    }
-    else if(d.type==='resync-request'){
-      if(role==='host'){
-        c.send({ type:'userlist', users });
-        const lastIndex = chatHistory.findIndex(m=>m.id===d.lastId);
-        const newMessages = lastIndex>=0 ? chatHistory.slice(lastIndex+1) : chatHistory;
-        if(newMessages.length) c.send({ type:'history', history:newMessages });
-      }
+    switch(d.type){
+      case 'chat':
+        // host receives, then broadcasts to all (including sender)
+        if(role==='host') broadcast(d);
+        addMsg(d.nickname, d.text, d.time, d.color, d.id);
+        break;
+      case 'system':
+        addSystem(d.text);
+        break;
+      case 'join':
+        users[c.peer] = {nick:d.nickname,color:d.color,status:d.status};
+        updateUserList();
+        if(role==='host') broadcast(d);
+        break;
+      case 'userlist':
+        users=d.users; updateUserList();
+        break;
+      case 'history':
+        d.history.forEach(m=>addMsg(m.nick, m.text, m.time, m.color, m.id));
+        break;
+      case 'reaction':
+        const msg=chatHistory.find(m=>m.id===d.id);
+        if(msg){
+          if(!msg.reactions[d.emoji]) msg.reactions[d.emoji]=[];
+          if(!msg.reactions[d.emoji].includes(d.user)) msg.reactions[d.emoji].push(d.user);
+          renderReactions(d.id,msg.reactions);
+          localStorage.setItem("chatHistory", JSON.stringify(chatHistory));
+        }
+        break;
+      case 'resync-request':
+        if(role==='host'){
+          c.send({ type:'userlist', users });
+          const lastIndex = chatHistory.findIndex(m=>m.id===d.lastId);
+          const newMessages = lastIndex>=0 ? chatHistory.slice(lastIndex+1) : chatHistory;
+          if(newMessages.length) c.send({ type:'history', history:newMessages });
+        }
+        break;
     }
   });
 
@@ -184,7 +192,7 @@ function setupConn(c){
 }
 
 function broadcast(data, except){
-  conns.forEach(c=>{if(c!==except && c.open) c.send(data);});
+  conns.forEach(c=>{if(c.open) c.send(data);});
 }
 
 /* ---------------- Chat ---------------- */
@@ -193,7 +201,7 @@ function sendMsg(){
   const id=Date.now()+"-"+Math.random();
   const data={type:'chat', nickname, text, time:timestamp(), color:nickColor, id};
   addMsg(nickname, text, data.time, nickColor, id);
-  if(role==='host') broadcast(data); else if(conn&&conn.open) conn.send(data);
+  if(role==='host') broadcast(data); else if(conn && conn.open) conn.send(data);
 }
 sendBtn.onclick=sendMsg;
 input.addEventListener('keypress', e=>{if(e.key==='Enter') sendMsg();});
@@ -257,7 +265,9 @@ function reactToMsg(id,emoji){
   if(!msg.reactions[emoji]) msg.reactions[emoji]=[];
   if(!msg.reactions[emoji].includes(nickname)) msg.reactions[emoji].push(nickname);
   renderReactions(id,msg.reactions);
-  broadcast({type:'reaction',id,emoji,user:nickname});
+  localStorage.setItem("chatHistory", JSON.stringify(chatHistory));
+  if(role==='host') broadcast({type:'reaction',id,emoji,user:nickname});
+  else if(conn && conn.open) conn.send({type:'reaction',id,emoji,user:nickname});
 }
 
 function renderReactions(id,reactions){
