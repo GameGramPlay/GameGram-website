@@ -1,146 +1,113 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mouse Tracker</title>
-    <style>
-        body, html { margin: 0; height: 100%; overflow: hidden; }
-        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
-    </style>
+  <meta charset="utf-8">
+  <title>Tic Tac Toe Online (PeerJS)</title>
+  <style>
+    body { font-family:sans-serif; display:flex; flex-direction:column; align-items:center; padding:20px; }
+    .board { display:grid; grid-template-columns:repeat(3,100px); gap:5px; margin:20px 0; }
+    .cell { width:100px; height:100px; background:#f9f9f9; display:flex; justify-content:center; align-items:center;
+            font-size:48px; cursor:pointer; border:2px solid #333; }
+    #status { margin:10px; font-size:20px; }
+    input,button { margin:5px; padding:8px; }
+  </style>
 </head>
 <body>
-    <canvas id="canvas"></canvas>
-    <div id="message"></div>
-    <script>
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
-        const messageDiv = document.getElementById('message');
-        
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+  <h1>Multiplayer Tic Tac Toe</h1>
+  <div>
+    <input id="peerIdInput" placeholder="Room ID">
+    <button id="hostBtn">Host Game</button>
+    <button id="joinBtn">Join Game</button>
+  </div>
+  <div id="myId"></div>
 
-        let localConnection;
-        let remoteConnection;
-        let dataChannel;
-        let users = {};
+  <div class="board" id="board"></div>
+  <div id="status">Not connected</div>
 
-        // Generate and exchange signaling data between two peers
-        const signalingData = window.location.hash.slice(1);
+  <!-- PeerJS (public cloud signaling) -->
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <script>
+    const boardEl = document.getElementById('board');
+    const status = document.getElementById('status');
+    const myIdEl = document.getElementById('myId');
+    const input = document.getElementById('peerIdInput');
+    let cells = Array(9).fill(null);
+    let turn = 'X';
+    let mySymbol = null;
+    let conn;
 
-        // If there is signaling data (offer/answer), we are the answerer
-        if (signalingData) {
-            // The user is the answerer
-            messageDiv.innerHTML = "Answering connection request...";
+    // Create PeerJS client (auto-generate ID)
+    const peer = new Peer();
+    peer.on('open', id => {
+      myIdEl.textContent = "Your Room ID: " + id;
+    });
 
-            const data = JSON.parse(atob(signalingData));
-            createAnswer(data.offer);
-        } else {
-            // Otherwise, we are the offerer
-            messageDiv.innerHTML = "Creating connection offer...";
+    // Handle incoming connections (hosting)
+    peer.on('connection', c => {
+      conn = c;
+      mySymbol = 'X';
+      setupConn();
+    });
 
-            createOffer();
+    // Join button
+    document.getElementById('joinBtn').onclick = () => {
+      conn = peer.connect(input.value);
+      mySymbol = 'O';
+      setupConn();
+    };
+
+    // Host button just sets symbol (waiting for others to connect)
+    document.getElementById('hostBtn').onclick = () => {
+      mySymbol = 'X';
+      status.textContent = "Waiting for another player to join...";
+    };
+
+    function setupConn() {
+      conn.on('open', () => {
+        status.textContent = "Connected! You are " + mySymbol;
+        render();
+      });
+      conn.on('data', data => {
+        if (data.type === 'move') {
+          cells[data.idx] = data.symbol;
+          turn = data.symbol === 'X' ? 'O' : 'X';
+          render();
         }
+      });
+    }
 
-        // Create the offer and send it as a link for the other user to respond
-        async function createOffer() {
-            localConnection = new RTCPeerConnection();
-            dataChannel = localConnection.createDataChannel('mouse-movement');
-            dataChannel.onopen = () => console.log('Data Channel Open');
-            dataChannel.onmessage = (event) => receiveMousePos(event.data);
+    // Build board
+    for (let i=0; i<9; i++) {
+      let c = document.createElement('div');
+      c.className = 'cell';
+      c.dataset.i = i;
+      c.onclick = () => move(i, c);
+      boardEl.appendChild(c);
+    }
 
-            // Handle ICE candidates
-            localConnection.onicecandidate = (event) => {
-                if (event.candidate) {
-                    // Send ICE candidate to remote peer
-                    sendIceCandidate(event.candidate);
-                }
-            };
+    function move(i, cell) {
+      if (!mySymbol || turn !== mySymbol || cells[i]) return;
+      cells[i] = mySymbol;
+      conn.send({ type: 'move', idx: i, symbol: mySymbol });
+      turn = mySymbol === 'X' ? 'O' : 'X';
+      render();
+    }
 
-            // Create offer and set local description
-            const offer = await localConnection.createOffer();
-            await localConnection.setLocalDescription(offer);
+    function render() {
+      Array.from(boardEl.children).forEach((c,i)=>c.textContent = cells[i]||'');
+      const winner = checkWinner();
+      if (winner) {
+        status.textContent = (winner==='Draw' ? "It's a draw!" : winner + " wins!");
+      } else {
+        status.textContent = "Turn: " + turn + " | You are " + mySymbol;
+      }
+    }
 
-            // Create signaling link (Base64 encoded offer) to send to the other user
-            const offerLink = document.createElement('a');
-            const offerData = {
-                offer: offer,
-                candidates: []
-            };
-            offerLink.href = `#${btoa(JSON.stringify(offerData))}`;
-            offerLink.innerText = "Click to accept connection (share this link with the other person)";
-            messageDiv.innerHTML = '';
-            messageDiv.appendChild(offerLink);
-        }
-
-        // Create answer to the received offer
-        async function createAnswer(offerData) {
-            remoteConnection = new RTCPeerConnection();
-            remoteConnection.ondatachannel = (event) => {
-                const remoteDataChannel = event.channel;
-                remoteDataChannel.onmessage = (event) => receiveMousePos(event.data);
-            };
-
-            // Handle ICE candidates
-            remoteConnection.onicecandidate = (event) => {
-                if (event.candidate) {
-                    // Send ICE candidate to local peer
-                    sendIceCandidate(event.candidate);
-                }
-            };
-
-            await remoteConnection.setRemoteDescription(offerData.offer);
-
-            // Create answer and send it to local peer
-            const answer = await remoteConnection.createAnswer();
-            await remoteConnection.setLocalDescription(answer);
-
-            // Send back the answer to the offerer
-            offerData.answer = answer;
-            sendSignalingData(offerData);
-        }
-
-        // Send signaling data (offer, answer, ICE candidates)
-        function sendSignalingData(data) {
-            const signalingLink = `#${btoa(JSON.stringify(data))}`;
-            messageDiv.innerHTML = `Connection established! Share this link to connect to others: <a href="${signalingLink}">${signalingLink}</a>`;
-        }
-
-        // Send ICE candidates to the other peer
-        function sendIceCandidate(candidate) {
-            if (remoteConnection) {
-                remoteConnection.addIceCandidate(candidate);
-            } else {
-                console.log('ICE Candidate not yet sent: waiting for peer connection');
-            }
-        }
-
-        // Receive mouse positions and draw them
-        function receiveMousePos(data) {
-            const mousePos = JSON.parse(data);
-            users[mousePos.id] = mousePos;
-            draw();
-        }
-
-        // Draw the users' mouse positions on the canvas
-        function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            for (const id in users) {
-                const user = users[id];
-                ctx.beginPath();
-                ctx.arc(user.x, user.y, 10, 0, Math.PI * 2);
-                ctx.fillStyle = "blue";
-                ctx.fill();
-            }
-        }
-
-        // Track mouse movements and send to remote peer
-        canvas.addEventListener('mousemove', (e) => {
-            const mousePos = { id: Date.now(), x: e.clientX, y: e.clientY };
-            if (dataChannel && dataChannel.readyState === 'open') {
-                dataChannel.send(JSON.stringify(mousePos));
-            }
-        });
-    </script>
+    function checkWinner() {
+      const lines=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+      for (let [a,b,c] of lines) if (cells[a] && cells[a]===cells[b] && cells[a]===cells[c]) return cells[a];
+      return cells.every(x=>x) ? 'Draw' : null;
+    }
+  </script>
 </body>
 </html>
