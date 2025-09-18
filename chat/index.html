@@ -27,9 +27,9 @@
       </label>
       <label>Status
         <select id="statusSelect">
-          <option value="online" selected>Online</option>
-          <option value="idle">Idle</option>
-          <option value="dnd">Do Not Disturb</option>
+          <option value="online">Online</option>
+          <option value="away">Away</option>
+          <option value="busy">Busy</option>
         </select>
       </label>
       <label>Font Size
@@ -37,14 +37,13 @@
       </label>
       <label>Theme
         <select id="themeSelect">
-          <option value="dark" selected>Dark</option>
+          <option value="dark">Dark</option>
           <option value="light">Light</option>
-          <option value="amoled">AMOLED</option>
         </select>
       </label>
       <label>Message Style
         <select id="msgStyle">
-          <option value="cozy" selected>Cozy</option>
+          <option value="cozy">Cozy</option>
           <option value="compact">Compact</option>
         </select>
       </label>
@@ -54,7 +53,6 @@
   <div class="chat">
     <header>Public Lobby Chat</header>
     <div id="messages"></div>
-    <div id="typing"></div>
     <footer>
       <input id="input" type="text" placeholder="Type a message..." />
       <button id="send">Send</button>
@@ -72,33 +70,56 @@
     const nickInput=document.getElementById('nickInput');
     const loginBtn=document.getElementById('loginBtn');
     const nickColorInput=document.getElementById('nickColor');
-    const typingEl=document.getElementById('typing');
 
     let nickname="";
     let nickColor="#ffffff";
     let status="online";
+    let chatHistory=[];
 
+    // Networking
     const hostId="public-lobby-host";
     let role, peer, conn;
     const conns=new Set();
-    let users={}; 
-    let chatHistory=[]; 
+    let users={}; // {peerId:{nick,color,status}}
 
-    // Login
+    // ---- Load saved settings ----
+    window.onload=()=>{
+      nickname=localStorage.getItem("nickname")||"";
+      nickColor=localStorage.getItem("nickColor")||"#ffffff";
+      status=localStorage.getItem("status")||"online";
+
+      nickInput.value=nickname;
+      nickColorInput.value=nickColor;
+      document.getElementById("statusSelect").value=status;
+
+      const fontSize=localStorage.getItem("fontSize")||"14";
+      messagesEl.style.fontSize=fontSize+"px";
+      document.getElementById("fontSize").value=fontSize;
+
+      const theme=localStorage.getItem("theme")||"dark";
+      document.getElementById("themeSelect").value=theme;
+      applyTheme(theme);
+
+      const msgStyle=localStorage.getItem("msgStyle")||"cozy";
+      document.getElementById("msgStyle").value=msgStyle;
+      applyMsgStyle(msgStyle);
+    };
+
+    // ---- Save settings ----
+    nickColorInput.oninput=e=>{ nickColor=e.target.value; localStorage.setItem("nickColor",nickColor); };
+    document.getElementById("statusSelect").onchange=e=>{ status=e.target.value; localStorage.setItem("status",status); sendJoin(); };
+    document.getElementById("fontSize").oninput=e=>{ messagesEl.style.fontSize=e.target.value+"px"; localStorage.setItem("fontSize",e.target.value); };
+    document.getElementById("themeSelect").onchange=e=>{ applyTheme(e.target.value); localStorage.setItem("theme",e.target.value); };
+    document.getElementById("msgStyle").onchange=e=>{ applyMsgStyle(e.target.value); localStorage.setItem("msgStyle",e.target.value); };
+
+    // ---- Login ----
     loginBtn.onclick=()=>{
       nickname=nickInput.value.trim()||"Guest"+Math.floor(Math.random()*1000);
+      localStorage.setItem("nickname",nickname);
       login.style.display='none';
       startAsRandomPeerAndTryConnectToHost();
     };
 
-    // Settings
-    nickColorInput.oninput=()=>{nickColor=nickColorInput.value;};
-    document.getElementById('statusSelect').onchange=e=>{status=e.target.value; sendJoin();};
-    document.getElementById('fontSize').oninput=e=>{messagesEl.style.fontSize=e.target.value+"px";};
-    document.getElementById('themeSelect').onchange=e=>applyTheme(e.target.value);
-    document.getElementById('msgStyle').onchange=e=>applyMsgStyle(e.target.value);
-
-    // Networking
     function startAsRandomPeerAndTryConnectToHost(){
       role=null;
       peer=new Peer();
@@ -107,7 +128,7 @@
         tryConnectToHost();
       });
       peer.on('connection', incoming=>{
-        incoming.on('open',()=>{ incoming.send({type:'system',text:'Spectator connected'}); });
+        incoming.on('open',()=>{ setupConn(incoming); });
       });
     }
 
@@ -133,13 +154,14 @@
         setupConn(c);
         addSystem('A user joined');
         broadcast({type:'system',text:`${timestamp()} – A user joined`});
-        // send user list + chat history
         c.send({type:'userlist',users});
         c.send({type:'history',history:chatHistory});
+        c.send({type:'peerlist',peers:Array.from(conns).map(cc=>cc.peer)});
       });
     }
 
     function setupConn(c){
+      conns.add(c);
       c.on('data',d=>{
         if(d.type==='chat'){
           addMsg(d.nickname,d.text,d.time,d.color,d.id);
@@ -154,17 +176,21 @@
         } else if(d.type==='userlist'){
           users=d.users; updateUserList();
         } else if(d.type==='history'){
-          d.history.forEach(m=>addMsg(m.nick,m.text,m.time,m.color,m.id));
-        } else if(d.type==='typing'){
-          showTyping(d.nickname);
-        } else if(d.type==='edit'){
-          const msgEl=messagesEl.querySelector(`.msg[data-id="${d.id}"] .text`);
-          if(msgEl) msgEl.textContent=d.newText;
-          updateHistory(d.id,d.newText);
-        } else if(d.type==='delete'){
-          const msgEl=messagesEl.querySelector(`.msg[data-id="${d.id}"]`);
-          if(msgEl) msgEl.remove();
-          chatHistory=chatHistory.filter(m=>m.id!==d.id);
+          d.history.forEach(m=>addMsg(m.nick,m.text,m.time,m.color,m.id,m.reactions));
+        } else if(d.type==='peerlist'){
+          d.peers.forEach(pid=>{
+            if(pid!==peer.id && !conns.has(pid)){
+              const extra=peer.connect(pid,{reliable:true});
+              extra.on('open',()=>{ setupConn(extra); sendJoin(); });
+            }
+          });
+        } else if(d.type==='reaction'){
+          const msg=chatHistory.find(m=>m.id===d.id);
+          if(msg){
+            if(!msg.reactions[d.emoji]) msg.reactions[d.emoji]=[];
+            if(!msg.reactions[d.emoji].includes(d.user)) msg.reactions[d.emoji].push(d.user);
+            renderReactions(d.id,msg.reactions);
+          }
         }
       });
       c.on('close',()=>{conns.delete(c); delete users[c.peer]; updateUserList(); addSystem(`${timestamp()} – A user left`); if(role==='host') broadcast({type:'system',text:`${timestamp()} – A user left`}); });
@@ -175,8 +201,9 @@
 
     function sendMsg(){
       const text=input.value.trim(); if(!text)return; input.value='';
-      const data={type:'chat',nickname,text,time:timestamp(),color:nickColor,id:Date.now()};
-      addMsg(nickname,text,data.time,nickColor,data.id);
+      const id=Date.now()+Math.random().toString(36).slice(2);
+      const data={type:'chat',nickname,text,time:timestamp(),color:nickColor,id};
+      addMsg(nickname,text,data.time,nickColor,id);
       if(role==='host') broadcast(data); else if(conn&&conn.open) conn.send(data);
     }
 
@@ -188,35 +215,47 @@
 
     sendBtn.onclick=sendMsg;
     input.addEventListener('keypress',e=>{if(e.key==='Enter')sendMsg();});
-    input.addEventListener('input',()=>{ 
-      const data={type:'typing',nickname};
-      if(role==='host') broadcast(data); else if(conn&&conn.open) conn.send(data);
-    });
 
-    function addMsg(nick,text,time,color,id){
+    function addMsg(nick,text,time,color,id,reactions={}){
+      if(chatHistory.find(m=>m.id===id)) return;
       const div=document.createElement('div');
       div.className='msg';
       div.dataset.id=id;
-      div.innerHTML=`<div class="meta"><span class="nickname" style="color:${color}">${nick}</span> <span>${time}</span> ${nick===nickname?`<button class="editBtn">✎</button><button class="delBtn">🗑</button>`:""}</div><div class="text">${escapeHtml(text)}</div>`;
+      div.innerHTML=`
+        <div class="meta">
+          <span class="nickname" style="color:${color}">${nick}</span> <span>${time}</span>
+        </div>
+        <div class="text">${escapeHtml(text)}</div>
+        <div class="reactions"></div>
+        <button class="reactBtn">😊</button>
+      `;
       messagesEl.appendChild(div);
       messagesEl.scrollTop=messagesEl.scrollHeight;
-      chatHistory.push({id,nick,text,time,color});
-      div.querySelectorAll('.editBtn').forEach(btn=>{btn.onclick=()=>editMsg(div,id);});
-      div.querySelectorAll('.delBtn').forEach(btn=>{btn.onclick=()=>deleteMsg(div,id);});
+      chatHistory.push({id,nick,text,time,color,reactions});
+      renderReactions(id,reactions);
+      div.querySelector('.reactBtn').onclick=()=>reactToMsg(id);
     }
-    function editMsg(div,id){
-      const newText=prompt("Edit message:",div.querySelector('.text').textContent);
-      if(!newText)return;
-      div.querySelector('.text').textContent=newText;
-      updateHistory(id,newText);
-      broadcast({type:'edit',id,newText});
+
+    function reactToMsg(id){
+      const emoji=prompt("React with emoji (e.g. 👍 ❤️ 😂):");
+      if(!emoji) return;
+      const msg=chatHistory.find(m=>m.id===id);
+      if(!msg.reactions[emoji]) msg.reactions[emoji]=[];
+      if(!msg.reactions[emoji].includes(nickname)) msg.reactions[emoji].push(nickname);
+      renderReactions(id,msg.reactions);
+      broadcast({type:'reaction',id,emoji,user:nickname});
     }
-    function deleteMsg(div,id){
-      div.remove();
-      chatHistory=chatHistory.filter(m=>m.id!==id);
-      broadcast({type:'delete',id});
+
+    function renderReactions(id,reactions){
+      const div=messagesEl.querySelector(`.msg[data-id="${id}"] .reactions`);
+      div.innerHTML="";
+      Object.entries(reactions).forEach(([emoji,users])=>{
+        const span=document.createElement('span');
+        span.textContent=`${emoji} ${users.length}`;
+        span.className="reaction";
+        div.appendChild(span);
+      });
     }
-    function updateHistory(id,newText){ const msg=chatHistory.find(m=>m.id===id); if(msg) msg.text=newText; }
 
     function addSystem(text){
       const div=document.createElement('div');
@@ -232,48 +271,23 @@
         const div=document.createElement('div');
         div.className='user';
         div.style.color=u.color;
-        div.textContent=`${u.nick} • ${u.status}`;
+        div.textContent=u.nick+" ("+u.status+")";
         userListEl.appendChild(div);
       });
     }
 
-    let typingTimeout;
-    function showTyping(user){
-      typingEl.textContent=`${user} is typing...`;
-      clearTimeout(typingTimeout);
-      typingTimeout=setTimeout(()=>{typingEl.textContent="";},2000);
+    function timestamp(){
+      const d=new Date();
+      return d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
     }
 
-    function timestamp(){const d=new Date();return d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});}
     function escapeHtml(s){ return s.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
 
-    function applyTheme(t){
-      if(t==='light'){
-        document.documentElement.style.setProperty('--bg','#f3f3f3');
-        document.documentElement.style.setProperty('--panel','#ffffff');
-        document.documentElement.style.setProperty('--text','#1e1e1e');
-        document.documentElement.style.setProperty('--muted','#555');
-      } else if(t==='amoled'){
-        document.documentElement.style.setProperty('--bg','#000000');
-        document.documentElement.style.setProperty('--panel','#111111');
-        document.documentElement.style.setProperty('--text','#ffffff');
-        document.documentElement.style.setProperty('--muted','#888');
-      } else {
-        document.documentElement.style.setProperty('--bg','#36393f');
-        document.documentElement.style.setProperty('--panel','#2f3136');
-        document.documentElement.style.setProperty('--text','#dcddde');
-        document.documentElement.style.setProperty('--muted','#72767d');
-      }
+    function applyTheme(theme){
+      document.body.dataset.theme=theme;
     }
-
     function applyMsgStyle(style){
-      if(style==='compact'){
-        document.documentElement.style.setProperty('--msg-spacing','4px');
-        document.documentElement.style.setProperty('--msg-font-size','13px');
-      } else {
-        document.documentElement.style.setProperty('--msg-spacing','12px');
-        document.documentElement.style.setProperty('--msg-font-size','14px');
-      }
+      document.body.dataset.msgstyle=style;
     }
   </script>
 </body>
