@@ -4,43 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Lobby Chat</title>
-  <style>
-    :root {
-      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      --bg: #36393f;
-      --panel: #2f3136;
-      --accent: #5865f2;
-      --text: #dcddde;
-      --muted: #72767d;
-    }
-    body { margin:0; background:var(--bg); color:var(--text); display:flex; height:100vh; }
-    .sidebar { width:220px; background:var(--panel); display:flex; flex-direction:column; }
-    .sidebar h2 { padding:12px; font-size:14px; text-transform:uppercase; color:var(--muted); margin:0; }
-    #userList { flex:1; overflow-y:auto; padding:8px; }
-    .user { margin:4px 0; font-size:14px; font-weight:500; }
-    .settings { padding:8px; border-top:1px solid #202225; }
-    .settings label { display:block; margin:4px 0; font-size:13px; color:var(--muted); }
-    .settings input { width:100%; margin-top:2px; }
-
-    .chat { flex:1; display:flex; flex-direction:column; }
-    header { background:var(--panel); padding:12px; font-weight:bold; text-align:center; }
-    #messages { flex:1; overflow-y:auto; padding:12px; }
-    .msg { margin-bottom:10px; }
-    .msg .meta { font-size:12px; color:var(--muted); margin-bottom:2px; }
-    .msg .text { font-size:14px; line-height:1.4; }
-    .msg .nickname { font-weight:600; margin-right:6px; }
-    .system { text-align:center; font-size:12px; color:var(--muted); margin:8px 0; }
-    footer { background:var(--panel); padding:12px; display:flex; gap:8px; }
-    input[type=text] { flex:1; padding:8px; border:none; border-radius:4px; background:#40444b; color:var(--text); }
-    button { padding:8px 12px; border:none; border-radius:4px; background:var(--accent); color:white; cursor:pointer; }
-    button:hover { background:#4752c4; }
-
-    /* Login screen */
-    #login { position:fixed; inset:0; background:var(--bg); display:flex; align-items:center; justify-content:center; }
-    #login .box { background:var(--panel); padding:20px; border-radius:8px; width:300px; }
-    #login h1 { margin-top:0; font-size:20px; }
-    #login input, #login button { width:100%; margin-top:10px; }
-  </style>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
 
@@ -61,11 +25,36 @@
       <label>Nickname Color
         <input type="color" id="nickColor" value="#ffffff" />
       </label>
+      <label>Status
+        <select id="statusSelect">
+          <option value="online" selected>Online</option>
+          <option value="idle">Idle</option>
+          <option value="dnd">Do Not Disturb</option>
+        </select>
+      </label>
+      <label>Font Size
+        <input type="range" id="fontSize" min="12" max="20" value="14" />
+      </label>
+      <label>Theme
+        <select id="themeSelect">
+          <option value="dark" selected>Dark</option>
+          <option value="light">Light</option>
+          <option value="amoled">AMOLED</option>
+        </select>
+      </label>
+      <label>Message Style
+        <select id="msgStyle">
+          <option value="cozy" selected>Cozy</option>
+          <option value="compact">Compact</option>
+        </select>
+      </label>
     </div>
   </div>
+
   <div class="chat">
     <header>Public Lobby Chat</header>
     <div id="messages"></div>
+    <div id="typing"></div>
     <footer>
       <input id="input" type="text" placeholder="Type a message..." />
       <button id="send">Send</button>
@@ -83,24 +72,33 @@
     const nickInput=document.getElementById('nickInput');
     const loginBtn=document.getElementById('loginBtn');
     const nickColorInput=document.getElementById('nickColor');
+    const typingEl=document.getElementById('typing');
 
     let nickname="";
     let nickColor="#ffffff";
+    let status="online";
 
-    // Networking
     const hostId="public-lobby-host";
     let role, peer, conn;
     const conns=new Set();
-    let users={}; // {peerId:{nick,color}}
+    let users={}; 
+    let chatHistory=[]; 
 
+    // Login
     loginBtn.onclick=()=>{
       nickname=nickInput.value.trim()||"Guest"+Math.floor(Math.random()*1000);
       login.style.display='none';
       startAsRandomPeerAndTryConnectToHost();
     };
 
+    // Settings
     nickColorInput.oninput=()=>{nickColor=nickColorInput.value;};
+    document.getElementById('statusSelect').onchange=e=>{status=e.target.value; sendJoin();};
+    document.getElementById('fontSize').oninput=e=>{messagesEl.style.fontSize=e.target.value+"px";};
+    document.getElementById('themeSelect').onchange=e=>applyTheme(e.target.value);
+    document.getElementById('msgStyle').onchange=e=>applyMsgStyle(e.target.value);
 
+    // Networking
     function startAsRandomPeerAndTryConnectToHost(){
       role=null;
       peer=new Peer();
@@ -135,25 +133,38 @@
         setupConn(c);
         addSystem('A user joined');
         broadcast({type:'system',text:`${timestamp()} – A user joined`});
-        // send current user list
+        // send user list + chat history
         c.send({type:'userlist',users});
+        c.send({type:'history',history:chatHistory});
       });
     }
 
     function setupConn(c){
       c.on('data',d=>{
         if(d.type==='chat'){
-          addMsg(d.nickname,d.text,d.time,d.color);
+          addMsg(d.nickname,d.text,d.time,d.color,d.id);
           if(role==='host') broadcast(d,c);
         } else if(d.type==='system'){
           addSystem(d.text);
         } else if(d.type==='join'){
-          users[c.peer]={nick:d.nickname,color:d.color};
+          users[c.peer]={nick:d.nickname,color:d.color,status:d.status};
           updateUserList();
           addSystem(`${d.time} – ${d.nickname} joined`);
           if(role==='host') broadcast(d,c);
         } else if(d.type==='userlist'){
           users=d.users; updateUserList();
+        } else if(d.type==='history'){
+          d.history.forEach(m=>addMsg(m.nick,m.text,m.time,m.color,m.id));
+        } else if(d.type==='typing'){
+          showTyping(d.nickname);
+        } else if(d.type==='edit'){
+          const msgEl=messagesEl.querySelector(`.msg[data-id="${d.id}"] .text`);
+          if(msgEl) msgEl.textContent=d.newText;
+          updateHistory(d.id,d.newText);
+        } else if(d.type==='delete'){
+          const msgEl=messagesEl.querySelector(`.msg[data-id="${d.id}"]`);
+          if(msgEl) msgEl.remove();
+          chatHistory=chatHistory.filter(m=>m.id!==d.id);
         }
       });
       c.on('close',()=>{conns.delete(c); delete users[c.peer]; updateUserList(); addSystem(`${timestamp()} – A user left`); if(role==='host') broadcast({type:'system',text:`${timestamp()} – A user left`}); });
@@ -164,27 +175,49 @@
 
     function sendMsg(){
       const text=input.value.trim(); if(!text)return; input.value='';
-      const data={type:'chat',nickname,text,time:timestamp(),color:nickColor};
-      addMsg(nickname,text,data.time,nickColor);
+      const data={type:'chat',nickname,text,time:timestamp(),color:nickColor,id:Date.now()};
+      addMsg(nickname,text,data.time,nickColor,data.id);
       if(role==='host') broadcast(data); else if(conn&&conn.open) conn.send(data);
     }
 
     function sendJoin(){
-      const data={type:'join',nickname,color:nickColor,time:timestamp()};
-      if(role==='host'){ users[peer.id]={nick:nickname,color:nickColor}; updateUserList(); broadcast(data);} 
+      const data={type:'join',nickname,color:nickColor,status,time:timestamp()};
+      if(role==='host'){ users[peer.id]={nick:nickname,color:nickColor,status}; updateUserList(); broadcast(data);} 
       else if(conn&&conn.open) conn.send(data);
     }
 
     sendBtn.onclick=sendMsg;
     input.addEventListener('keypress',e=>{if(e.key==='Enter')sendMsg();});
+    input.addEventListener('input',()=>{ 
+      const data={type:'typing',nickname};
+      if(role==='host') broadcast(data); else if(conn&&conn.open) conn.send(data);
+    });
 
-    function addMsg(nick,text,time,color){
+    function addMsg(nick,text,time,color,id){
       const div=document.createElement('div');
       div.className='msg';
-      div.innerHTML=`<div class="meta"><span class="nickname" style="color:${color}">${nick}</span> <span>${time}</span></div><div class="text">${escapeHtml(text)}</div>`;
+      div.dataset.id=id;
+      div.innerHTML=`<div class="meta"><span class="nickname" style="color:${color}">${nick}</span> <span>${time}</span> ${nick===nickname?`<button class="editBtn">✎</button><button class="delBtn">🗑</button>`:""}</div><div class="text">${escapeHtml(text)}</div>`;
       messagesEl.appendChild(div);
       messagesEl.scrollTop=messagesEl.scrollHeight;
+      chatHistory.push({id,nick,text,time,color});
+      div.querySelectorAll('.editBtn').forEach(btn=>{btn.onclick=()=>editMsg(div,id);});
+      div.querySelectorAll('.delBtn').forEach(btn=>{btn.onclick=()=>deleteMsg(div,id);});
     }
+    function editMsg(div,id){
+      const newText=prompt("Edit message:",div.querySelector('.text').textContent);
+      if(!newText)return;
+      div.querySelector('.text').textContent=newText;
+      updateHistory(id,newText);
+      broadcast({type:'edit',id,newText});
+    }
+    function deleteMsg(div,id){
+      div.remove();
+      chatHistory=chatHistory.filter(m=>m.id!==id);
+      broadcast({type:'delete',id});
+    }
+    function updateHistory(id,newText){ const msg=chatHistory.find(m=>m.id===id); if(msg) msg.text=newText; }
+
     function addSystem(text){
       const div=document.createElement('div');
       div.className='system';
@@ -199,17 +232,49 @@
         const div=document.createElement('div');
         div.className='user';
         div.style.color=u.color;
-        div.textContent=u.nick;
+        div.textContent=`${u.nick} • ${u.status}`;
         userListEl.appendChild(div);
       });
     }
 
-    function timestamp(){
-      const d=new Date();
-      return d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+    let typingTimeout;
+    function showTyping(user){
+      typingEl.textContent=`${user} is typing...`;
+      clearTimeout(typingTimeout);
+      typingTimeout=setTimeout(()=>{typingEl.textContent="";},2000);
     }
 
+    function timestamp(){const d=new Date();return d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});}
     function escapeHtml(s){ return s.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+
+    function applyTheme(t){
+      if(t==='light'){
+        document.documentElement.style.setProperty('--bg','#f3f3f3');
+        document.documentElement.style.setProperty('--panel','#ffffff');
+        document.documentElement.style.setProperty('--text','#1e1e1e');
+        document.documentElement.style.setProperty('--muted','#555');
+      } else if(t==='amoled'){
+        document.documentElement.style.setProperty('--bg','#000000');
+        document.documentElement.style.setProperty('--panel','#111111');
+        document.documentElement.style.setProperty('--text','#ffffff');
+        document.documentElement.style.setProperty('--muted','#888');
+      } else {
+        document.documentElement.style.setProperty('--bg','#36393f');
+        document.documentElement.style.setProperty('--panel','#2f3136');
+        document.documentElement.style.setProperty('--text','#dcddde');
+        document.documentElement.style.setProperty('--muted','#72767d');
+      }
+    }
+
+    function applyMsgStyle(style){
+      if(style==='compact'){
+        document.documentElement.style.setProperty('--msg-spacing','4px');
+        document.documentElement.style.setProperty('--msg-font-size','13px');
+      } else {
+        document.documentElement.style.setProperty('--msg-spacing','12px');
+        document.documentElement.style.setProperty('--msg-font-size','14px');
+      }
+    }
   </script>
 </body>
 </html>
