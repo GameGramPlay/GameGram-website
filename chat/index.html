@@ -76,11 +76,10 @@
     let status="online";
     let chatHistory=[];
 
-    // Networking
     const hostId="public-lobby-host";
     let role, peer, conn;
     const conns=new Set();
-    let users={}; // {peerId:{nick,color,status}}
+    let users={};
 
     // ---- Load saved settings ----
     window.onload=()=>{
@@ -128,7 +127,7 @@
         tryConnectToHost();
       });
       peer.on('connection', incoming=>{
-        incoming.on('open',()=>{ setupConn(incoming); });
+        setupConn(incoming);
       });
     }
 
@@ -150,13 +149,10 @@
       peer=new Peer(hostId);
       peer.on('open',()=>{ addSystem(`Hosting public lobby as ${nickname}`); sendJoin(); });
       peer.on('connection',c=>{
-        conns.add(c);
         setupConn(c);
-        addSystem('A user joined');
-        broadcast({type:'system',text:`${timestamp()} – A user joined`});
+        // send full state to new client
         c.send({type:'userlist',users});
         c.send({type:'history',history:chatHistory});
-        c.send({type:'peerlist',peers:Array.from(conns).map(cc=>cc.peer)});
       });
     }
 
@@ -164,7 +160,7 @@
       conns.add(c);
       c.on('data',d=>{
         if(d.type==='chat'){
-          addMsg(d.nickname,d.text,d.time,d.color,d.id);
+          addMsg(d.nickname,d.text,d.time,d.color,d.id,d.reactions);
           if(role==='host') broadcast(d,c);
         } else if(d.type==='system'){
           addSystem(d.text);
@@ -172,18 +168,15 @@
           users[c.peer]={nick:d.nickname,color:d.color,status:d.status};
           updateUserList();
           addSystem(`${d.time} – ${d.nickname} joined`);
-          if(role==='host') broadcast(d,c);
+          if(role==='host'){ 
+            broadcast(d,c);
+            // sync userlist for everyone
+            broadcast({type:'userlist',users});
+          }
         } else if(d.type==='userlist'){
           users=d.users; updateUserList();
         } else if(d.type==='history'){
           d.history.forEach(m=>addMsg(m.nick,m.text,m.time,m.color,m.id,m.reactions));
-        } else if(d.type==='peerlist'){
-          d.peers.forEach(pid=>{
-            if(pid!==peer.id && !conns.has(pid)){
-              const extra=peer.connect(pid,{reliable:true});
-              extra.on('open',()=>{ setupConn(extra); sendJoin(); });
-            }
-          });
         } else if(d.type==='reaction'){
           const msg=chatHistory.find(m=>m.id===d.id);
           if(msg){
@@ -191,6 +184,7 @@
             if(!msg.reactions[d.emoji].includes(d.user)) msg.reactions[d.emoji].push(d.user);
             renderReactions(d.id,msg.reactions);
           }
+          if(role==='host') broadcast(d,c);
         }
       });
       c.on('close',()=>{conns.delete(c); delete users[c.peer]; updateUserList(); addSystem(`${timestamp()} – A user left`); if(role==='host') broadcast({type:'system',text:`${timestamp()} – A user left`}); });
@@ -202,8 +196,8 @@
     function sendMsg(){
       const text=input.value.trim(); if(!text)return; input.value='';
       const id=Date.now()+Math.random().toString(36).slice(2);
-      const data={type:'chat',nickname,text,time:timestamp(),color:nickColor,id};
-      addMsg(nickname,text,data.time,nickColor,id);
+      const data={type:'chat',nickname,text,time:timestamp(),color:nickColor,id,reactions:{}};
+      addMsg(nickname,text,data.time,nickColor,id,{});
       if(role==='host') broadcast(data); else if(conn&&conn.open) conn.send(data);
     }
 
@@ -227,21 +221,26 @@
         </div>
         <div class="text">${escapeHtml(text)}</div>
         <div class="reactions"></div>
-        <button class="reactBtn">😊</button>
+        <div class="reaction-bar">
+          <span>👍</span><span>❤️</span><span>😂</span><span>😮</span><span>👀</span><span>➕</span>
+        </div>
       `;
       messagesEl.appendChild(div);
       messagesEl.scrollTop=messagesEl.scrollHeight;
       chatHistory.push({id,nick,text,time,color,reactions});
       renderReactions(id,reactions);
-      div.querySelector('.reactBtn').onclick=()=>reactToMsg(id);
+
+      div.querySelectorAll('.reaction-bar span').forEach(btn=>{
+        btn.onclick=()=>reactToMsg(id,btn.textContent);
+      });
     }
 
-    function reactToMsg(id){
-      const emoji=prompt("React with emoji (e.g. 👍 ❤️ 😂):");
-      if(!emoji) return;
+    function reactToMsg(id,emoji){
       const msg=chatHistory.find(m=>m.id===id);
       if(!msg.reactions[emoji]) msg.reactions[emoji]=[];
-      if(!msg.reactions[emoji].includes(nickname)) msg.reactions[emoji].push(nickname);
+      const i=msg.reactions[emoji].indexOf(nickname);
+      if(i===-1) msg.reactions[emoji].push(nickname);
+      else msg.reactions[emoji].splice(i,1);
       renderReactions(id,msg.reactions);
       broadcast({type:'reaction',id,emoji,user:nickname});
     }
@@ -250,10 +249,12 @@
       const div=messagesEl.querySelector(`.msg[data-id="${id}"] .reactions`);
       div.innerHTML="";
       Object.entries(reactions).forEach(([emoji,users])=>{
-        const span=document.createElement('span');
-        span.textContent=`${emoji} ${users.length}`;
-        span.className="reaction";
-        div.appendChild(span);
+        if(users.length>0){
+          const span=document.createElement('span');
+          span.textContent=`${emoji} ${users.length}`;
+          span.className="reaction";
+          div.appendChild(span);
+        }
       });
     }
 
@@ -283,12 +284,8 @@
 
     function escapeHtml(s){ return s.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
 
-    function applyTheme(theme){
-      document.body.dataset.theme=theme;
-    }
-    function applyMsgStyle(style){
-      document.body.dataset.msgstyle=style;
-    }
+    function applyTheme(theme){ document.body.dataset.theme=theme; }
+    function applyMsgStyle(style){ document.body.dataset.msgstyle=style; }
   </script>
 </body>
 </html>
