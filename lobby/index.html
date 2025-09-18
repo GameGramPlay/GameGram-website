@@ -1,113 +1,238 @@
 <!doctype html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Tic Tac Toe Online (PeerJS)</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PeerJS Tic‑Tac‑Toe — single link (no Firebase)</title>
   <style>
-    body { font-family:sans-serif; display:flex; flex-direction:column; align-items:center; padding:20px; }
-    .board { display:grid; grid-template-columns:repeat(3,100px); gap:5px; margin:20px 0; }
-    .cell { width:100px; height:100px; background:#f9f9f9; display:flex; justify-content:center; align-items:center;
-            font-size:48px; cursor:pointer; border:2px solid #333; }
-    #status { margin:10px; font-size:20px; }
-    input,button { margin:5px; padding:8px; }
+    :root{font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial}
+    body{display:flex;min-height:100vh;align-items:center;justify-content:center;background:#f7fafc;margin:0;padding:24px}
+    .card{background:white;padding:18px;border-radius:12px;box-shadow:0 8px 28px rgba(20,20,40,0.08);width:420px}
+    h1{font-size:18px;margin:0 0 10px}
+    .board{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}
+    .cell{height:96px;background:#eef2f7;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:48px;cursor:pointer;user-select:none}
+    .muted{color:#666;font-size:13px}
+    .row{display:flex;gap:8px;align-items:center}
+    input{padding:8px;border-radius:8px;border:1px solid #ddd}
+    button{padding:8px 12px;border-radius:8px;border:0;background:#111827;color:white;cursor:pointer}
   </style>
 </head>
 <body>
-  <h1>Multiplayer Tic Tac Toe</h1>
-  <div>
-    <input id="peerIdInput" placeholder="Room ID">
-    <button id="hostBtn">Host Game</button>
-    <button id="joinBtn">Join Game</button>
+  <div class="card">
+    <h1>PeerJS Tic‑Tac‑Toe — one link</h1>
+    <div class="muted">This page uses PeerJS (public signaling). It auto-creates a room in the URL. Share the full link — visitors will auto-join.</div>
+
+    <div style="height:10px"></div>
+    <div class="row"><div class="muted">Room link:</div><div style="flex:1"></div><div id="roomLink" class="muted"></div></div>
+    <div style="height:8px"></div>
+
+    <div class="row"><div class="muted">You are:</div><strong id="me">—</strong><div style="flex:1"></div><div id="statusText" class="muted">status</div></div>
+
+    <div class="board" id="board"></div>
+
+    <div class="row"><div class="muted">Turn:</div><strong id="turn">—</strong><div style="flex:1"></div><button id="reset">Reset (host)</button></div>
+    <div style="height:8px"></div>
+    <div class="muted">Open the same link from other devices — first visitor becomes host (X), next becomes O.</div>
   </div>
-  <div id="myId"></div>
 
-  <div class="board" id="board"></div>
-  <div id="status">Not connected</div>
-
-  <!-- PeerJS (public cloud signaling) -->
+  <!-- PeerJS CDN -->
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
   <script>
-    const boardEl = document.getElementById('board');
-    const status = document.getElementById('status');
-    const myIdEl = document.getElementById('myId');
-    const input = document.getElementById('peerIdInput');
+    // Utilities
+    const q = s => document.querySelector(s);
+    const roomParam = (k)=>new URL(location.href).searchParams.get(k);
+    const makeId = (n=6)=>Math.random().toString(36).slice(2,2+n);
+
+    // UI refs
+    const boardEl = q('#board');
+    const roomLinkEl = q('#roomLink');
+    const meEl = q('#me');
+    const turnEl = q('#turn');
+    const statusEl = q('#statusText');
+    const resetBtn = q('#reset');
+
+    // Game state
     let cells = Array(9).fill(null);
     let turn = 'X';
-    let mySymbol = null;
-    let conn;
+    let winner = null;
+    let mySymbol = null; // 'X' for host, 'O' for client, null for spectator
 
-    // Create PeerJS client (auto-generate ID)
-    const peer = new Peer();
-    peer.on('open', id => {
-      myIdEl.textContent = "Your Room ID: " + id;
-    });
+    // PeerJS objects
+    let peer = null;
+    let conn = null; // single DataConnection to the other player
+    let role = null; // 'host' | 'client'
 
-    // Handle incoming connections (hosting)
-    peer.on('connection', c => {
-      conn = c;
-      mySymbol = 'X';
-      setupConn();
-    });
+    // Ensure room param
+    let room = roomParam('room');
+    if(!room){ room = makeId(6); location.replace(location.pathname + '?room=' + room); }
+    // display link for copying
+    roomLinkEl.textContent = location.href;
 
-    // Join button
-    document.getElementById('joinBtn').onclick = () => {
-      conn = peer.connect(input.value);
-      mySymbol = 'O';
-      setupConn();
-    };
+    // deterministic host peer id for this room
+    const hostId = ('ttt-' + room + '-host').slice(0, 63); // keep it below PeerJS id length
 
-    // Host button just sets symbol (waiting for others to connect)
-    document.getElementById('hostBtn').onclick = () => {
-      mySymbol = 'X';
-      status.textContent = "Waiting for another player to join...";
-    };
+    // Build UI board
+    for(let i=0;i<9;i++){
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.dataset.i = i;
+      cell.onclick = () => onLocalMove(i);
+      boardEl.appendChild(cell);
+    }
 
-    function setupConn() {
-      conn.on('open', () => {
-        status.textContent = "Connected! You are " + mySymbol;
+    // Start by creating a random peer and trying to connect to the host ID.
+    // If no host answers within timeout, promote ourselves to host (create peer with hostId).
+    startAsRandomPeerAndTryConnectToHost();
+
+    function startAsRandomPeerAndTryConnectToHost(){
+      role = null; mySymbol = null; statusEl.textContent = 'Connecting...';
+      peer = new Peer();
+      peer.on('open', id => {
+        console.log('my peer id', id);
+        meEl.textContent = id;
+        // attempt to connect to host
+        tryConnectToHost();
+      });
+      peer.on('error', err => {
+        console.warn('peer error (random):', err);
+      });
+      peer.on('connection', incoming => {
+        // unlikely: someone trying to connect to our random id — accept but treat as spectator
+        incoming.on('open', ()=>{
+          console.log('incoming connection to random peer — treating as spectator');
+          incoming.on('data', d=>console.log('spectator data',d));
+          incoming.send({ type:'spectator-hello' });
+        });
+      });
+    }
+
+    function tryConnectToHost(){
+      let connected = false;
+      const timeoutMs = 2500;
+      const attempt = peer.connect(hostId, { reliable:true });
+      attempt.on('open', ()=>{
+        connected = true;
+        conn = attempt;
+        role = 'client'; mySymbol = 'O';
+        setupDataConnection();
+        statusEl.textContent = 'Connected as O to host';
+      });
+      attempt.on('error', err=>{ console.warn('connect error', err); });
+
+      // if no host replies within timeout, become the host
+      setTimeout(()=>{
+        if(connected) return;
+        console.log('no host responded — promoting to hostId', hostId);
+        // cleanup and become host
+        try { attempt.close(); } catch(e){}
+        try { peer.destroy(); } catch(e){}
+        startAsHost();
+      }, timeoutMs);
+    }
+
+    function startAsHost(){
+      role = 'host'; mySymbol = 'X';
+      // create peer with deterministic hostId
+      peer = new Peer(hostId);
+      peer.on('open', id => {
+        console.log('hosting as', id);
+        meEl.textContent = id + ' (host)';
+        statusEl.textContent = 'Hosting — waiting for player to join';
+      });
+      peer.on('connection', c => {
+        // when a client connects, accept as the opponent
+        console.log('incoming connection from client', c.peer);
+        conn = c;
+        setupDataConnection();
+      });
+      peer.on('error', err => {
+        console.error('peer error (host):', err);
+        // if id already taken, fallback to random joiner behaviour
+        statusEl.textContent = 'Host ID taken — trying to join existing host';
+        try { peer.destroy(); } catch(e){}
+        startAsRandomPeerAndTryConnectToHost();
+      });
+    }
+
+    function setupDataConnection(){
+      if(!conn) return;
+      conn.on('open', ()=>{
+        // sync state if we're the host
+        if(role === 'host'){
+          conn.send({ type:'sync', board:cells, turn:turn });
+          statusEl.textContent = 'Player joined — you are X';
+        } else {
+          statusEl.textContent = 'Connected to host — you are O';
+        }
         render();
       });
-      conn.on('data', data => {
-        if (data.type === 'move') {
-          cells[data.idx] = data.symbol;
-          turn = data.symbol === 'X' ? 'O' : 'X';
+      conn.on('data', d=>{
+        console.log('got', d);
+        if(d.type === 'move'){
+          // apply remote move
+          cells[d.idx] = d.symbol;
+          turn = (d.symbol === 'X') ? 'O' : 'X';
+          winner = checkWinner();
           render();
+        } else if(d.type === 'sync'){
+          // initial sync (client receives from host)
+          cells = d.board || Array(9).fill(null);
+          turn = d.turn || 'X';
+          winner = checkWinner();
+          render();
+        } else if(d.type === 'reset'){
+          cells = Array(9).fill(null); turn = 'X'; winner = null; render();
         }
+      });
+      conn.on('close', ()=>{
+        statusEl.textContent = 'Connection closed';
+        console.log('conn closed');
+      });
+      conn.on('error', err=>{
+        console.warn('conn error', err);
       });
     }
 
-    // Build board
-    for (let i=0; i<9; i++) {
-      let c = document.createElement('div');
-      c.className = 'cell';
-      c.dataset.i = i;
-      c.onclick = () => move(i, c);
-      boardEl.appendChild(c);
-    }
-
-    function move(i, cell) {
-      if (!mySymbol || turn !== mySymbol || cells[i]) return;
+    // local click handler
+    function onLocalMove(i){
+      if(winner) return;
+      if(!mySymbol) { alert('Not connected as a player'); return; }
+      if(turn !== mySymbol) return;
+      if(cells[i]) return;
+      // make local move
       cells[i] = mySymbol;
-      conn.send({ type: 'move', idx: i, symbol: mySymbol });
-      turn = mySymbol === 'X' ? 'O' : 'X';
+      // send to remote
+      if(conn && conn.open) conn.send({ type:'move', idx:i, symbol: mySymbol });
+      turn = (mySymbol === 'X') ? 'O' : 'X';
+      winner = checkWinner();
       render();
     }
 
-    function render() {
-      Array.from(boardEl.children).forEach((c,i)=>c.textContent = cells[i]||'');
-      const winner = checkWinner();
-      if (winner) {
-        status.textContent = (winner==='Draw' ? "It's a draw!" : winner + " wins!");
-      } else {
-        status.textContent = "Turn: " + turn + " | You are " + mySymbol;
-      }
+    // reset (host only)
+    resetBtn.onclick = () => {
+      if(role !== 'host') return alert('Only the host (first visitor) may reset.');
+      cells = Array(9).fill(null); turn = 'X'; winner = null; render();
+      if(conn && conn.open) conn.send({ type:'reset' });
+    };
+
+    // render UI
+    function render(){
+      Array.from(boardEl.children).forEach((el,i)=>el.textContent = cells[i] || '');
+      turnEl.textContent = winner ? (winner === 'Draw' ? 'Draw' : winner + ' wins') : turn;
+      meEl.textContent = (peer && peer.id) ? (peer.id + (role==='host' ? ' (host)' : '')) : meEl.textContent;
+      if(!mySymbol) meEl.textContent = (peer && peer.id) ? peer.id : 'Spectator';
+      // status small
+      if(winner) statusEl.textContent = (winner === 'Draw' ? "It's a draw" : winner + ' wins');
     }
 
-    function checkWinner() {
-      const lines=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
-      for (let [a,b,c] of lines) if (cells[a] && cells[a]===cells[b] && cells[a]===cells[c]) return cells[a];
+    function checkWinner(){
+      const lines = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+      for(const [a,b,c] of lines) if(cells[a] && cells[a]===cells[b] && cells[a]===cells[c]) return cells[a];
       return cells.every(x=>x) ? 'Draw' : null;
     }
+
+    // Clean up on unload
+    window.addEventListener('beforeunload', ()=>{ try{ peer && peer.destroy(); }catch(e){} });
   </script>
 </body>
 </html>
