@@ -206,11 +206,12 @@ function sendMsg(){
 sendBtn.onclick=sendMsg;
 input.addEventListener('keypress', e=>{if(e.key==='Enter') sendMsg();});
 
-function addMsg(nick, text, time, color, id, save=true){
+function addMsg(nick, text, time, color, id, save=true, animate=true){
   let div = messagesEl.querySelector(`.msg[data-id="${id}"]`);
   if(!div){
     div = document.createElement('div');
     div.className='msg';
+    if(animate) div.classList.add('new'); // only new messages animate
     div.dataset.id=id;
     div.innerHTML=`
       <div class="meta">
@@ -223,22 +224,26 @@ function addMsg(nick, text, time, color, id, save=true){
         <span class="reactBtn">👍</span>
         <span class="reactBtn">❤️</span>
       </div>`;
-    setTimeout(()=>div.classList.add('show'),10); // fade-in animation
     messagesEl.appendChild(div);
     messagesEl.scrollTop=messagesEl.scrollHeight;
 
     div.querySelectorAll('.reactBtn').forEach(btn=>{
       btn.onclick=()=>reactToMsg(id, btn.textContent);
     });
+
+    // Animate new messages
+    if(animate){
+      setTimeout(()=>div.classList.add('show'),10);
+      setTimeout(()=>div.classList.remove('new'),300); // cleanup class after animation
+    }
   } else {
-    // If message already exists, just update text/nick/color if needed
+    // update existing message
     div.querySelector('.nickname').style.color = color;
     div.querySelector('.nickname').textContent = nick;
     div.querySelector('.text').innerHTML = escapeHtml(text);
   }
 
   if(save){
-    // Avoid duplicating in chatHistory
     if(!chatHistory.find(m=>m.id===id)){
       chatHistory.push({id,nick,text,time,color,reactions:{}});
       localStorage.setItem("chatHistory", JSON.stringify(chatHistory));
