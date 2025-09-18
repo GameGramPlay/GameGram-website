@@ -58,19 +58,23 @@ function drawConnectionGraph() {
 const PEERJS_HOSTS = ['0.peerjs.com','1.peerjs.com','2.peerjs.com','3.peerjs.com'];
 const PEER_OPEN_TIMEOUT = 2500;
 
+let roomName = "public"; // default public room
+
 // ---------- LocalStorage & UI init ----------
 window.onload = () => {
   nickname = localStorage.getItem("nickname") || "";
   nickColor = localStorage.getItem("nickColor") || "#ffffff";
   status = localStorage.getItem("status") || "online";
-  roomName = localStorage.getItem("roomName") || "lobby";
+  roomName = localStorage.getItem("roomName") || "public";
 
   document.getElementById("meName").textContent = nickname || "Guest";
   document.getElementById("meStatus").textContent = `(${status})`;
+  document.getElementById("roomLabel").textContent = roomName; // show room
 
   nickColorInput.value = nickColor;
   statusSelect.value = status;
   roomInput.value = roomName;
+
 
   const theme = localStorage.getItem("theme") || "dark";
   document.body.dataset.theme = theme;
@@ -95,10 +99,13 @@ window.onload = () => {
 // ---------- Login ----------
 loginBtn.onclick = () => {
   nickname = nickInput.value.trim() || "Guest" + Math.floor(Math.random() * 1000);
-  roomName = roomInput.value.trim() || "lobby";
+  roomName = roomInput.value.trim() || "public"; // default if empty
   localStorage.setItem("nickname", nickname);
   localStorage.setItem("roomName", roomName);
+
   document.getElementById("meName").textContent = nickname;
+  document.getElementById("roomLabel").textContent = roomName; // update visible room
+
   login.style.display = 'none';
   startPeerWithFallbacks();
 };
@@ -142,8 +149,9 @@ msgStyleSelect.onchange = e => {
 
 // ---------- PeerJS startup with host fallbacks ----------
 function makePeerId() {
-  return `${roomName}-${Math.random().toString(36).substr(2, 9)}`;
+  return `${roomName}-${Math.random().toString(36).substr(2, 9)}`; // peer id includes room
 }
+
 function startPeerWithFallbacks() {
   addSystem("Starting PeerJS client — trying public cloud endpoints...");
   tryPeerHostsSequentially(PEERJS_HOSTS.slice(), 0);
