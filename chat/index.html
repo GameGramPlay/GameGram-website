@@ -6,7 +6,7 @@
   <title>Lobby Chat</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
-<body>
+<body data-theme="dark" data-msgstyle="cozy">
 
   <!-- Login overlay -->
   <div id="login">
@@ -17,39 +17,20 @@
     </div>
   </div>
 
-  <!-- App -->
+  <!-- Sidebar -->
   <div class="sidebar">
     <h2>Online</h2>
     <div id="userList"></div>
-    <div class="settings">
-      <label>Nickname Color
-        <input type="color" id="nickColor" value="#ffffff" />
-      </label>
-      <label>Status
-        <select id="statusSelect">
-          <option value="online">Online</option>
-          <option value="away">Away</option>
-          <option value="busy">Busy</option>
-        </select>
-      </label>
-      <label>Font Size
-        <input type="range" id="fontSize" min="12" max="20" value="14" />
-      </label>
-      <label>Theme
-        <select id="themeSelect">
-          <option value="dark">Dark</option>
-          <option value="light">Light</option>
-        </select>
-      </label>
-      <label>Message Style
-        <select id="msgStyle">
-          <option value="cozy">Cozy</option>
-          <option value="compact">Compact</option>
-        </select>
-      </label>
+    <div class="self">
+      <div class="me">
+        <span id="meName">Guest</span>
+        <small id="meStatus">(online)</small>
+      </div>
+      <button id="settingsBtn">⚙</button>
     </div>
   </div>
 
+  <!-- Chat -->
   <div class="chat">
     <header>Public Lobby Chat</header>
     <div id="messages"></div>
@@ -59,233 +40,48 @@
     </footer>
   </div>
 
+  <!-- Settings modal -->
+  <div id="settingsModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>User Settings</h2>
+        <button id="closeSettings">✖</button>
+      </div>
+      <div class="settings">
+        <label>Nickname
+          <input id="nickInputSettings" />
+        </label>
+        <label>Nickname Color
+          <input type="color" id="nickColor" />
+        </label>
+        <label>Status
+          <select id="statusSelect">
+            <option value="online">Online</option>
+            <option value="away">Away</option>
+            <option value="busy">Busy</option>
+          </select>
+        </label>
+        <label>Font Size
+          <input type="range" id="fontSize" min="12" max="20" value="14" />
+        </label>
+        <label>Theme
+          <select id="themeSelect">
+            <option value="dark">Dark</option>
+            <option value="light">Light</option>
+          </select>
+        </label>
+        <label>Message Style
+          <select id="msgStyle">
+            <option value="cozy">Cozy</option>
+            <option value="compact">Compact</option>
+          </select>
+        </label>
+      </div>
+    </div>
+  </div>
+
   <!-- PeerJS -->
   <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script>
-    const messagesEl=document.getElementById('messages');
-    const input=document.getElementById('input');
-    const sendBtn=document.getElementById('send');
-    const userListEl=document.getElementById('userList');
-    const login=document.getElementById('login');
-    const nickInput=document.getElementById('nickInput');
-    const loginBtn=document.getElementById('loginBtn');
-    const nickColorInput=document.getElementById('nickColor');
-
-    let nickname="";
-    let nickColor="#ffffff";
-    let status="online";
-    let chatHistory=[];
-
-    const hostId="public-lobby-host";
-    let role, peer, conn;
-    const conns=new Set();
-    let users={};
-
-    // ---- Load saved settings ----
-    window.onload=()=>{
-      nickname=localStorage.getItem("nickname")||"";
-      nickColor=localStorage.getItem("nickColor")||"#ffffff";
-      status=localStorage.getItem("status")||"online";
-
-      nickInput.value=nickname;
-      nickColorInput.value=nickColor;
-      document.getElementById("statusSelect").value=status;
-
-      const fontSize=localStorage.getItem("fontSize")||"14";
-      messagesEl.style.fontSize=fontSize+"px";
-      document.getElementById("fontSize").value=fontSize;
-
-      const theme=localStorage.getItem("theme")||"dark";
-      document.getElementById("themeSelect").value=theme;
-      applyTheme(theme);
-
-      const msgStyle=localStorage.getItem("msgStyle")||"cozy";
-      document.getElementById("msgStyle").value=msgStyle;
-      applyMsgStyle(msgStyle);
-    };
-
-    // ---- Save settings ----
-    nickColorInput.oninput=e=>{ nickColor=e.target.value; localStorage.setItem("nickColor",nickColor); };
-    document.getElementById("statusSelect").onchange=e=>{ status=e.target.value; localStorage.setItem("status",status); sendJoin(); };
-    document.getElementById("fontSize").oninput=e=>{ messagesEl.style.fontSize=e.target.value+"px"; localStorage.setItem("fontSize",e.target.value); };
-    document.getElementById("themeSelect").onchange=e=>{ applyTheme(e.target.value); localStorage.setItem("theme",e.target.value); };
-    document.getElementById("msgStyle").onchange=e=>{ applyMsgStyle(e.target.value); localStorage.setItem("msgStyle",e.target.value); };
-
-    // ---- Login ----
-    loginBtn.onclick=()=>{
-      nickname=nickInput.value.trim()||"Guest"+Math.floor(Math.random()*1000);
-      localStorage.setItem("nickname",nickname);
-      login.style.display='none';
-      startAsRandomPeerAndTryConnectToHost();
-    };
-
-    function startAsRandomPeerAndTryConnectToHost(){
-      role=null;
-      peer=new Peer();
-      peer.on('open',id=>{
-        addSystem(`Connected as ${nickname}`);
-        tryConnectToHost();
-      });
-      peer.on('connection', incoming=>{
-        setupConn(incoming);
-      });
-    }
-
-    function tryConnectToHost(){
-      let connected=false;
-      const attempt=peer.connect(hostId,{reliable:true});
-      attempt.on('open',()=>{
-        connected=true;
-        role='client';
-        conn=attempt;
-        setupConn(conn);
-        sendJoin();
-      });
-      setTimeout(()=>{ if(!connected){ try{attempt.close();}catch(e){} try{peer.destroy();}catch(e){} startAsHost(); }},2500);
-    }
-
-    function startAsHost(){
-      role='host';
-      peer=new Peer(hostId);
-      peer.on('open',()=>{ addSystem(`Hosting public lobby as ${nickname}`); sendJoin(); });
-      peer.on('connection',c=>{
-        setupConn(c);
-        // send full state to new client
-        c.send({type:'userlist',users});
-        c.send({type:'history',history:chatHistory});
-      });
-    }
-
-    function setupConn(c){
-      conns.add(c);
-      c.on('data',d=>{
-        if(d.type==='chat'){
-          addMsg(d.nickname,d.text,d.time,d.color,d.id,d.reactions);
-          if(role==='host') broadcast(d,c);
-        } else if(d.type==='system'){
-          addSystem(d.text);
-        } else if(d.type==='join'){
-          users[c.peer]={nick:d.nickname,color:d.color,status:d.status};
-          updateUserList();
-          addSystem(`${d.time} – ${d.nickname} joined`);
-          if(role==='host'){ 
-            broadcast(d,c);
-            // sync userlist for everyone
-            broadcast({type:'userlist',users});
-          }
-        } else if(d.type==='userlist'){
-          users=d.users; updateUserList();
-        } else if(d.type==='history'){
-          d.history.forEach(m=>addMsg(m.nick,m.text,m.time,m.color,m.id,m.reactions));
-        } else if(d.type==='reaction'){
-          const msg=chatHistory.find(m=>m.id===d.id);
-          if(msg){
-            if(!msg.reactions[d.emoji]) msg.reactions[d.emoji]=[];
-            if(!msg.reactions[d.emoji].includes(d.user)) msg.reactions[d.emoji].push(d.user);
-            renderReactions(d.id,msg.reactions);
-          }
-          if(role==='host') broadcast(d,c);
-        }
-      });
-      c.on('close',()=>{conns.delete(c); delete users[c.peer]; updateUserList(); addSystem(`${timestamp()} – A user left`); if(role==='host') broadcast({type:'system',text:`${timestamp()} – A user left`}); });
-      c.on('error',err=>{conns.delete(c); delete users[c.peer]; updateUserList(); console.warn(err);});
-    }
-
-    function broadcast(data,except){ conns.forEach(c=>{if(c!==except && c.open)c.send(data);}); }
-
-    function sendMsg(){
-      const text=input.value.trim(); if(!text)return; input.value='';
-      const id=Date.now()+Math.random().toString(36).slice(2);
-      const data={type:'chat',nickname,text,time:timestamp(),color:nickColor,id,reactions:{}};
-      addMsg(nickname,text,data.time,nickColor,id,{});
-      if(role==='host') broadcast(data); else if(conn&&conn.open) conn.send(data);
-    }
-
-    function sendJoin(){
-      const data={type:'join',nickname,color:nickColor,status,time:timestamp()};
-      if(role==='host'){ users[peer.id]={nick:nickname,color:nickColor,status}; updateUserList(); broadcast(data);} 
-      else if(conn&&conn.open) conn.send(data);
-    }
-
-    sendBtn.onclick=sendMsg;
-    input.addEventListener('keypress',e=>{if(e.key==='Enter')sendMsg();});
-
-    function addMsg(nick,text,time,color,id,reactions={}){
-      if(chatHistory.find(m=>m.id===id)) return;
-      const div=document.createElement('div');
-      div.className='msg';
-      div.dataset.id=id;
-      div.innerHTML=`
-        <div class="meta">
-          <span class="nickname" style="color:${color}">${nick}</span> <span>${time}</span>
-        </div>
-        <div class="text">${escapeHtml(text)}</div>
-        <div class="reactions"></div>
-        <div class="reaction-bar">
-          <span>👍</span><span>❤️</span><span>😂</span><span>😮</span><span>👀</span><span>➕</span>
-        </div>
-      `;
-      messagesEl.appendChild(div);
-      messagesEl.scrollTop=messagesEl.scrollHeight;
-      chatHistory.push({id,nick,text,time,color,reactions});
-      renderReactions(id,reactions);
-
-      div.querySelectorAll('.reaction-bar span').forEach(btn=>{
-        btn.onclick=()=>reactToMsg(id,btn.textContent);
-      });
-    }
-
-    function reactToMsg(id,emoji){
-      const msg=chatHistory.find(m=>m.id===id);
-      if(!msg.reactions[emoji]) msg.reactions[emoji]=[];
-      const i=msg.reactions[emoji].indexOf(nickname);
-      if(i===-1) msg.reactions[emoji].push(nickname);
-      else msg.reactions[emoji].splice(i,1);
-      renderReactions(id,msg.reactions);
-      broadcast({type:'reaction',id,emoji,user:nickname});
-    }
-
-    function renderReactions(id,reactions){
-      const div=messagesEl.querySelector(`.msg[data-id="${id}"] .reactions`);
-      div.innerHTML="";
-      Object.entries(reactions).forEach(([emoji,users])=>{
-        if(users.length>0){
-          const span=document.createElement('span');
-          span.textContent=`${emoji} ${users.length}`;
-          span.className="reaction";
-          div.appendChild(span);
-        }
-      });
-    }
-
-    function addSystem(text){
-      const div=document.createElement('div');
-      div.className='system';
-      div.textContent=text;
-      messagesEl.appendChild(div);
-      messagesEl.scrollTop=messagesEl.scrollHeight;
-    }
-
-    function updateUserList(){
-      userListEl.innerHTML="";
-      Object.values(users).forEach(u=>{
-        const div=document.createElement('div');
-        div.className='user';
-        div.style.color=u.color;
-        div.textContent=u.nick+" ("+u.status+")";
-        userListEl.appendChild(div);
-      });
-    }
-
-    function timestamp(){
-      const d=new Date();
-      return d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
-    }
-
-    function escapeHtml(s){ return s.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
-
-    function applyTheme(theme){ document.body.dataset.theme=theme; }
-    function applyMsgStyle(style){ document.body.dataset.msgstyle=style; }
-  </script>
+  <script src="script.js"></script>
 </body>
 </html>
