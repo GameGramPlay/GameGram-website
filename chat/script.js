@@ -17,12 +17,11 @@ const themeSelect = document.getElementById("themeSelect");
 const msgStyleSelect = document.getElementById("msgStyle");
 
 let nickname = "", nickColor = "#ffffff", status = "online";
-let peer, conn, role;
-const conns = new Set();
-let users = {};
+let peer;
+const peers = new Map(); // peerId => connection
+const knownPeers = new Set(); // discovered peers
 let chatHistory = [];
-
-const hostId = "public-lobby-host";
+let users = {};
 
 /* ---------------- LocalStorage ---------------- */
 window.onload = () => {
@@ -48,12 +47,9 @@ window.onload = () => {
     fontSizeInput.value = fontSize;
     messagesEl.style.fontSize = fontSize + "px";
 
-    // Load stored chat history
     const storedHistory = JSON.parse(localStorage.getItem("chatHistory") || "[]");
     storedHistory.forEach(m => addMsg(m.nick, m.text, m.time, m.color, m.id, false));
     chatHistory = storedHistory;
-
-    // Render reactions
     storedHistory.forEach(m => renderReactions(m.id, m.reactions || {}));
 };
 
@@ -63,10 +59,10 @@ loginBtn.onclick = () => {
     localStorage.setItem("nickname", nickname);
     document.getElementById("meName").textContent = nickname;
     login.style.display = 'none';
-    startAsRandomPeerAndTryConnectToHost();
+    startPeer();
 };
 
-/* ---------------- Settings modal ---------------- */
+/* ---------------- Settings ---------------- */
 settingsBtn.onclick = () => {
     nickInputSettings.value = nickname;
     settingsModal.classList.remove("hidden");
@@ -77,18 +73,18 @@ nickInputSettings.onchange = e => {
     nickname = e.target.value.trim() || nickname;
     localStorage.setItem("nickname", nickname);
     document.getElementById("meName").textContent = nickname;
-    sendJoin();
+    broadcastJoin();
 };
 nickColorInput.oninput = e => {
     nickColor = e.target.value;
     localStorage.setItem("nickColor", nickColor);
-    sendJoin();
+    broadcastJoin();
 };
 statusSelect.onchange = e => {
     status = e.target.value;
     localStorage.setItem("status", status);
     document.getElementById("meStatus").textContent = `(${status})`;
-    sendJoin();
+    broadcastJoin();
 };
 fontSizeInput.oninput = e => {
     messagesEl.style.fontSize = e.target.value + "px";
@@ -103,161 +99,151 @@ msgStyleSelect.onchange = e => {
     localStorage.setItem("msgStyle", e.target.value);
 };
 
-/* ---------------- Networking ---------------- */
-function startAsRandomPeerAndTryConnectToHost() {
-    // Use PeerJS public cloud server
+/* ---------------- PeerJS P2P ---------------- */
+function startPeer() {
     peer = new Peer(undefined, {
         host: 'peerjs.com',
         port: 443,
         secure: true,
-        config: {
-            'iceServers': [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:global.stun.twilio.com:3478?transport=udp' }
-            ]
-        }
+        config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] }
     });
 
     peer.on('open', id => {
         addSystem(`Connected as ${nickname} (${id})`);
-        tryConnectToHost();
+        // reconnect to known peers
+        const known = JSON.parse(localStorage.getItem("knownPeers") || "[]");
+        known.forEach(pid => { if (pid !== id) connectToPeer(pid); });
+        broadcastJoin();
     });
 
-    peer.on('connection', incoming => {
-        conns.add(incoming);
-        setupConn(incoming);
-    });
-
-    // Optional: auto-connect to known peers from localStorage for faster multi-device connection
-    const known = JSON.parse(localStorage.getItem("knownPeers") || "[]");
-    known.forEach(pid => { if(pid !== peer.id) tryConnectToKnownPeer(pid); });
-}
-
-function tryConnectToHost() {
-    let connected = false;
-    const attempt = peer.connect(hostId, { reliable: true });
-    attempt.on('open', () => {
-        connected = true;
-        role = 'client';
-        conn = attempt;
-        conns.add(conn);
+    peer.on('connection', conn => {
         setupConn(conn);
-        sendJoin();
-        saveKnownPeer(hostId);
     });
-    attempt.on('error', () => {
-        if (!connected) {
-            try { attempt.close(); } catch (e) {}
-            try { peer.destroy(); } catch (e) {}
-            startAsHost();
+}
+
+function connectToPeer(peerId) {
+    if (peers.has(peerId)) return;
+    const conn = peer.connect(peerId, { reliable: true });
+    setupConn(conn);
+}
+
+function setupConn(conn) {
+    conn.on('open', () => {
+        peers.set(conn.peer, conn);
+        knownPeers.add(conn.peer);
+        saveKnownPeer(conn.peer);
+        addSystem(`Connected to peer ${conn.peer}`);
+        broadcastJoin(conn);
+        // send chat history to new peer
+        conn.send({ type: 'history', history: chatHistory });
+        // share known peers
+        conn.send({ type: 'peerlist', peers: Array.from(knownPeers) });
+    });
+
+    conn.on('data', data => {
+        switch (data.type) {
+            case 'chat': handleIncomingMsg(data); break;
+            case 'join': handlePeerJoin(data); break;
+            case 'history': syncHistory(data.history); break;
+            case 'peerlist': data.peers.forEach(p => { if(p !== peer.id && !peers.has(p)) connectToPeer(p); }); break;
+            case 'reaction': handleReaction(data); break;
         }
     });
-    setTimeout(() => {
-        if (!connected) {
-            try { attempt.close(); } catch (e) {}
-            try { peer.destroy(); } catch (e) {}
-            startAsHost();
-        }
-    }, 2000);
-}
 
-function startAsHost() {
-    role = 'host';
-    peer = new Peer(hostId, {
-        host: 'peerjs.com',
-        port: 443,
-        secure: true
+    conn.on('close', () => {
+        peers.delete(conn.peer);
+        delete users[conn.peer];
+        updateUserList();
+        addSystem(`Disconnected from ${conn.peer}`);
     });
-
-    peer.on('open', () => {
-        addSystem(`Hosting lobby as ${nickname}`);
-        sendJoin();
-    });
-
-    peer.on('connection', c => {
-        conns.add(c);
-        setupConn(c);
-        c.on('open', () => {
-            c.send({ type: 'userlist', users });
-            c.send({ type: 'history', history: chatHistory });
-        });
-    });
-}
-
-/* ---------------- Utility: remember known peers ---------------- */
-function saveKnownPeer(peerId) {
-    let known = JSON.parse(localStorage.getItem("knownPeers") || "[]");
-    if (!known.includes(peerId)) {
-        known.push(peerId);
-        localStorage.setItem("knownPeers", JSON.stringify(known));
-    }
-}
-
-function tryConnectToKnownPeer(peerId) {
-    const attempt = peer.connect(peerId, { reliable: true });
-    attempt.on('open', () => {
-        conns.add(attempt);
-        setupConn(attempt);
-        saveKnownPeer(peerId);
-    });
-    attempt.on('error', () => { /* ignore failed attempt */ });
 }
 
 /* ---------------- Chat ---------------- */
+sendBtn.onclick = sendMsg;
+input.addEventListener('keypress', e => { if (e.key === 'Enter') sendMsg(); });
+
 function sendMsg() {
     const text = input.value.trim();
     if (!text) return;
     input.value = '';
     const id = Date.now() + "-" + Math.random();
-    const data = { type: 'chat', nickname, text, time: timestamp(), color: nickColor, id };
+    const data = { type: 'chat', nickname, text, color: nickColor, time: timestamp(), id };
     addMsg(nickname, text, data.time, nickColor, id);
-    if (role === 'host') broadcast(data);
-    else if (conn && conn.open) conn.send(data);
+    broadcast(data);
 }
-sendBtn.onclick = sendMsg;
-input.addEventListener('keypress', e => { if (e.key === 'Enter') sendMsg(); });
 
-function addMsg(nick, text, time, color, id, save = true, animate = true) {
-    let div = messagesEl.querySelector(`.msg[data-id="${id}"]`);
-    if (!div) {
-        div = document.createElement('div');
-        div.className = 'msg';
-        if (animate) div.classList.add('new');
-        div.dataset.id = id;
-        div.innerHTML = `
-      <div class="meta">
-        <span class="nickname" style="color:${color}">${nick}</span> <span>${time}</span>
-      </div>
-      <div class="text">${escapeHtml(text)}</div>
-      <div class="reactions"></div>
-      <div class="reaction-bar">
-        <span class="reactBtn">😊</span>
-        <span class="reactBtn">👍</span>
-        <span class="reactBtn">❤️</span>
-      </div>`;
-        messagesEl.appendChild(div);
-        messagesEl.scrollTop = messagesEl.scrollHeight;
-
-        div.querySelectorAll('.reactBtn').forEach(btn => {
-            btn.onclick = () => reactToMsg(id, btn.textContent);
-        });
-
-        if (animate) {
-            setTimeout(() => div.classList.add('show'), 10);
-            setTimeout(() => div.classList.remove('new'), 300);
-        }
-    } else {
-        div.querySelector('.nickname').style.color = color;
-        div.querySelector('.nickname').textContent = nick;
-        div.querySelector('.text').innerHTML = escapeHtml(text);
+function handleIncomingMsg(msg) {
+    if (!chatHistory.find(m => m.id === msg.id)) {
+        addMsg(msg.nickname, msg.text, msg.time, msg.color, msg.id);
+        broadcast(msg); // propagate to other peers
     }
+}
 
-    if (save) {
-        if (!chatHistory.find(m => m.id === id)) {
-            chatHistory.push({ id, nick, text, time, color, reactions: {} });
-            localStorage.setItem("chatHistory", JSON.stringify(chatHistory));
+function broadcast(data, except) {
+    peers.forEach(conn => { if(conn.open && conn !== except) conn.send(data); });
+}
+
+/* ---------------- Join / Peer management ---------------- */
+function broadcastJoin(conn) {
+    const data = { type: 'join', id: peer.id, nickname, color: nickColor, status };
+    if(conn) conn.send(data);
+    else broadcast(data);
+    users[peer.id] = { nick: nickname, color: nickColor, status };
+    updateUserList();
+}
+
+function handlePeerJoin(data) {
+    users[data.id] = { nick: data.nickname, color: data.color, status: data.status };
+    updateUserList();
+}
+
+/* ---------------- History ---------------- */
+function syncHistory(history) {
+    history.forEach(m => {
+        if (!chatHistory.find(msg => msg.id === m.id)) {
+            addMsg(m.nick, m.text, m.time, m.color, m.id);
         }
-    }
+    });
+}
+
+/* ---------------- Reactions ---------------- */
+function reactToMsg(id, emoji) {
+    const msg = chatHistory.find(m => m.id === id);
+    if (!msg.reactions) msg.reactions = {};
+    if (!msg.reactions[emoji]) msg.reactions[emoji] = [];
+    if (!msg.reactions[emoji].includes(nickname)) msg.reactions[emoji].push(nickname);
+    renderReactions(id, msg.reactions);
+    broadcast({ type: 'reaction', id, emoji, user: nickname });
+}
+
+function handleReaction(data) {
+    const msg = chatHistory.find(m => m.id === data.id);
+    if (!msg) return;
+    if (!msg.reactions) msg.reactions = {};
+    if (!msg.reactions[data.emoji]) msg.reactions[data.emoji] = [];
+    if (!msg.reactions[data.emoji].includes(data.user)) msg.reactions[data.emoji].push(data.user);
+    renderReactions(data.id, msg.reactions);
+}
+
+/* ---------------- UI ---------------- */
+function addMsg(nick, text, time, color, id) {
+    if(messagesEl.querySelector(`.msg[data-id="${id}"]`)) return;
+    const div = document.createElement('div');
+    div.className = 'msg';
+    div.dataset.id = id;
+    div.innerHTML = `<div class="meta"><span class="nickname" style="color:${color}">${nick}</span> <span>${time}</span></div>
+                     <div class="text">${escapeHtml(text)}</div>
+                     <div class="reactions"></div>
+                     <div class="reaction-bar">
+                        <span class="reactBtn">😊</span>
+                        <span class="reactBtn">👍</span>
+                        <span class="reactBtn">❤️</span>
+                     </div>`;
+    messagesEl.appendChild(div);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+    div.querySelectorAll('.reactBtn').forEach(btn => btn.onclick = () => reactToMsg(id, btn.textContent));
+    chatHistory.push({ id, nick, text, time, color, reactions: {} });
+    localStorage.setItem("chatHistory", JSON.stringify(chatHistory));
 }
 
 function addSystem(text) {
@@ -280,13 +266,19 @@ function updateUserList() {
 }
 
 function timestamp() {
-    const d = new Date();
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
 }
 
-function escapeHtml(s) { 
-    return s.replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])); 
+function escapeHtml(s) {
+    return s.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
 }
+
+/* ---------------- Save known peers ---------------- */
+function saveKnownPeer(peerId) {
+    let known = JSON.parse(localStorage.getItem("knownPeers")||"[]");
+    if(!known.includes(peerId)){ known.push(peerId); localStorage.setItem("knownPeers", JSON.stringify(known)); }
+}
+
 
 /* ---------------- Reactions ---------------- */
 function reactToMsg(id, emoji) {
