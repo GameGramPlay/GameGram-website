@@ -248,7 +248,13 @@ function handleIncomingMsg(msg) {
   }
 }
 function broadcast(data, except) {
-  peers.forEach(conn => { if (conn.open && conn!==except) conn.send(data); });
+  peers.forEach(c => {
+    try {
+      if (c.open && c !== except) c.send(data);
+    } catch (e) {
+      console.warn("Broadcast send failed to", c.peer, e);
+    }
+  });
 }
 
 // ---------- Join / Peers ----------
@@ -277,7 +283,11 @@ function reactToMsg(id, emoji) {
   if (!msg.reactions) msg.reactions = {};
   if (!msg.reactions[emoji]) msg.reactions[emoji] = [];
   if (!msg.reactions[emoji].includes(nickname)) msg.reactions[emoji].push(nickname);
+
   renderReactions(id, msg.reactions);
+  localStorage.setItem("chatHistory", JSON.stringify(chatHistory));
+
+  // broadcast reaction to everyone else
   broadcast({ type: 'reaction', id, emoji, user: nickname });
 }
 function handleReaction(data) {
@@ -339,6 +349,15 @@ function renderReactions(id, reactions) {
     div.appendChild(span);
   });
 }
+
+function sendJoin() {
+  const data = { type: 'join', id: peer.id, nickname, color: nickColor, status, time: timestamp() };
+  broadcast(data);
+  users[peer.id] = { nick: nickname, color: nickColor, status };
+  updateUserList();
+}
+
+
 function timestamp() {
   return new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
 }
@@ -349,3 +368,9 @@ function saveKnownPeer(peerId) {
   let known = JSON.parse(localStorage.getItem("knownPeers")||"[]");
   if(!known.includes(peerId)) { known.push(peerId); localStorage.setItem("knownPeers", JSON.stringify(known)); }
 }
+
+setInterval(() => {
+  if (peer && peer.open) {
+    broadcast({ type: 'resync-request', lastId: chatHistory.length ? chatHistory[chatHistory.length - 1].id : null });
+  }
+}, 15000);
