@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mouse Tracker</title>
+    <style>
+        body, html { margin: 0; height: 100%; overflow: hidden; }
+        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div id="message"></div>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const messageDiv = document.getElementById('message');
+        
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        let localConnection;
+        let remoteConnection;
+        let dataChannel;
+        let users = {};
+
+        // Generate and exchange signaling data between two peers
+        const signalingData = window.location.hash.slice(1);
+
+        // If there is signaling data (offer/answer), we are the answerer
+        if (signalingData) {
+            // The user is the answerer
+            messageDiv.innerHTML = "Answering connection request...";
+
+            const data = JSON.parse(atob(signalingData));
+            createAnswer(data.offer);
+        } else {
+            // Otherwise, we are the offerer
+            messageDiv.innerHTML = "Creating connection offer...";
+
+            createOffer();
+        }
+
+        // Create the offer and send it as a link for the other user to respond
+        async function createOffer() {
+            localConnection = new RTCPeerConnection();
+            dataChannel = localConnection.createDataChannel('mouse-movement');
+            dataChannel.onopen = () => console.log('Data Channel Open');
+            dataChannel.onmessage = (event) => receiveMousePos(event.data);
+
+            // Handle ICE candidates
+            localConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    // Send ICE candidate to remote peer
+                    sendIceCandidate(event.candidate);
+                }
+            };
+
+            // Create offer and set local description
+            const offer = await localConnection.createOffer();
+            await localConnection.setLocalDescription(offer);
+
+            // Create signaling link (Base64 encoded offer) to send to the other user
+            const offerLink = document.createElement('a');
+            const offerData = {
+                offer: offer,
+                candidates: []
+            };
+            offerLink.href = `#${btoa(JSON.stringify(offerData))}`;
+            offerLink.innerText = "Click to accept connection (share this link with the other person)";
+            messageDiv.innerHTML = '';
+            messageDiv.appendChild(offerLink);
+        }
+
+        // Create answer to the received offer
+        async function createAnswer(offerData) {
+            remoteConnection = new RTCPeerConnection();
+            remoteConnection.ondatachannel = (event) => {
+                const remoteDataChannel = event.channel;
+                remoteDataChannel.onmessage = (event) => receiveMousePos(event.data);
+            };
+
+            // Handle ICE candidates
+            remoteConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    // Send ICE candidate to local peer
+                    sendIceCandidate(event.candidate);
+                }
+            };
+
+            await remoteConnection.setRemoteDescription(offerData.offer);
+
+            // Create answer and send it to local peer
+            const answer = await remoteConnection.createAnswer();
+            await remoteConnection.setLocalDescription(answer);
+
+            // Send back the answer to the offerer
+            offerData.answer = answer;
+            sendSignalingData(offerData);
+        }
+
+        // Send signaling data (offer, answer, ICE candidates)
+        function sendSignalingData(data) {
+            const signalingLink = `#${btoa(JSON.stringify(data))}`;
+            messageDiv.innerHTML = `Connection established! Share this link to connect to others: <a href="${signalingLink}">${signalingLink}</a>`;
+        }
+
+        // Send ICE candidates to the other peer
+        function sendIceCandidate(candidate) {
+            if (remoteConnection) {
+                remoteConnection.addIceCandidate(candidate);
+            } else {
+                console.log('ICE Candidate not yet sent: waiting for peer connection');
+            }
+        }
+
+        // Receive mouse positions and draw them
+        function receiveMousePos(data) {
+            const mousePos = JSON.parse(data);
+            users[mousePos.id] = mousePos;
+            draw();
+        }
+
+        // Draw the users' mouse positions on the canvas
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (const id in users) {
+                const user = users[id];
+                ctx.beginPath();
+                ctx.arc(user.x, user.y, 10, 0, Math.PI * 2);
+                ctx.fillStyle = "blue";
+                ctx.fill();
+            }
+        }
+
+        // Track mouse movements and send to remote peer
+        canvas.addEventListener('mousemove', (e) => {
+            const mousePos = { id: Date.now(), x: e.clientX, y: e.clientY };
+            if (dataChannel && dataChannel.readyState === 'open') {
+                dataChannel.send(JSON.stringify(mousePos));
+            }
+        });
+    </script>
+</body>
+</html>
