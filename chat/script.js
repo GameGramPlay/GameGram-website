@@ -59,7 +59,7 @@ function drawConnectionGraph() {
 
 // Public PeerJS hosts
 const PEERJS_HOSTS = ['0.peerjs.com','1.peerjs.com','2.peerjs.com','3.peerjs.com'];
-const PEER_OPEN_TIMEOUT = 3000;
+const PEER_OPEN_TIMEOUT = 25000;
 
 let roomName = "public"; // default public room
 
@@ -264,7 +264,7 @@ function cleanupPeer() {
 
 // ---------- Peer Discovery ----------
 function discoverPeers() {
-  for (let i = 1; i <= 100; i++) {
+  for (let i = 1; i <= 3; i++) {
     const targetId = `gamegramuser${i}`;
     enqueuePeer(targetId);
   }
@@ -282,7 +282,7 @@ function processQueue() {
   if (connecting || connectQueue.length === 0) return;
   connecting = true;
   const peerId = connectQueue.shift();
-  const delay = 1000 + Math.random()*4000; // 1-5 sec random
+  const delay = 1000 + Math.random()*10000; // 1-5 sec random
 
   setTimeout(() => {
     const conn = peer.connect(peerId, { reliable: true });
