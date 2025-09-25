@@ -33,6 +33,10 @@ let chatHistory = [];
 let users = {};
 let debugEnabled = true;
 
+// --- Connection queue ---
+let connectQueue = [];
+let connecting = false;
+
 // ---------------- Helpers ----------------
 function logDebug(msg, obj) {
   if (!debugEnabled) return;
@@ -55,7 +59,7 @@ function drawConnectionGraph() {
 
 // Public PeerJS hosts
 const PEERJS_HOSTS = ['0.peerjs.com','1.peerjs.com','2.peerjs.com','3.peerjs.com'];
-const PEER_OPEN_TIMEOUT = 2500;
+const PEER_OPEN_TIMEOUT = 3000;
 
 let roomName = "public"; // default public room
 
@@ -96,7 +100,7 @@ window.onload = () => {
 
 // ---------- Login ----------
 loginBtn.onclick = () => {
-  nickname = nickInput.value.trim() || "Guest" + Math.floor(Math.random() * 50);
+  nickname = nickInput.value.trim() || "Guest" + Math.floor(Math.random() * 1000);
   roomName = roomInput.value.trim() || "public";
   localStorage.setItem("nickname", nickname);
   localStorage.setItem("roomName", roomName);
@@ -150,13 +154,15 @@ async function makePeerId() {
   let counter = parseInt(localStorage.getItem("globalPeerCounter") || "0", 10);
   let newId;
   let attempts = 0;
+
   while (true) {
     counter++;
     newId = `gamegramuser${counter}`;
     attempts++;
-    if (attempts > 15) break;
+    if (attempts > 1000) break;
     if (!Array.from(knownPeers).includes(newId)) break;
   }
+
   localStorage.setItem("globalPeerCounter", counter);
   return newId;
 }
@@ -189,7 +195,7 @@ function tryPeerHostsSequentially(hosts, attemptIndex) {
   }, (err) => {
     if (err) {
       cleanupPeer();
-      setTimeout(()=> tryPeerHostsSequentially(hosts, attemptIndex + 1), 200);
+      setTimeout(()=> tryPeerHostsSequentially(hosts, attemptIndex + 1), 500);
     }
   });
   setTimeout(() => {
@@ -233,11 +239,15 @@ function cleanupPeer() {
   peer = null;
 }
 
-// ---------- Peer Discovery & Throttled Connections ----------
-let connectQueue = [];
-let connecting = false;
-let lastConnectionMade = false; // tracks if at least one connection succeeded
+// ---------- Peer Discovery ----------
+function discoverPeers() {
+  for (let i = 1; i <= 100; i++) {
+    const targetId = `gamegramuser${i}`;
+    enqueuePeer(targetId);
+  }
+}
 
+// --- Connection queue functions ---
 function enqueuePeer(peerId) {
   if (!peers.has(peerId) && peerId !== peer.id && !connectQueue.includes(peerId)) {
     connectQueue.push(peerId);
@@ -249,53 +259,39 @@ function processQueue() {
   if (connecting || connectQueue.length === 0) return;
   connecting = true;
   const peerId = connectQueue.shift();
+  const delay = 1000 + Math.random()*4000; // 1-5 sec random
 
-  logDebug(`Attempting connection to ${peerId}`);
-  const conn = peer.connect(peerId, { reliable:true });
-  setupConn(conn);
-
-  // random 1-5s delay before next connection
-  const delay = 1000 + Math.random() * 4000;
   setTimeout(() => {
-    connecting = false;
-    processQueue();
+    const conn = peer.connect(peerId, { reliable: true });
+    setupConn(conn);
+
+    conn.on('open', () => {
+      connecting = false;
+      processQueue();
+    });
+
+    conn.on('error', () => {
+      connecting = false;
+      setTimeout(() => enqueuePeer(peerId), 15000); // retry after 15s
+      processQueue();
+    });
+
+    conn.on('close', () => { connecting = false; processQueue(); });
   }, delay);
 }
 
-function discoverPeers() {
-  lastConnectionMade = false;
+// ---------- Connections ----------
+function connectToPeer(peerId) { enqueuePeer(peerId); }
 
-  for (let i = 1; i <= 15; i++) {
-    const targetId = `gamegramuser${i}`;
-    if (peer.id !== targetId && !peers.has(targetId)) {
-      enqueuePeer(targetId);
-    }
-  }
-
-  // if no connection made, retry after 15s
-  setTimeout(() => {
-    if (!lastConnectionMade) {
-      logDebug("No peers connected. Retrying discovery in 15s...");
-      discoverPeers();
-    }
-  }, 15000);
-}
-
-setInterval(() => {
-  if (peer && peer.open) discoverPeers();
-}, 20000);
-
-// ---------- Connection Setup ----------
 function setupConn(conn) {
   conn.on('open', () => {
-    logDebug(`Connection open: ${conn.peer}`);
+    addSystem(`Data connection open: ${conn.peer}`);
     peers.set(conn.peer, conn);
     knownPeers.add(conn.peer);
     saveKnownPeer(conn.peer);
-    lastConnectionMade = true; // mark success
-    conn.send({ type:'join', id:peer.id, nickname, color:nickColor, status });
-    conn.send({ type:'history', history:chatHistory });
-    conn.send({ type:'peerlist', peers:Array.from(knownPeers).concat([peer.id]) });
+    conn.send({ type: 'join', id: peer.id, nickname, color: nickColor, status });
+    conn.send({ type: 'history', history: chatHistory });
+    conn.send({ type: 'peerlist', peers: Array.from(knownPeers).concat([peer.id]) });
   });
 
   conn.on('data', data => {
@@ -305,30 +301,14 @@ function setupConn(conn) {
       case 'join': handlePeerJoin(data); break;
       case 'history': syncHistory(data.history); break;
       case 'peerlist':
-        (data.peers||[]).forEach(p => {
-          if (p!==peer.id && !peers.has(p)) {
-            knownPeers.add(p);
-            enqueuePeer(p); // use throttled queue
-          }
-        });
+        (data.peers||[]).forEach(p => { if (p!==peer.id && !peers.has(p)) enqueuePeer(p); });
         break;
       case 'reaction': handleReaction(data); break;
     }
   });
 
-  conn.on('close', () => {
-    peers.delete(conn.peer);
-    delete users[conn.peer];
-    updateUserList();
-    logDebug(`Connection closed: ${conn.peer}`);
-  });
-
-  conn.on('error', err => {
-    peers.delete(conn.peer);
-    delete users[conn.peer];
-    updateUserList();
-    logDebug(`Connection error with ${conn.peer}: ${err}`);
-  });
+  conn.on('close', () => { peers.delete(conn.peer); delete users[conn.peer]; updateUserList(); addSystem(`Connection closed: ${conn.peer}`); });
+  conn.on('error', err => { peers.delete(conn.peer); delete users[conn.peer]; updateUserList(); addSystem(`Connection error with ${conn.peer}: ${err}`); });
 }
 
 // ---------- Chat ----------
@@ -341,28 +321,32 @@ function sendMsg() {
   const id = Date.now()+"-"+Math.random();
   const data = { type: 'chat', nickname, text, color: nickColor, time: timestamp(), id };
   addMsg(nickname, text, data.time, nickColor, id);
-  broadcast(data);
+  safeBroadcast(data);
 }
 function handleIncomingMsg(msg) {
   if (!chatHistory.find(m => m.id === msg.id)) {
     addMsg(msg.nickname, msg.text, msg.time, msg.color, msg.id);
-    broadcast(msg);
+    safeBroadcast(msg);
+  }
+}
+function safeBroadcast(data) {
+  if (peers.size > 0) {
+    broadcast(data);
+  } else {
+    setTimeout(() => safeBroadcast(data), 15000);
   }
 }
 function broadcast(data, except) {
   peers.forEach(c => {
-    try {
-      if (c.open && c !== except) c.send(data);
-    } catch (e) {
-      console.warn("Broadcast send failed to", c.peer, e);
-    }
+    try { if (c.open && c !== except) c.send(data); } 
+    catch (e) { console.warn("Broadcast failed", c.peer, e); }
   });
 }
 
 // ---------- Join / Peers ----------
 function broadcastJoin(conn) {
   const data = { type: 'join', id: peer.id, nickname, color: nickColor, status };
-  if (conn?.open) conn.send(data); else broadcast(data);
+  if (conn?.open) conn.send(data); else safeBroadcast(data);
   users[peer.id] = { nick: nickname, color: nickColor, status };
   updateUserList();
 }
@@ -385,11 +369,9 @@ function reactToMsg(id, emoji) {
   if (!msg.reactions) msg.reactions = {};
   if (!msg.reactions[emoji]) msg.reactions[emoji] = [];
   if (!msg.reactions[emoji].includes(nickname)) msg.reactions[emoji].push(nickname);
-
   renderReactions(id, msg.reactions);
   localStorage.setItem("chatHistory", JSON.stringify(chatHistory));
-
-  broadcast({ type: 'reaction', id, emoji, user: nickname });
+  safeBroadcast({ type: 'reaction', id, emoji, user: nickname });
 }
 function handleReaction(data) {
   const msg = chatHistory.find(m => m.id === data.id);
@@ -414,11 +396,9 @@ function addMsg(nick, text, time, color, id, save = true) {
   messagesEl.scrollTop = messagesEl.scrollHeight;
   div.querySelectorAll('.reactBtn').forEach(btn => btn.onclick = () => reactToMsg(id, btn.textContent));
   setTimeout(()=>div.classList.add('show'), 10);
-  if (save) {
-    if (!chatHistory.find(m => m.id === id)) {
-      chatHistory.push({ id, nick, text, time, color, reactions: {} });
-      localStorage.setItem("chatHistory", JSON.stringify(chatHistory));
-    }
+  if (save && !chatHistory.find(m => m.id === id)) {
+    chatHistory.push({ id, nick, text, time, color, reactions: {} });
+    localStorage.setItem("chatHistory", JSON.stringify(chatHistory));
   }
 }
 function addSystem(text) {
@@ -444,19 +424,15 @@ function renderReactions(id, reactions) {
   if (!div) return;
   div.innerHTML = "";
   Object.entries(reactions).forEach(([emoji, users]) => {
-    const span = document.createElement('span');
+    const span = document.createElement("span");
     span.textContent = `${emoji} ${users.length}`;
     span.className = "reaction";
     div.appendChild(span);
   });
 }
 
-function timestamp() {
-  return new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
-}
-function escapeHtml(s='') {
-  return String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
-}
+function timestamp() { return new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }); }
+function escapeHtml(s='') { return String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
 function saveKnownPeer(peerId) {
   let known = JSON.parse(localStorage.getItem("knownPeers")||"[]");
   if(!known.includes(peerId)) { known.push(peerId); localStorage.setItem("knownPeers", JSON.stringify(known)); }
@@ -464,13 +440,13 @@ function saveKnownPeer(peerId) {
 
 // ---------- Periodic Gossip ----------
 setInterval(() => {
-  if (peer && peer.open) {
+  if (peer && peer.open && peers.size>0) {
     broadcast({ type: 'peerlist', peers: Array.from(knownPeers).concat([peer.id]) });
   }
-}, 20000);
+}, 20000 + Math.random()*5000);
 
 setInterval(() => {
-  if (peer && peer.open) {
+  if (peer && peer.open && peers.size>0) {
     broadcast({ type: 'resync-request', lastId: chatHistory.length ? chatHistory[chatHistory.length - 1].id : null });
   }
-}, 15000);
+}, 15000 + Math.random()*3000);
