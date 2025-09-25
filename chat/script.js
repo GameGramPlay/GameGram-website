@@ -99,18 +99,41 @@ window.onload = () => {
 };
 
 // ---------- Login ----------
-loginBtn.onclick = () => {
-  nickname = nickInput.value.trim() || "Guest" + Math.floor(Math.random() * 30);
-  roomName = roomInput.value.trim() || "public";
+loginBtn.onclick = async () => {
+  // Get nickname and room
+  const nick = nickInput.value.trim();
+  const room = roomInput.value.trim();
+
+  if (!nick) {
+    alert("Please enter a nickname!");
+    return;
+  }
+  if (!room) {
+    alert("Please enter a room name!");
+    return;
+  }
+
+  nickname = nick;
+  roomName = room;
+
   localStorage.setItem("nickname", nickname);
   localStorage.setItem("roomName", roomName);
 
+  // Update UI
   document.getElementById("meName").textContent = nickname;
   document.getElementById("roomLabel").textContent = roomName;
 
   login.style.display = 'none';
-  startPeerWithFallbacks();
+  addSystem(`Joining room ${roomName} as ${nickname}...`);
+
+  try {
+    await startPeerWithFallbacks();
+  } catch (err) {
+    addSystem("Failed to join: " + err);
+    login.style.display = 'block'; // show login again
+  }
 };
+
 
 // ---------- Settings ----------
 settingsBtn.onclick = () => {
