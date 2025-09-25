@@ -1,5 +1,6 @@
-// script.js — Fully P2P with PeerJS fallback hosts + TURN/STUN + verbose debug
+// script.js — Fully P2P with PeerJS fallback hosts + TURN/STUN + verbose debug (optimized)
 
+// ------------------ DOM Elements ------------------
 const messagesEl = document.getElementById('messages');
 const input = document.getElementById('input');
 const sendBtn = document.getElementById('send');
@@ -25,6 +26,7 @@ debugPanel.id = "debugPanel";
 debugPanel.className = "hidden p-2 border-t mt-2 text-xs font-mono bg-black text-green-400 max-h-64 overflow-y-auto";
 settingsModal.appendChild(debugPanel);
 
+// ------------------ Variables ------------------
 let nickname = "", nickColor = "#ffffff", status = "online";
 let peer;                               // PeerJS Peer instance
 const peers = new Map();                // peerId => DataConnection
@@ -33,334 +35,36 @@ let chatHistory = [];
 let users = {};
 let debugEnabled = true;
 
-// ---------------- Helpers ----------------
+// Connection queue for throttling
+let connectQueue = [];
+let connecting = false;
+
+// ------------------ Helpers ------------------
 function logDebug(msg, obj) {
   if (!debugEnabled) return;
+  // Skip repetitive connection logs
+  if (typeof msg === "string" && msg.startsWith("Connecting to peer")) return;
   const line = document.createElement("div");
   line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
   debugPanel.appendChild(line);
   debugPanel.scrollTop = debugPanel.scrollHeight;
   if (obj) console.debug("[Debug]", msg, obj);
-  drawConnectionGraph();
-}
-function drawConnectionGraph() {
-  let graph = `You: ${peer?.id || "?"}\n`;
-  peers.forEach((c, pid) => { graph += ` ↔ ${pid} (${c.open ? "open" : "closed"})\n`; });
-  const line = document.createElement("pre");
-  line.textContent = graph;
-  line.className = "mt-2 border-t border-gray-700 pt-2 text-gray-400";
-  debugPanel.appendChild(line);
-  debugPanel.scrollTop = debugPanel.scrollHeight;
 }
 
-// Public PeerJS hosts
-const PEERJS_HOSTS = ['0.peerjs.com','1.peerjs.com','2.peerjs.com','3.peerjs.com'];
-const PEER_OPEN_TIMEOUT = 2500;
-
-let roomName = "public"; // default public room
-
-// ---------- LocalStorage & UI init ----------
-window.onload = () => {
-  nickname = localStorage.getItem("nickname") || "";
-  nickColor = localStorage.getItem("nickColor") || "#ffffff";
-  status = localStorage.getItem("status") || "online";
-  roomName = localStorage.getItem("roomName") || "public";
-
-  document.getElementById("meName").textContent = nickname || "Guest";
-  document.getElementById("meStatus").textContent = `(${status})`;
-  document.getElementById("roomLabel").textContent = roomName;
-
-  nickColorInput.value = nickColor;
-  statusSelect.value = status;
-  roomInput.value = roomName;
-
-  const theme = localStorage.getItem("theme") || "dark";
-  document.body.dataset.theme = theme;
-  themeSelect.value = theme;
-
-  const msgStyle = localStorage.getItem("msgStyle") || "cozy";
-  document.body.dataset.msgstyle = msgStyle;
-  msgStyleSelect.value = msgStyle;
-
-  const fontSize = localStorage.getItem("fontSize") || "14";
-  fontSizeInput.value = fontSize;
-  messagesEl.style.fontSize = fontSize + "px";
-
-  const storedHistory = JSON.parse(localStorage.getItem("chatHistory") || "[]");
-  storedHistory.forEach(m => addMsg(m.nick, m.text, m.time, m.color, m.id, false));
-  chatHistory = storedHistory;
-  storedHistory.forEach(m => renderReactions(m.id, m.reactions || {}));
-
-  addSystem("UI ready. Please log in.");
-};
-
-// ---------- Login ----------
-loginBtn.onclick = () => {
-  nickname = nickInput.value.trim() || "Guest" + Math.floor(Math.random() * 1000);
-  roomName = roomInput.value.trim() || "public";
-  localStorage.setItem("nickname", nickname);
-  localStorage.setItem("roomName", roomName);
-
-  document.getElementById("meName").textContent = nickname;
-  document.getElementById("roomLabel").textContent = roomName;
-
-  login.style.display = 'none';
-  startPeerWithFallbacks();
-};
-
-// ---------- Settings ----------
-settingsBtn.onclick = () => {
-  nickInputSettings.value = nickname;
-  settingsModal.classList.remove("hidden");
-};
-closeSettings.onclick = () => settingsModal.classList.add("hidden");
-
-nickInputSettings.onchange = e => {
-  nickname = e.target.value.trim() || nickname;
-  localStorage.setItem("nickname", nickname);
-  document.getElementById("meName").textContent = nickname;
-  broadcastJoin();
-};
-nickColorInput.oninput = e => {
-  nickColor = e.target.value;
-  localStorage.setItem("nickColor", nickColor);
-  broadcastJoin();
-};
-statusSelect.onchange = e => {
-  status = e.target.value;
-  localStorage.setItem("status", status);
-  document.getElementById("meStatus").textContent = `(${status})`;
-  broadcastJoin();
-};
-fontSizeInput.oninput = e => {
-  messagesEl.style.fontSize = e.target.value + "px";
-  localStorage.setItem("fontSize", e.target.value);
-};
-themeSelect.onchange = e => {
-  document.body.dataset.theme = e.target.value;
-  localStorage.setItem("theme", e.target.value);
-};
-msgStyleSelect.onchange = e => {
-  document.body.dataset.msgstyle = e.target.value;
-  localStorage.setItem("msgStyle", e.target.value);
-};
-
-// ---------- PeerJS startup with host fallbacks ----------
-
-// Global sequential peer ID generator with collision detection
-async function makePeerId() {
-  let counter = parseInt(localStorage.getItem("globalPeerCounter") || "0", 10);
-  let newId;
-  let attempts = 0;
-
-  while (true) {
-    counter++;
-    newId = `gamegramuser${counter}`;
-    attempts++;
-
-    if (attempts > 1000) break;
-
-    if (!Array.from(knownPeers).includes(newId)) break;
-  }
-
-  localStorage.setItem("globalPeerCounter", counter);
-  return newId;
+function timestamp() {
+  return new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
 }
 
-function startPeerWithFallbacks() {
-  addSystem("Starting PeerJS client — trying public cloud endpoints...");
-  tryPeerHostsSequentially(PEERJS_HOSTS.slice(), 0);
+function escapeHtml(s='') {
+  return String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
 }
 
-function tryPeerHostsSequentially(hosts, attemptIndex) {
-  if (attemptIndex >= hosts.length) {
-    addSystem("All public PeerJS endpoints failed. Run your own PeerServer for reliability.");
-    return;
-  }
-  const host = hosts[attemptIndex];
-  addSystem(`Attempting PeerJS host: ${host}`);
-  startPeerWithOptions({
-    host,
-    port: 443,
-    path: '/',
-    secure: true,
-    config: {
-      iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-        { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-        { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
-      ]
-    }
-  }, (err) => {
-    if (err) {
-      cleanupPeer();
-      setTimeout(()=> tryPeerHostsSequentially(hosts, attemptIndex + 1), 200);
-    }
-  });
-  setTimeout(() => {
-    if (!peer?.id) {
-      cleanupPeer();
-      tryPeerHostsSequentially(hosts, attemptIndex + 1);
-    }
-  }, PEER_OPEN_TIMEOUT);
+function saveKnownPeer(peerId) {
+  let known = JSON.parse(localStorage.getItem("knownPeers")||"[]");
+  if(!known.includes(peerId)) { known.push(peerId); localStorage.setItem("knownPeers", JSON.stringify(known)); }
 }
 
-async function startPeerWithOptions(opts, callback) {
-  try { if (peer && !peer.destroyed) peer.destroy(); } catch {}
-
-  const id = await makePeerId();
-  peer = new Peer(id, opts);
-
-  peer.on('open', id => {
-    addSystem(`Connected as ${nickname} (${id}) in room [${roomName}]`);
-    logDebug("Peer open", id);
-
-    discoverPeers();
-    broadcastJoin();
-
-    peer.on('connection', conn => {
-      addSystem(`Incoming connection from ${conn.peer}`);
-      logDebug("Incoming connection", conn.peer);
-      setupConn(conn);
-    });
-
-    peer.on('disconnected', () => addSystem("Peer disconnected from signaling server."));
-    peer.on('close', () => addSystem("Peer connection closed."));
-    peer.on('error', err => addSystem("Peer error: " + String(err)));
-
-    if (callback) callback(null);
-  });
-
-  peer.on('error', err => { if (callback) callback(err); });
-}
-
-function cleanupPeer() {
-  try { if (peer && !peer.destroyed) peer.destroy(); } catch {}
-  peer = null;
-}
-
-// ---------- Peer Discovery ----------
-function discoverPeers() {
-  for (let i = 1; i <= 100; i++) {
-    const targetId = `gamegramuser${i}`;
-    if (peer.id !== targetId && !peers.has(targetId)) {
-      connectToPeer(targetId);
-    }
-  }
-}
-setInterval(() => {
-  if (peer && peer.open) discoverPeers();
-}, 10000);
-
-// ---------- Connections ----------
-function connectToPeer(peerId) {
-  if (!peer || peerId === peer.id || peers.has(peerId)) return;
-  addSystem(`Connecting to peer ${peerId}...`);
-  const conn = peer.connect(peerId, { reliable: true });
-  setupConn(conn);
-}
-function setupConn(conn) {
-  conn.on('open', () => {
-    addSystem(`Data connection open: ${conn.peer}`);
-    peers.set(conn.peer, conn);
-    knownPeers.add(conn.peer);
-    saveKnownPeer(conn.peer);
-    conn.send({ type: 'join', id: peer.id, nickname, color: nickColor, status });
-    conn.send({ type: 'history', history: chatHistory });
-    conn.send({ type: 'peerlist', peers: Array.from(knownPeers).concat([peer.id]) });
-  });
-  conn.on('data', data => {
-    logDebug(`Data from ${conn.peer}`, data);
-    switch (data.type) {
-      case 'chat': handleIncomingMsg(data); break;
-      case 'join': handlePeerJoin(data); break;
-      case 'history': syncHistory(data.history); break;
-      case 'peerlist':
-        (data.peers||[]).forEach(p => {
-          if (p!==peer.id && !peers.has(p)) {
-            knownPeers.add(p);
-            connectToPeer(p);
-          }
-        });
-        break;
-      case 'reaction': handleReaction(data); break;
-    }
-  });
-  conn.on('close', () => { peers.delete(conn.peer); delete users[conn.peer]; updateUserList(); addSystem(`Connection closed: ${conn.peer}`); });
-  conn.on('error', err => { peers.delete(conn.peer); delete users[conn.peer]; updateUserList(); addSystem(`Connection error with ${conn.peer}: ${err}`); });
-}
-
-// ---------- Chat ----------
-sendBtn.onclick = sendMsg;
-input.addEventListener('keypress', e => { if (e.key === 'Enter') sendMsg(); });
-function sendMsg() {
-  const text = input.value.trim();
-  if (!text) return;
-  input.value = '';
-  const id = Date.now()+"-"+Math.random();
-  const data = { type: 'chat', nickname, text, color: nickColor, time: timestamp(), id };
-  addMsg(nickname, text, data.time, nickColor, id);
-  broadcast(data);
-}
-function handleIncomingMsg(msg) {
-  if (!chatHistory.find(m => m.id === msg.id)) {
-    addMsg(msg.nickname, msg.text, msg.time, msg.color, msg.id);
-    broadcast(msg);
-  }
-}
-function broadcast(data, except) {
-  peers.forEach(c => {
-    try {
-      if (c.open && c !== except) c.send(data);
-    } catch (e) {
-      console.warn("Broadcast send failed to", c.peer, e);
-    }
-  });
-}
-
-// ---------- Join / Peers ----------
-function broadcastJoin(conn) {
-  const data = { type: 'join', id: peer.id, nickname, color: nickColor, status };
-  if (conn?.open) conn.send(data); else broadcast(data);
-  users[peer.id] = { nick: nickname, color: nickColor, status };
-  updateUserList();
-}
-function handlePeerJoin(data) {
-  users[data.id] = { nick: data.nickname, color: data.color, status: data.status };
-  updateUserList();
-  addSystem(`Peer joined: ${data.nickname} (${data.id})`);
-}
-
-// ---------- History ----------
-function syncHistory(history) {
-  if (!Array.isArray(history)) return;
-  history.forEach(m => { if (!chatHistory.find(msg => msg.id === m.id)) addMsg(m.nick, m.text, m.time, m.color, m.id); });
-}
-
-// ---------- Reactions ----------
-function reactToMsg(id, emoji) {
-  const msg = chatHistory.find(m => m.id === id);
-  if (!msg) return;
-  if (!msg.reactions) msg.reactions = {};
-  if (!msg.reactions[emoji]) msg.reactions[emoji] = [];
-  if (!msg.reactions[emoji].includes(nickname)) msg.reactions[emoji].push(nickname);
-
-  renderReactions(id, msg.reactions);
-  localStorage.setItem("chatHistory", JSON.stringify(chatHistory));
-
-  broadcast({ type: 'reaction', id, emoji, user: nickname });
-}
-function handleReaction(data) {
-  const msg = chatHistory.find(m => m.id === data.id);
-  if (!msg) return;
-  if (!msg.reactions) msg.reactions = {};
-  if (!msg.reactions[data.emoji]) msg.reactions[data.emoji] = [];
-  if (!msg.reactions[data.emoji].includes(data.user)) msg.reactions[data.emoji].push(data.user);
-  renderReactions(data.id, msg.reactions);
-}
-
-// ---------- UI ----------
+// ------------------ UI ------------------
 function addMsg(nick, text, time, color, id, save = true) {
   if (messagesEl.querySelector(`.msg[data-id="${id}"]`)) return;
   const div = document.createElement('div');
@@ -381,14 +85,15 @@ function addMsg(nick, text, time, color, id, save = true) {
     }
   }
 }
+
 function addSystem(text) {
   const div = document.createElement('div');
   div.className = 'system';
   div.textContent = text;
   messagesEl.appendChild(div);
   messagesEl.scrollTop = messagesEl.scrollHeight;
-  console.log("[SYSTEM]", text);
 }
+
 function updateUserList() {
   userListEl.innerHTML = "";
   Object.values(users).forEach(u => {
@@ -399,6 +104,7 @@ function updateUserList() {
     userListEl.appendChild(div);
   });
 }
+
 function renderReactions(id, reactions) {
   const div = messagesEl.querySelector(`.msg[data-id="${id}"] .reactions`);
   if (!div) return;
@@ -411,18 +117,238 @@ function renderReactions(id, reactions) {
   });
 }
 
-function timestamp() {
-  return new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' });
-}
-function escapeHtml(s='') {
-  return String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
-}
-function saveKnownPeer(peerId) {
-  let known = JSON.parse(localStorage.getItem("knownPeers")||"[]");
-  if(!known.includes(peerId)) { known.push(peerId); localStorage.setItem("knownPeers", JSON.stringify(known)); }
+// ------------------ PeerJS ------------------
+const PEERJS_HOSTS = ['0.peerjs.com','1.peerjs.com','2.peerjs.com','3.peerjs.com'];
+const PEER_OPEN_TIMEOUT = 2500;
+let roomName = "public";
+
+// Generate sequential global ID
+function makePeerId() {
+  let counter = parseInt(localStorage.getItem("peerCounter") || "1");
+  localStorage.setItem("peerCounter", counter + 1);
+  return `gamegramuser${counter}`;
 }
 
-// ---------- Periodic Gossip ----------
+// ------------------ Peer connection ------------------
+function startPeerWithFallbacks() {
+  addSystem("Starting PeerJS client...");
+  tryPeerHostsSequentially(PEERJS_HOSTS.slice(), 0);
+}
+
+function tryPeerHostsSequentially(hosts, index) {
+  if (index >= hosts.length) { addSystem("All public PeerJS endpoints failed."); return; }
+  const host = hosts[index];
+  startPeerWithOptions({
+    host, port: 443, path: '/', secure: true,
+    config: {
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'turn:openrelay.metered.ca:443', username:'openrelayproject', credential:'openrelayproject' }
+      ]
+    }
+  }, (err)=>{
+    if (err) setTimeout(()=> tryPeerHostsSequentially(hosts, index+1), 200);
+  });
+  setTimeout(()=>{ if(!peer?.id) tryPeerHostsSequentially(hosts, index+1); }, PEER_OPEN_TIMEOUT);
+}
+
+function startPeerWithOptions(opts, callback) {
+  try { if(peer && !peer.destroyed) peer.destroy(); } catch{}
+  peer = new Peer(makePeerId(), opts);
+
+  peer.on('open', id=>{
+    addSystem(`Connected as ${nickname} (${id}) in room [${roomName}]`);
+    const known = JSON.parse(localStorage.getItem("knownPeers")||"[]");
+    known.forEach(pid=> enqueuePeer(pid));
+    broadcastJoin();
+    peer.on('connection', setupConn);
+    if(callback) callback(null);
+  });
+
+  peer.on('error', err => { if(callback) callback(err); });
+}
+
+// ------------------ Connections queue ------------------
+function enqueuePeer(peerId) {
+  if (!peers.has(peerId) && peerId !== peer.id && !connectQueue.includes(peerId)) {
+    connectQueue.push(peerId);
+    processQueue();
+  }
+}
+
+function processQueue() {
+  if (connecting || connectQueue.length === 0) return;
+  connecting = true;
+  const peerId = connectQueue.shift();
+  const conn = peer.connect(peerId, { reliable:true });
+  setupConn(conn);
+  setTimeout(()=>{ connecting=false; processQueue(); }, 500); // throttle 500ms
+}
+
+function setupConn(conn) {
+  conn.on('open', ()=>{
+    peers.set(conn.peer, conn);
+    knownPeers.add(conn.peer);
+    saveKnownPeer(conn.peer);
+    conn.send({ type:'join', id:peer.id, nickname, color:nickColor, status });
+    conn.send({ type:'history', history:chatHistory });
+    conn.send({ type:'peerlist', peers:Array.from(knownPeers).concat([peer.id]) });
+  });
+  conn.on('data', handleData);
+  conn.on('close', ()=>{ peers.delete(conn.peer); delete users[conn.peer]; updateUserList(); });
+  conn.on('error', ()=>{ peers.delete(conn.peer); delete users[conn.peer]; updateUserList(); });
+}
+
+function handleData(data){
+  switch(data.type){
+    case 'chat': handleIncomingMsg(data); break;
+    case 'join': handlePeerJoin(data); break;
+    case 'history': syncHistory(data.history); break;
+    case 'peerlist': (data.peers||[]).forEach(p=>enqueuePeer(p)); break;
+    case 'reaction': handleReaction(data); break;
+  }
+}
+
+// ------------------ Chat ------------------
+sendBtn.onclick = sendMsg;
+input.addEventListener('keypress', e => { if(e.key==='Enter') sendMsg(); });
+
+function sendMsg(){
+  const text = input.value.trim();
+  if(!text) return;
+  input.value='';
+  const id = Date.now()+"-"+Math.random();
+  const data = {type:'chat', nickname, text, color:nickColor, time:timestamp(), id};
+  addMsg(nickname, text, data.time, nickColor, id);
+  broadcast(data);
+}
+
+function handleIncomingMsg(msg){
+  if(!chatHistory.find(m=>m.id===msg.id)){
+    addMsg(msg.nickname,msg.text,msg.time,msg.color,msg.id);
+    broadcast(msg);
+  }
+}
+
+function broadcast(data, except){
+  peers.forEach(c=>{
+    try{ if(c.open && c!==except) c.send(data); } catch{}
+  });
+}
+
+// ------------------ Join / Peers ------------------
+function broadcastJoin(conn){
+  const data={type:'join',id:peer.id,nickname,color:nickColor,status};
+  if(conn?.open) conn.send(data); else broadcast(data);
+  users[peer.id]={nick:nickname,color:nickColor,status};
+  updateUserList();
+}
+
+function handlePeerJoin(data){
+  users[data.id]={nick:data.nickname,color:data.color,status:data.status};
+  updateUserList();
+}
+
+// ------------------ History ------------------
+function syncHistory(history){
+  if(!Array.isArray(history)) return;
+  history.forEach(m=>{ if(!chatHistory.find(msg=>msg.id===m.id)) addMsg(m.nick,m.text,m.time,m.color,m.id); });
+}
+
+// ------------------ Reactions ------------------
+function reactToMsg(id, emoji){
+  const msg = chatHistory.find(m=>m.id===id);
+  if(!msg) return;
+  if(!msg.reactions) msg.reactions={};
+  if(!msg.reactions[emoji]) msg.reactions[emoji]=[];
+  if(!msg.reactions[emoji].includes(nickname)) msg.reactions[emoji].push(nickname);
+  renderReactions(id,msg.reactions);
+  localStorage.setItem("chatHistory",JSON.stringify(chatHistory));
+  broadcast({type:'reaction',id,emoji,user:nickname});
+}
+
+function handleReaction(data){
+  const msg = chatHistory.find(m=>m.id===data.id);
+  if(!msg) return;
+  if(!msg.reactions) msg.reactions={};
+  if(!msg.reactions[data.emoji]) msg.reactions[data.emoji]=[];
+  if(!msg.reactions[data.emoji].includes(data.user)) msg.reactions[data.emoji].push(data.user);
+  renderReactions(data.id,msg.reactions);
+}
+
+// ------------------ Peer discovery ------------------
+function discoverPeers(){
+  for(let i=1;i<=50;i++){ enqueuePeer(`gamegramuser${i}`); } // max 50 peers
+}
+
+setInterval(()=>{ if(peer && peer.open) discoverPeers(); },20000); // periodic discovery
+
+// ------------------ Login & Settings ------------------
+window.onload = ()=>{
+  nickname=localStorage.getItem("nickname")||"";
+  nickColor=localStorage.getItem("nickColor")||"#ffffff";
+  status=localStorage.getItem("status")||"online";
+  roomName=localStorage.getItem("roomName")||"public";
+  document.getElementById("meName").textContent=nickname||"Guest";
+  document.getElementById("meStatus").textContent=`(${status})`;
+  document.getElementById("roomLabel").textContent=roomName;
+  nickColorInput.value=nickColor;
+  statusSelect.value=status;
+  roomInput.value=roomName;
+  const storedHistory=JSON.parse(localStorage.getItem("chatHistory")||"[]");
+  storedHistory.forEach(m=>addMsg(m.nick,m.text,m.time,m.color,m.id,false));
+  chatHistory=storedHistory;
+  storedHistory.forEach(m=>renderReactions(m.id,m.reactions||{}));
+  addSystem("UI ready. Please log in.");
+};
+
+loginBtn.onclick=()=>{
+  nickname=nickInput.value.trim()||"Guest"+Math.floor(Math.random()*1000);
+  roomName=roomInput.value.trim()||"public";
+  localStorage.setItem("nickname",nickname);
+  localStorage.setItem("roomName",roomName);
+  document.getElementById("meName").textContent=nickname;
+  document.getElementById("roomLabel").textContent=roomName;
+  login.style.display='none';
+  startPeerWithFallbacks();
+};
+
+settingsBtn.onclick=()=>{ nickInputSettings.value=nickname; settingsModal.classList.remove("hidden"); };
+closeSettings.onclick=()=>settingsModal.classList.add("hidden");
+nickInputSettings.onchange=e=>{ nickname=e.target.value.trim()||nickname; localStorage.setItem("nickname", nickname); 
+document.getElementById("meName").textContent = nickname; 
+broadcastJoin(); 
+};
+
+nickColorInput.oninput = e => { 
+  nickColor = e.target.value; 
+  localStorage.setItem("nickColor", nickColor); 
+  broadcastJoin(); 
+};
+
+statusSelect.onchange = e => { 
+  status = e.target.value; 
+  localStorage.setItem("status", status); 
+  document.getElementById("meStatus").textContent = `(${status})`; 
+  broadcastJoin(); 
+};
+
+fontSizeInput.oninput = e => { 
+  messagesEl.style.fontSize = e.target.value + "px"; 
+  localStorage.setItem("fontSize", e.target.value); 
+};
+
+themeSelect.onchange = e => { 
+  document.body.dataset.theme = e.target.value; 
+  localStorage.setItem("theme", e.target.value); 
+};
+
+msgStyleSelect.onchange = e => { 
+  document.body.dataset.msgstyle = e.target.value; 
+  localStorage.setItem("msgStyle", e.target.value); 
+};
+
+// ------------------ Periodic Gossip ------------------
 setInterval(() => {
   if (peer && peer.open) {
     broadcast({ type: 'peerlist', peers: Array.from(knownPeers).concat([peer.id]) });
@@ -434,3 +360,13 @@ setInterval(() => {
     broadcast({ type: 'resync-request', lastId: chatHistory.length ? chatHistory[chatHistory.length - 1].id : null });
   }
 }, 15000);
+
+// ------------------ Additional Utilities ------------------
+function handleResyncRequest(data) {
+  if (!data.lastId) return;
+  const index = chatHistory.findIndex(m => m.id === data.lastId);
+  const missing = index >= 0 ? chatHistory.slice(index + 1) : chatHistory;
+  if (missing.length && peers.has(data.sender)) {
+    peers.get(data.sender).send({ type: 'history', history: missing });
+  }
+}
