@@ -100,7 +100,7 @@ window.onload = () => {
 
 // ---------- Login ----------
 loginBtn.onclick = () => {
-  nickname = nickInput.value.trim() || "Guest" + Math.floor(Math.random() * 1000);
+  nickname = nickInput.value.trim() || "Guest" + Math.floor(Math.random() * 30);
   roomName = roomInput.value.trim() || "public";
   localStorage.setItem("nickname", nickname);
   localStorage.setItem("roomName", roomName);
@@ -159,7 +159,7 @@ async function makePeerId() {
     counter++;
     newId = `gamegramuser${counter}`;
     attempts++;
-    if (attempts > 1000) break;
+    if (attempts > 15) break;
     if (!Array.from(knownPeers).includes(newId)) break;
   }
 
