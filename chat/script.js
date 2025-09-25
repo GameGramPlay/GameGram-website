@@ -6,7 +6,7 @@ const sendBtn = document.getElementById('send');
 const userListEl = document.getElementById('userList');
 const login = document.getElementById('login');
 const nickInput = document.getElementById('nickInput');
-const roomInput = document.getElementById('roomInput'); // <-- add this input in HTML
+const roomInput = document.getElementById('roomInput');
 const loginBtn = document.getElementById('loginBtn');
 
 const settingsBtn = document.getElementById("settingsBtn");
@@ -68,12 +68,11 @@ window.onload = () => {
 
   document.getElementById("meName").textContent = nickname || "Guest";
   document.getElementById("meStatus").textContent = `(${status})`;
-  document.getElementById("roomLabel").textContent = roomName; // show room
+  document.getElementById("roomLabel").textContent = roomName;
 
   nickColorInput.value = nickColor;
   statusSelect.value = status;
   roomInput.value = roomName;
-
 
   const theme = localStorage.getItem("theme") || "dark";
   document.body.dataset.theme = theme;
@@ -98,12 +97,12 @@ window.onload = () => {
 // ---------- Login ----------
 loginBtn.onclick = () => {
   nickname = nickInput.value.trim() || "Guest" + Math.floor(Math.random() * 1000);
-  roomName = roomInput.value.trim() || "public"; // default if empty
+  roomName = roomInput.value.trim() || "public";
   localStorage.setItem("nickname", nickname);
   localStorage.setItem("roomName", roomName);
 
   document.getElementById("meName").textContent = nickname;
-  document.getElementById("roomLabel").textContent = roomName; // update visible room
+  document.getElementById("roomLabel").textContent = roomName;
 
   login.style.display = 'none';
   startPeerWithFallbacks();
@@ -147,14 +146,32 @@ msgStyleSelect.onchange = e => {
 };
 
 // ---------- PeerJS startup with host fallbacks ----------
-function makePeerId() {
-  return `${roomName}-${Math.random().toString(36).substr(2, 9)}`; // peer id includes room
+
+// Global sequential peer ID generator with collision detection
+async function makePeerId() {
+  let counter = parseInt(localStorage.getItem("globalPeerCounter") || "0", 10);
+  let newId;
+  let attempts = 0;
+
+  while (true) {
+    counter++;
+    newId = `gamegramuser${counter}`;
+    attempts++;
+
+    if (attempts > 1000) break;
+
+    if (!Array.from(knownPeers).includes(newId)) break;
+  }
+
+  localStorage.setItem("globalPeerCounter", counter);
+  return newId;
 }
 
 function startPeerWithFallbacks() {
   addSystem("Starting PeerJS client — trying public cloud endpoints...");
   tryPeerHostsSequentially(PEERJS_HOSTS.slice(), 0);
 }
+
 function tryPeerHostsSequentially(hosts, attemptIndex) {
   if (attemptIndex >= hosts.length) {
     addSystem("All public PeerJS endpoints failed. Run your own PeerServer for reliability.");
@@ -188,31 +205,53 @@ function tryPeerHostsSequentially(hosts, attemptIndex) {
     }
   }, PEER_OPEN_TIMEOUT);
 }
-function startPeerWithOptions(opts, callback) {
+
+async function startPeerWithOptions(opts, callback) {
   try { if (peer && !peer.destroyed) peer.destroy(); } catch {}
-  peer = new Peer(makePeerId(), opts);
+
+  const id = await makePeerId();
+  peer = new Peer(id, opts);
+
   peer.on('open', id => {
     addSystem(`Connected as ${nickname} (${id}) in room [${roomName}]`);
     logDebug("Peer open", id);
-    const known = JSON.parse(localStorage.getItem("knownPeers") || "[]");
-    known.forEach(pid => { if (pid !== id) connectToPeer(pid); });
+
+    discoverPeers();
     broadcastJoin();
+
     peer.on('connection', conn => {
       addSystem(`Incoming connection from ${conn.peer}`);
       logDebug("Incoming connection", conn.peer);
       setupConn(conn);
     });
+
     peer.on('disconnected', () => addSystem("Peer disconnected from signaling server."));
     peer.on('close', () => addSystem("Peer connection closed."));
     peer.on('error', err => addSystem("Peer error: " + String(err)));
+
     if (callback) callback(null);
   });
+
   peer.on('error', err => { if (callback) callback(err); });
 }
+
 function cleanupPeer() {
   try { if (peer && !peer.destroyed) peer.destroy(); } catch {}
   peer = null;
 }
+
+// ---------- Peer Discovery ----------
+function discoverPeers() {
+  for (let i = 1; i <= 100; i++) {
+    const targetId = `gamegramuser${i}`;
+    if (peer.id !== targetId && !peers.has(targetId)) {
+      connectToPeer(targetId);
+    }
+  }
+}
+setInterval(() => {
+  if (peer && peer.open) discoverPeers();
+}, 10000);
 
 // ---------- Connections ----------
 function connectToPeer(peerId) {
@@ -370,13 +409,6 @@ function renderReactions(id, reactions) {
     span.className = "reaction";
     div.appendChild(span);
   });
-}
-
-function sendJoin() {
-  const data = { type: 'join', id: peer.id, nickname, color: nickColor, status, time: timestamp() };
-  broadcast(data);
-  users[peer.id] = { nick: nickname, color: nickColor, status };
-  updateUserList();
 }
 
 function timestamp() {
