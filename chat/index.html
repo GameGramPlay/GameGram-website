@@ -1,1 +1,90 @@
-<!doctype html> <html lang="en"> <head> <meta charset="utf-8" /> <meta name="viewport" content="width=device-width, initial-scale=1" /> <title>Lobby Chat</title> <link rel="stylesheet" href="styles.css" /> </head> <body data-theme="dark" data-msgstyle="cozy"> <!-- Login overlay --> <div id="login"> <div class="box"> <h1>Enter Lobby</h1> <input id="nickInput" placeholder="Nickname" /> <input id="roomInput" placeholder="Room name" /> <button id="loginBtn" class="big-btn">Join Lobby</button> </div> </div> <!-- Sidebar --> <div class="sidebar"> <h2>Online</h2> <div id="userList"></div> <div class="self"> <div class="me"> <span id="meName">Guest</span> <small id="meStatus">(online)</small> </div> <button id="settingsBtn">⚙</button> </div> </div> <!-- Chat --> <div class="chat"> <header> Public Lobby Chat — <span id="roomLabel">public</span> </header> <div id="messages"></div> <footer> <input id="input" type="text" placeholder="Type a message..." /> <button id="send">Send</button> </footer> </div> <!-- Settings modal --> <div id="settingsModal" class="modal hidden"> <div class="modal-content"> <div class="modal-header"> <h2>User Settings</h2> <button id="closeSettings">✖</button> </div> <div class="settings"> <label>Nickname <input id="nickInputSettings" /> </label> <label>Nickname Color <input type="color" id="nickColor" /> </label> <label>Status <select id="statusSelect"> <option value="online">Online</option> <option value="away">Away</option> <option value="busy">Busy</option> </select> </label> <label>Font Size <input type="range" id="fontSize" min="12" max="20" value="14" /> </label> <label>Theme <select id="themeSelect"> <option value="dark">Dark</option> <option value="light">Light</option> </select> </label> <label>Message Style <select id="msgStyle"> <option value="cozy">Cozy</option> <option value="compact">Compact</option> </select> </label> </div> </div> </div> <!-- PeerJS --> <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script> <script src="script.js"></script> </body> </html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lobby Chat</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body data-theme="dark" data-msgstyle="cozy">
+
+  <!-- Login overlay -->
+  <div id="login">
+    <div class="box">
+      <h1>Enter Lobby</h1>
+      <input id="nickInput" placeholder="Nickname" />
+      <input id="roomInput" placeholder="Room name" />
+      <button id="loginBtn" class="big-btn">Join Lobby</button>
+    </div>
+  </div>
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <h2>Online</h2>
+    <div id="userList"></div>
+    <div class="self">
+      <div class="me">
+        <span id="meName">Guest</span>
+        <small id="meStatus">(online)</small>
+      </div>
+      <button id="settingsBtn">⚙</button>
+    </div>
+  </div>
+
+  <!-- Chat -->
+  <div class="chat">
+    <header>
+      Public Lobby Chat — <span id="roomLabel">public</span>
+    </header>
+    <div id="messages"></div>
+    <footer>
+      <input id="input" type="text" placeholder="Type a message..." />
+      <button id="send">Send</button>
+    </footer>
+  </div>
+
+  <!-- Settings modal -->
+  <div id="settingsModal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>User Settings</h2>
+        <button id="closeSettings">✖</button>
+      </div>
+      <div class="settings">
+        <label>Nickname
+          <input id="nickInputSettings" />
+        </label>
+        <label>Nickname Color
+          <input type="color" id="nickColor" />
+        </label>
+        <label>Status
+          <select id="statusSelect">
+            <option value="online">Online</option>
+            <option value="away">Away</option>
+            <option value="busy">Busy</option>
+          </select>
+        </label>
+        <label>Font Size
+          <input type="range" id="fontSize" min="12" max="20" value="14" />
+        </label>
+        <label>Theme
+          <select id="themeSelect">
+            <option value="dark">Dark</option>
+            <option value="light">Light</option>
+          </select>
+        </label>
+        <label>Message Style
+          <select id="msgStyle">
+            <option value="cozy">Cozy</option>
+            <option value="compact">Compact</option>
+          </select>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- PeerJS -->
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
