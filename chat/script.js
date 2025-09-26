@@ -428,7 +428,7 @@ class PeerManager {
 
   static setupTempConnection(conn, discovered) {
     conn.on('open', () => {
-      conn.send({ type: 'request-peerlist' });
+      try { conn.send({ type: 'request-peerlist' }); } catch (e) { /* ignore send errors */ }
     });
   
     conn.on('data', (data) => {
