@@ -360,7 +360,7 @@ class PeerManager {
   }
 
   static async claimId(candidateId, attempt = 0) {
-    if (attempt > 50) {  // allow more retries
+    if (attempt > 50) {
       throw new Error('Too many ID claim attempts');
     }
   
@@ -368,20 +368,25 @@ class PeerManager {
       Logger.debug(`Attempting to claim ID: ${candidateId}`);
       return await this.createPeer(candidateId, false);
     } catch (error) {
-      Logger.warn(`ID claim failed for ${candidateId}, retrying...`, error);
+      const msg = String(error?.message || error);
   
-      // increment last number, or append "1" if none
-      const nextId = candidateId.match(/\d+$/)
-        ? candidateId.replace(/(\d+)$/, (_, num) => `${parseInt(num) + 1}`)
-        : candidateId + "1";
+      // Only increment if "ID is taken"
+      if (/ID.*taken/i.test(msg)) {
+        const nextId = candidateId.match(/\d+$/)
+          ? candidateId.replace(/(\d+)$/, (_, num) => `${parseInt(num) + 1}`)
+          : candidateId + "1";
   
-      await new Promise(resolve =>
-        setTimeout(resolve, Utils.randomDelay(200, 600))
-      );
+        Logger.warn(`ID ${candidateId} is taken, retrying with ${nextId}`);
   
-      return this.claimId(nextId, attempt + 1);
+        await new Promise(r => setTimeout(r, Utils.randomDelay(200, 600)));
+        return this.claimId(nextId, attempt + 1);
+      }
+  
+      // Other errors (like connection issues) bubble up
+      throw error;
     }
   }
+
 
 }
 
