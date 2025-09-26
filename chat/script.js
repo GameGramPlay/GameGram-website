@@ -360,26 +360,29 @@ class PeerManager {
   }
 
   static async claimId(candidateId, attempt = 0) {
-    if (attempt > 10) {
+    if (attempt > 50) {  // allow more retries
       throw new Error('Too many ID claim attempts');
     }
-
+  
     try {
       Logger.debug(`Attempting to claim ID: ${candidateId}`);
       return await this.createPeer(candidateId, false);
     } catch (error) {
-      // If ID is taken, try next sequential number
-      const nextId = candidateId.replace(/(\d+)$/, (match, num) => 
-        `${parseInt(num) + 1}`
+      Logger.warn(`ID claim failed for ${candidateId}, retrying...`, error);
+  
+      // increment last number, or append "1" if none
+      const nextId = candidateId.match(/\d+$/)
+        ? candidateId.replace(/(\d+)$/, (_, num) => `${parseInt(num) + 1}`)
+        : candidateId + "1";
+  
+      await new Promise(resolve =>
+        setTimeout(resolve, Utils.randomDelay(200, 600))
       );
-      
-      await new Promise(resolve => 
-        setTimeout(resolve, Utils.randomDelay(300, 300))
-      );
-      
+  
       return this.claimId(nextId, attempt + 1);
     }
   }
+
 }
 
 // ================== CONNECTION MANAGER ==================
