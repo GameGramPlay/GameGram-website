@@ -312,6 +312,16 @@ function setupConn(conn) {
     peers.set(conn.peer, conn);
     knownPeers.add(conn.peer);
     saveKnownPeer(conn.peer);
+
+    // mark user online or create them if new
+    if (!users[conn.peer]) {
+      users[conn.peer] = { nick: conn.peer, color: "#ccc", status: "online" };
+    } else {
+      users[conn.peer].status = "online";
+    }
+
+    updateUserList();
+
     conn.send({ type: 'join', id: peer.id, nickname, color: nickColor, status });
     conn.send({ type: 'history', history: chatHistory });
     conn.send({ type: 'peerlist', peers: Array.from(knownPeers).concat([peer.id]) });
@@ -330,9 +340,25 @@ function setupConn(conn) {
     }
   });
 
-  conn.on('close', () => { peers.delete(conn.peer); delete users[conn.peer]; updateUserList(); addSystem(`Connection closed: ${conn.peer}`); });
-  conn.on('error', err => { peers.delete(conn.peer); delete users[conn.peer]; updateUserList(); addSystem(`Connection error with ${conn.peer}: ${err}`); });
+  conn.on('close', () => {
+    peers.delete(conn.peer);
+    if (users[conn.peer]) {
+      users[conn.peer].status = "offline"; // mark offline, keep user
+    }
+    updateUserList();
+    addSystem(`Connection closed: ${conn.peer}`);
+  });
+
+  conn.on('error', err => {
+    peers.delete(conn.peer);
+    if (users[conn.peer]) {
+      users[conn.peer].status = "offline"; // mark offline, keep user
+    }
+    updateUserList();
+    addSystem(`Connection error with ${conn.peer}: ${err}`);
+  });
 }
+
 
 // ---------- Chat ----------
 sendBtn.onclick = sendMsg;
@@ -374,7 +400,20 @@ function broadcastJoin(conn) {
   updateUserList();
 }
 function handlePeerJoin(data) {
-  users[data.id] = { nick: data.nickname, color: data.color, status: data.status };
+  if (!users[data.id]) {
+    // new peer we’ve never seen before
+    users[data.id] = { 
+      nick: data.nickname, 
+      color: data.color, 
+      status: data.status || "online" 
+    };
+  } else {
+    // update existing peer (e.g. was offline, now online again)
+    users[data.id].nick = data.nickname;
+    users[data.id].color = data.color;
+    users[data.id].status = data.status || "online";
+  }
+
   updateUserList();
   addSystem(`Peer joined: ${data.nickname} (${data.id})`);
 }
