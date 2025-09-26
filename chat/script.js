@@ -347,6 +347,12 @@ class PeerManager {
       setTimeout(async () => {
         // At this point `discovered` contains candidates gathered from incoming/outgoing probes
         discovered.delete(tmpPeer.id);
+        for (const peer of Array.from(discovered)) {
+          if (peer.startsWith("tmp-")) {
+            discovered.delete(peer);
+          }
+        }
+
 
         // Probe each discovered ID for reachability (quick connect test)
         const candidates = Array.from(discovered);
@@ -422,17 +428,20 @@ class PeerManager {
 
   static setupTempConnection(conn, discovered) {
     conn.on('open', () => {
-      try { conn.send({ type: 'request-peerlist' }); } catch (e) { /* ignore send errors */ }
+      conn.send({ type: 'request-peerlist' });
     });
-
+  
     conn.on('data', (data) => {
       if (data?.type === 'peerlist' && Array.isArray(data.peers)) {
         data.peers.forEach(peer => {
-          if (peer) discovered.add(peer);
+          // filter out temp IDs
+          if (peer && !peer.startsWith("tmp-")) {
+            discovered.add(peer);
+          }
         });
       }
     });
-
+  
     conn.on('error', () => { /* ignore temp connection errors */ });
   }
 
