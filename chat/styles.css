@@ -96,13 +96,24 @@ button:active { transform:translateY(0); }
 }
 
 #login .box {
-  padding: 20px;
-  border-radius: 8px;
-  width: 320px;
+  width: 360px;            /* slightly wider for easier touch typing */
+  padding: 24px;
+  border-radius: 12px;
+  background: var(--panel-dark);
   display: flex;
   flex-direction: column;
-  z-index: 10000;
+  gap: 12px;
+  box-sizing: border-box;
 }
+
+
+#login h1 {
+  font-size: 24px;
+  margin: 0 0 12px 0;
+  text-align: center;
+  color: var(--text-dark);
+}
+
 
 #login input, #login button {
   width: 100%;
@@ -118,17 +129,29 @@ button:active { transform:translateY(0); }
   outline: 2px solid var(--accent);
 }
 
-
-
-/* Big join button */
-.big-btn { 
-  width:100%; padding:18px; font-size:18px; border:none; border-radius:8px; 
-  background:#5865f2; color:#fff; cursor:pointer; font-weight:bold; transition:0.2s; 
+/* Big Join Button */
+#login button.big-btn {
+  width: 100%;
+  padding: 16px;
+  font-size: 18px;
+  font-weight: bold;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  background: var(--accent);
+  color: #fff;
+  transition: background 0.2s, transform 0.1s;
 }
-.big-btn:hover, .big-btn:focus-visible { 
-  background:#4752c4; outline: 2px solid #fff; 
+
+#login button.big-btn:hover,
+#login button.big-btn:focus-visible {
+  background: var(--accent-hover);
+  outline: 2px solid var(--accent);
 }
-.big-btn:active { transform:translateY(1px); }
+
+#login button.big-btn:active {
+  transform: translateY(1px);
+}
 
 /* Reactions */
 .reactions { display:flex; gap:6px; margin-top:4px; }
