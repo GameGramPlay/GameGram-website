@@ -173,22 +173,23 @@ msgStyleSelect.onchange = e => {
 };
 
 // ---------- PeerJS startup with host fallbacks ----------
+let globalPeerCounter = 0;  // session-only counter
+
 async function makePeerId() {
-  let counter = parseInt(localStorage.getItem("globalPeerCounter") || "0", 10);
   let newId;
   let attempts = 0;
 
   while (true) {
-    counter++;
-    newId = `gamegramuser${counter}`;
+    globalPeerCounter++;
+    newId = `gamegramuser${globalPeerCounter}`;
     attempts++;
-    if (attempts > 15) break;
+    if (attempts > 5) break;
     if (!Array.from(knownPeers).includes(newId)) break;
   }
 
-  localStorage.setItem("globalPeerCounter", counter);
   return newId;
 }
+
 
 function startPeerWithFallbacks() {
   addSystem("Starting PeerJS client — trying public cloud endpoints...");
