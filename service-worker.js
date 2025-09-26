@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gamegram-cache-v4'; // updated version
+const CACHE_NAME = 'gamegram-cache-v5'; // updated version
 const urlsToCache = [
   '/',
   '/index.html',
