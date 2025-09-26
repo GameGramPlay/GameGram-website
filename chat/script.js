@@ -234,8 +234,9 @@ class IdManager {
     return `tmp-${Math.random().toString(36).slice(2, 9)}`;
   }
 }
+// Patched PeerManager: smarter discoverPeers() + quieter temp-peer errors
+// Replace your existing PeerManager class with this file.
 
-// ================== PEER MANAGEMENT ==================
 class PeerManager {
   static async createPeer(peerId, temporary = false) {
     return new Promise((resolve, reject) => {
@@ -265,8 +266,13 @@ class PeerManager {
         }
       });
 
+      // Demote errors for temporary probe peers to WARN to reduce log noise
       peer.on('error', (err) => {
-        Logger.error(`Peer error: ${peerId}`, err);
+        if (temporary) {
+          Logger.warn(`Temp peer error: ${peerId}`, err);
+        } else {
+          Logger.error(`Peer error: ${peerId}`, err);
+        }
         cleanup();
         if (!resolved) {
           resolved = true;
@@ -277,7 +283,8 @@ class PeerManager {
       // Timeout for peer creation
       setTimeout(() => {
         if (!resolved) {
-          Logger.warn(`Peer creation timeout: ${peerId}`);
+          if (temporary) Logger.warn(`Peer creation timeout (temp): ${peerId}`);
+          else Logger.warn(`Peer creation timeout: ${peerId}`);
           cleanup();
           reject(new Error('Peer creation timeout'));
         }
@@ -291,12 +298,17 @@ class PeerManager {
 
     try {
       const { peer: tmpPeer } = await this.createPeer(tempId, true);
-      const discoveredPeers = await this.discoverPeers(tmpPeer);
-      tmpPeer.destroy();
 
-      const candidateId = IdManager.chooseSequentialId(discoveredPeers);
+      // discoverPeers now returns both discovered and active sets
+      const { discovered, active } = await this.discoverPeers(tmpPeer);
+
+      try { tmpPeer.destroy(); } catch (e) { /* ignore */ }
+
+      // Prefer the active set if we found any active peers, otherwise fall back to discovered
+      const candidates = (active && active.size) ? active : discovered;
+      const candidateId = IdManager.chooseSequentialId(candidates);
+
       const { peer: mainPeer, id: finalId } = await this.claimId(candidateId);
-      
       return { peer: mainPeer, id: finalId };
     } catch (error) {
       Logger.error('Handshake failed', error);
@@ -305,23 +317,20 @@ class PeerManager {
   }
 
   static async discoverPeers(tmpPeer) {
+    // Start with known peers (persisted) — do NOT unconditionally add bootstrap guesses here.
     const discovered = new Set(Array.from(state.knownPeers));
-    
-    return new Promise((resolve) => {
-      // Add likely bootstrap peers
-      for (let i = 1; i <= 6; i++) {
-        discovered.add(`gamegramuser${i}`);
-      }
 
+    return new Promise((resolve) => {
       const connections = [];
-      
+
+      // Listen for incoming connections to the temporary peer
       tmpPeer.on('connection', (conn) => {
         connections.push(conn);
         this.setupTempConnection(conn, discovered);
       });
 
-      // Try to connect to known peers
-      const peersToTry = Array.from(state.knownPeers).slice(0, 8);
+      // Try outgoing connects to a short list of known peers to solicit peerlists
+      const peersToTry = Array.from(new Set([...state.knownPeers])).slice(0, 16);
       peersToTry.forEach(peerId => {
         if (peerId && peerId !== tmpPeer.id) {
           try {
@@ -329,30 +338,98 @@ class PeerManager {
             connections.push(conn);
             this.setupTempConnection(conn, discovered);
           } catch (e) {
-            Logger.warn(`Failed to connect to ${peerId}`, e);
+            Logger.debug(`Probe connect failed quickly: ${peerId}`, e?.message || e);
           }
         }
       });
 
-      // Wait for discovery period
-      setTimeout(() => {
+      // Wait for the discovery period so peers can respond with their peerlists
+      setTimeout(async () => {
+        // At this point `discovered` contains candidates gathered from incoming/outgoing probes
+        discovered.delete(tmpPeer.id);
+
+        // Probe each discovered ID for reachability (quick connect test)
+        const candidates = Array.from(discovered);
+        const active = new Set();
+
+        // Limit parallelism to avoid overwhelming the signaling server
+        const MAX_PARALLEL = 8;
+        let idx = 0;
+
+        const probeOne = async (peerId) => {
+          if (!peerId || peerId === tmpPeer.id) return;
+
+          return new Promise(resolveProbe => {
+            let settled = false;
+            try {
+              const conn = tmpPeer.connect(peerId, { reliable: true });
+
+              // Give each probe a short timeout — use HANDSHAKE as baseline
+              const probeTimeout = setTimeout(() => {
+                if (!settled) {
+                  settled = true;
+                  try { conn.close(); } catch (e) { /* ignore */ }
+                  resolveProbe();
+                }
+              }, Math.max(500, CONFIG.TIMEOUTS.HANDSHAKE));
+
+              conn.on('open', () => {
+                if (!settled) {
+                  settled = true;
+                  clearTimeout(probeTimeout);
+                  active.add(peerId);
+                  try { conn.close(); } catch (e) { /* ignore */ }
+                  resolveProbe();
+                }
+              });
+
+              conn.on('error', () => {
+                if (!settled) {
+                  settled = true;
+                  clearTimeout(probeTimeout);
+                  try { conn.close(); } catch (e) { /* ignore */ }
+                  resolveProbe();
+                }
+              });
+            } catch (e) {
+              // connect() sometimes throws synchronously — treat as unreachable
+              resolveProbe();
+            }
+          });
+        };
+
+        // Run probes with limited concurrency
+        const runners = new Array(Math.min(MAX_PARALLEL, candidates.length)).fill(null).map(async () => {
+          while (idx < candidates.length) {
+            const i = idx++;
+            await probeOne(candidates[i]);
+          }
+        });
+
+        await Promise.allSettled(runners);
+
+        // Close any temp connections we opened earlier
         connections.forEach(conn => {
           try { conn.close(); } catch (e) { /* ignore */ }
         });
-        discovered.delete(tmpPeer.id);
-        resolve(discovered);
+
+        // If we found active peers, return them; otherwise return discovered as fallback
+        const activeSet = active.size ? active : discovered;
+        resolve({ discovered, active: activeSet });
       }, CONFIG.TIMEOUTS.HANDSHAKE);
     });
   }
 
   static setupTempConnection(conn, discovered) {
     conn.on('open', () => {
-      conn.send({ type: 'request-peerlist' });
+      try { conn.send({ type: 'request-peerlist' }); } catch (e) { /* ignore send errors */ }
     });
 
     conn.on('data', (data) => {
       if (data?.type === 'peerlist' && Array.isArray(data.peers)) {
-        data.peers.forEach(peer => discovered.add(peer));
+        data.peers.forEach(peer => {
+          if (peer) discovered.add(peer);
+        });
       }
     });
 
@@ -386,9 +463,9 @@ class PeerManager {
       throw error;
     }
   }
-
-
 }
+
+export default PeerManager;
 
 // ================== CONNECTION MANAGER ==================
 class ConnectionManager {
