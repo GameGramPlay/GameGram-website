@@ -58,7 +58,7 @@ function drawConnectionGraph() {
 }
 
 // Public PeerJS hosts
-const PEERJS_HOSTS = ['0.peerjs.com','1.peerjs.com','2.peerjs.com','3.peerjs.com'];
+const PEERJS_HOSTS = ['0.peerjs.com'];
 const PEER_OPEN_TIMEOUT = 25000;
 
 let roomName = "public"; // default public room
