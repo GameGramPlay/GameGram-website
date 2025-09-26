@@ -465,8 +465,6 @@ class PeerManager {
   }
 }
 
-export default PeerManager;
-
 // ================== CONNECTION MANAGER ==================
 class ConnectionManager {
   static setupMainPeerHandlers(peer) {
