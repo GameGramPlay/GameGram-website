@@ -85,13 +85,27 @@ button:active { transform:translateY(0); }
 
 /* Login */
 #login { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; }
-#login .box { padding:20px; border-radius:8px; width:300px; }
+#login .box { padding:22px; border-radius:8px; width:300px; }
 #login h1 { margin-top:0; font-size:20px; }
-#login input, #login button { width:100%; margin-top:10px; }
+/* Login inputs and button */
+#login input, #login button { 
+  width: 100%; 
+  margin-top: 12px; 
+  padding: 12px;          /* Increase padding for bigger hitbox */
+  font-size: 16px;        /* Larger text makes typing easier */
+  border-radius: 8px; 
+  box-sizing: border-box; 
+}
+
+/* Optional: focus outline for accessibility */
+#login input:focus-visible { 
+  outline: 2px solid var(--accent); 
+}
+
 
 /* Big join button */
 .big-btn { 
-  width:100%; padding:15px; font-size:18px; border:none; border-radius:8px; 
+  width:100%; padding:18px; font-size:18px; border:none; border-radius:8px; 
   background:#5865f2; color:#fff; cursor:pointer; font-weight:bold; transition:0.2s; 
 }
 .big-btn:hover, .big-btn:focus-visible { 
