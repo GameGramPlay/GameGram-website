@@ -1,4 +1,4 @@
-// script.js — fully P2P single public room with HHS
+// script.js — HHS adapted for index.html lobby
 import { createPeerGroup } from '@hyper-hyper-space/core';
 
 const messagesEl = document.getElementById('messages');
@@ -7,6 +7,7 @@ const sendBtn = document.getElementById('send');
 const userListEl = document.getElementById('userList');
 const login = document.getElementById('login');
 const nickInput = document.getElementById('nickInput');
+const roomInput = document.getElementById('roomInput');
 const loginBtn = document.getElementById('loginBtn');
 
 const settingsBtn = document.getElementById("settingsBtn");
@@ -27,10 +28,11 @@ settingsModal.appendChild(debugPanel);
 // HHS PeerGroup & CRDT state
 let peerGroup, chatSpace, chatCRDT;
 let localId, nickname = "", nickColor = "#ffffff", status = "online";
+let currentRoom = "public";
 const users = {};      // peerId -> {nick,color,status}
-let chatHistory = [];  // local cache
+let chatHistory = [];
 
-// ----------------- UI & LocalStorage -----------------
+// ----------------- Helpers -----------------
 function logDebug(msg, obj) {
   const line = document.createElement("div");
   line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
@@ -42,6 +44,7 @@ function logDebug(msg, obj) {
 function timestamp() { return new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }
 function escapeHtml(s='') { return String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
 
+// ----------------- UI & LocalStorage -----------------
 function setLocalAccountDefaults() {
   nickname = localStorage.getItem("nickname") || "";
   nickColor = localStorage.getItem("nickColor") || "#ffffff";
@@ -62,19 +65,20 @@ function setLocalAccountDefaults() {
 // ----------------- Login -----------------
 loginBtn.onclick = async () => {
   const nick = nickInput.value.trim();
+  const room = roomInput.value.trim() || "public";
   if (!nick) { alert("Enter a nickname"); return; }
   nickname = nick;
+  currentRoom = room;
   localStorage.setItem("nickname", nickname);
   document.getElementById("meName").textContent = nickname;
   login.style.display = 'none';
-  addSystem(`Joining public room as ${nickname}...`);
-
+  addSystem(`Joining room "${currentRoom}" as ${nickname}...`);
   await startHHS();
 };
 
 // ----------------- HHS Initialization -----------------
 async function startHHS() {
-  // create a peer group using HHS public signaling server
+  // create a peer group
   peerGroup = createPeerGroup({
     identity: nickname + "-" + Math.random().toString(36).slice(2,6),
     signalingServer: 'wss://mypeer.net:443'
@@ -83,17 +87,16 @@ async function startHHS() {
   localId = peerGroup.identity;
   users[localId] = { nick: nickname, color: nickColor, status };
 
-  chatSpace = peerGroup.createSpace('public');
+  chatSpace = peerGroup.createSpace(currentRoom);
   chatCRDT = chatSpace.createCRDT('chat', 'ordered-set'); // ordered list of messages
 
-  // sync initial local state
+  // observe CRDT
   chatCRDT.observe(op => {
     if (op.type === 'add') handleIncomingMsg(op.value, false);
   });
 
   peerGroup.on('peer-connected', peerId => {
     logDebug('Connected to peer: ' + peerId);
-    // send join info
     broadcastJoin(peerId);
   });
 
@@ -103,21 +106,21 @@ async function startHHS() {
     updateUserList();
   });
 
-  // join the space (automatically syncs with peers)
   await chatSpace.join();
   updateUserList();
-  addSystem("Joined HHS public room!");
+  addSystem(`Joined room "${currentRoom}"!`);
 }
 
 // ----------------- Broadcast & Join -----------------
 function broadcastJoin(peerId = null) {
   const payload = { type:'join', id: localId, nickname, color: nickColor, status };
-  if (peerId) {
-    chatSpace.sendTo(peerId, payload);
-  } else {
-    chatSpace.broadcast(payload);
-  }
+  if (peerId) chatSpace.sendTo(peerId, payload);
+  else chatSpace.broadcast(payload);
 }
+
+// ----------------- Chat -----------------
+sendBtn.onclick = sendMsg;
+input.addEventListener('keypress', e => { if (e.key==='Enter') sendMsg(); });
 
 function sendMsg() {
   const text = input.value.trim();
@@ -125,7 +128,7 @@ function sendMsg() {
   input.value = '';
   const id = Date.now() + "-" + Math.random().toString(36).slice(2,7);
   const msg = { id, nickname, text, color: nickColor, time: timestamp(), reactions:{} };
-  chatCRDT.add(msg);       // add message to CRDT (auto syncs)
+  chatCRDT.add(msg);
   addMsg(nickname, text, msg.time, nickColor, id);
 }
 
@@ -137,10 +140,7 @@ function handleIncomingMsg(msg, save = true) {
   }
 }
 
-// ----------------- Chat UI -----------------
-sendBtn.onclick = sendMsg;
-input.addEventListener('keypress', e => { if (e.key==='Enter') sendMsg(); });
-
+// ----------------- UI -----------------
 function addMsg(nick, text, time, color, id, save = true) {
   if (messagesEl.querySelector(`.msg[data-id="${id}"]`)) return;
   const div = document.createElement('div');
@@ -148,42 +148,9 @@ function addMsg(nick, text, time, color, id, save = true) {
   div.dataset.id = id;
   div.innerHTML = `
     <div class="meta"><span class="nickname" style="color:${escapeHtml(color)}">${escapeHtml(nick)}</span> <span>${escapeHtml(time)}</span></div>
-    <div class="text">${escapeHtml(text)}</div>
-    <div class="reactions"></div>
-    <div class="reaction-bar"><span class="reactBtn">😊</span><span class="reactBtn">👍</span><span class="reactBtn">❤️</span></div>`;
+    <div class="text">${escapeHtml(text)}</div>`;
   messagesEl.appendChild(div);
   messagesEl.scrollTop = messagesEl.scrollHeight;
-
-  div.querySelectorAll('.reactBtn').forEach(btn => btn.onclick = () => {
-    const emoji = btn.textContent;
-    reactToMsg(id, emoji);
-  });
-
-  setTimeout(() => div.classList.add('show'), 10);
-}
-
-// ----------------- Reactions -----------------
-function reactToMsg(id, emoji) {
-  const msg = chatHistory.find(m => m.id === id);
-  if (!msg) return;
-  if (!msg.reactions) msg.reactions = {};
-  if (!msg.reactions[emoji]) msg.reactions[emoji] = [];
-  if (!msg.reactions[emoji].includes(nickname)) msg.reactions[emoji].push(nickname);
-  renderReactions(id, msg.reactions);
-  localStorage.setItem("chatHistory", JSON.stringify(chatHistory));
-  chatCRDT.add({ type:'reaction', id, emoji, user: nickname }); // sync reaction
-}
-
-function renderReactions(id, reactions) {
-  const div = messagesEl.querySelector(`.msg[data-id="${id}"] .reactions`);
-  if (!div) return;
-  div.innerHTML = "";
-  Object.entries(reactions).forEach(([emoji, users]) => {
-    const span = document.createElement("span");
-    span.textContent = `${emoji} ${users.length}`;
-    span.className = "reaction";
-    div.appendChild(span);
-  });
 }
 
 // ----------------- Users -----------------
@@ -208,8 +175,8 @@ function addSystem(text) {
   console.log("[SYSTEM]", text);
 }
 
-// ----------------- UI init -----------------
+// ----------------- Init -----------------
 window.onload = () => {
   setLocalAccountDefaults();
-  addSystem("UI ready. Please log in.");
+  addSystem("UI ready. Enter nickname and room.");
 };
