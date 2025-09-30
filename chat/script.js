@@ -1,4 +1,4 @@
-// script.js — HHS adapted for index.html lobby
+// script.js — HHS-powered chat with reactions, settings, and sync
 import { createPeerGroup } from '@hyper-hyper-space/core';
 
 const messagesEl = document.getElementById('messages');
@@ -9,7 +9,6 @@ const login = document.getElementById('login');
 const nickInput = document.getElementById('nickInput');
 const roomInput = document.getElementById('roomInput');
 const loginBtn = document.getElementById('loginBtn');
-
 const settingsBtn = document.getElementById("settingsBtn");
 const settingsModal = document.getElementById("settingsModal");
 const closeSettings = document.getElementById("closeSettings");
@@ -140,6 +139,34 @@ function handleIncomingMsg(msg, save = true) {
   }
 }
 
+// ----------------- Reactions -----------------
+function renderReactions(id, reactions) {
+  const div = messagesEl.querySelector(`.msg[data-id="${id}"] .reactions`);
+  if (!div) return;
+  div.innerHTML = "";
+  Object.entries(reactions).forEach(([emoji, users]) => {
+    const span = document.createElement("span");
+    span.textContent = `${emoji} ${users.length}`;
+    span.className = "reaction";
+    div.appendChild(span);
+  });
+}
+
+function reactToMsg(id, emoji) {
+  const msg = chatHistory.find(m => m.id === id);
+  if (!msg) return;
+  if (!msg.reactions) msg.reactions = {};
+  if (!msg.reactions[emoji]) msg.reactions[emoji] = [];
+  if (!msg.reactions[emoji].includes(nickname)) msg.reactions[emoji].push(nickname);
+
+  // update CRDT so HHS propagates it
+  const crdtMsg = chatCRDT.get(msg.id) || msg;
+  crdtMsg.reactions = msg.reactions;
+  chatCRDT.update(crdtMsg);
+
+  renderReactions(id, msg.reactions);
+}
+
 // ----------------- UI -----------------
 function addMsg(nick, text, time, color, id, save = true) {
   if (messagesEl.querySelector(`.msg[data-id="${id}"]`)) return;
@@ -148,12 +175,30 @@ function addMsg(nick, text, time, color, id, save = true) {
   div.dataset.id = id;
   div.innerHTML = `
     <div class="meta"><span class="nickname" style="color:${escapeHtml(color)}">${escapeHtml(nick)}</span> <span>${escapeHtml(time)}</span></div>
-    <div class="text">${escapeHtml(text)}</div>`;
+    <div class="text">${escapeHtml(text)}</div>
+    <div class="reactions"></div>
+    <div class="reactBtns">
+      <button class="reactBtn">👍</button>
+      <button class="reactBtn">❤️</button>
+      <button class="reactBtn">😂</button>
+      <button class="reactBtn">😢</button>
+      <button class="reactBtn">😡</button>
+    </div>`;
   messagesEl.appendChild(div);
   messagesEl.scrollTop = messagesEl.scrollHeight;
+
+  div.querySelectorAll('.reactBtn').forEach(btn => btn.onclick = () => {
+    const emoji = btn.textContent;
+    reactToMsg(id, emoji);
+  });
+
+  if (save) {
+    const msg = { id, nickname: nick, text, color, time, reactions: {} };
+    chatHistory.push(msg);
+    localStorage.setItem("chatHistory", JSON.stringify(chatHistory));
+  }
 }
 
-// ----------------- Users -----------------
 function updateUserList() {
   userListEl.innerHTML = "";
   Object.entries(users).forEach(([id, u]) => {
@@ -175,8 +220,18 @@ function addSystem(text) {
   console.log("[SYSTEM]", text);
 }
 
-// ----------------- Init -----------------
-window.onload = () => {
-  setLocalAccountDefaults();
-  addSystem("UI ready. Enter nickname and room.");
-};
+// ----------------- Settings Modal -----------------
+settingsBtn.onclick = () => settingsModal.classList.remove("hidden");
+closeSettings.onclick = () => settingsModal.classList.add("hidden");
+
+nickInputSettings.value = nickname;
+nickColorInput.value = nickColor;
+statusSelect.value = status;
+fontSizeInput.value = parseInt(localStorage.getItem("fontSize") || "14");
+themeSelect.value = localStorage.getItem("theme") || "dark";
+msgStyleSelect.value = localStorage.getItem("msgStyle") || "cozy";
+
+nickInputSettings.oninput = () => localStorage.setItem("nickname", nickInputSettings.value);
+nickColorInput.oninput
+::contentReference[oaicite:0]{index=0}
+ 
