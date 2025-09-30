@@ -232,6 +232,43 @@ themeSelect.value = localStorage.getItem("theme") || "dark";
 msgStyleSelect.value = localStorage.getItem("msgStyle") || "cozy";
 
 nickInputSettings.oninput = () => localStorage.setItem("nickname", nickInputSettings.value);
-nickColorInput.oninput
-::contentReference[oaicite:0]{index=0}
- 
+nickColorInput.oninput = () => { 
+  nickColor = nickColorInput.value; 
+  localStorage.setItem("nickColor", nickColor); 
+  users[localId].color = nickColor;
+  updateUserList();
+  broadcastJoin();
+};
+
+statusSelect.onchange = () => { 
+  status = statusSelect.value; 
+  localStorage.setItem("status", status); 
+  users[localId].status = status;
+  updateUserList();
+  broadcastJoin();
+};
+
+fontSizeInput.oninput = () => { 
+  const size = fontSizeInput.value; 
+  messagesEl.style.fontSize = size + "px"; 
+  localStorage.setItem("fontSize", size); 
+};
+
+themeSelect.onchange = () => { 
+  const theme = themeSelect.value; 
+  document.body.dataset.theme = theme; 
+  localStorage.setItem("theme", theme); 
+};
+
+msgStyleSelect.onchange = () => { 
+  const style = msgStyleSelect.value; 
+  document.body.dataset.msgstyle = style; 
+  localStorage.setItem("msgStyle", style); 
+};
+
+// ----------------- On Load -----------------
+window.onload = () => {
+  setLocalAccountDefaults();
+  addSystem("UI ready. Enter a nickname and room to join the lobby.");
+};
+
