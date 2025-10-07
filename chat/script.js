@@ -6,7 +6,7 @@ const CONFIG = {
         ENDPOINT: 'wss://hack.chat/chat-ws'
     },
     PUBLIC_ROOM: 'public',
-    DEBUG_VERBOSE: false,
+    DEBUG_VERBOSE: true,
     TIMEOUTS: {
         RECONNECT: 3000
     }
