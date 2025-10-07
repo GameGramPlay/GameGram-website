@@ -95,16 +95,31 @@ button:active { transform:translateY(0); }
   z-index: 9999;
 }
 
+/* Make the login overlay full-screen, clickable, and above everything */
+#login {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.85); /* semi-transparent dark overlay */
+  z-index: 9999;
+  pointer-events: auto; /* ensure clicks are captured */
+}
+
+/* Ensure the box receives clicks */
 #login .box {
-  width: 360px;            /* slightly wider for easier touch typing */
+  background: var(--panel-dark);
   padding: 24px;
   border-radius: 12px;
-  background: var(--panel-dark);
   display: flex;
   flex-direction: column;
   gap: 12px;
+  width: 360px;
   box-sizing: border-box;
+  pointer-events: auto;
 }
+
 
 
 #login h1 {
