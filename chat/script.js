@@ -162,3 +162,51 @@ function linkify(text) {
 
 // === INIT DEFAULT STYLING ===
 document.body.style.fontSize = '14px';
+
+// === LOGIN HANDLER ===
+function doLogin() {
+  nickname = nickInput.value.trim() || 'Guest';
+  room = roomInput.value.trim() || 'public';
+  loginDiv.style.display = 'none';
+  roomLabel.textContent = room;
+  initHackChat();
+}
+
+// Click login button
+loginBtn.addEventListener('click', doLogin);
+
+// Press Enter in nickname or room input
+[nickInput, roomInput].forEach(inputEl => {
+  inputEl.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') doLogin();
+  });
+});
+
+// === SEND MESSAGE ===
+function sendMessage() {
+  const msg = input.value.trim();
+  if (!msg || !hc) return;
+  hc.say(msg);
+  input.value = '';
+}
+
+// Click send button
+sendBtn.addEventListener('click', sendMessage);
+
+// Press Enter / Shift+Enter in message input
+input.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    if (e.shiftKey) {
+      // Shift+Enter → insert newline
+      const start = input.selectionStart;
+      const end = input.selectionEnd;
+      input.value = input.value.slice(0, start) + "\n" + input.value.slice(end);
+      input.selectionStart = input.selectionEnd = start + 1;
+    } else {
+      // Enter → send message
+      e.preventDefault(); // prevent new line
+      sendMessage();
+    }
+  }
+});
+
