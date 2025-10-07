@@ -229,10 +229,14 @@ class HackChatConnector {
     }
 }
 
-// ================= LOGIN HANDLER =================
-function doLogin() {
+async function doLogin() {
     const nickname = elements.nickInput.value.trim() || 'Guest';
     const room = elements.roomInput.value.trim() || CONFIG.PUBLIC_ROOM;
+
+    if (!window.Client) {
+        UI.addSystem('Error: hackchat-engine Client not loaded.');
+        return;
+    }
 
     elements.login.style.display = 'none';
     elements.roomLabel.textContent = room;
@@ -240,15 +244,19 @@ function doLogin() {
     state.nickname = nickname;
     StorageManager.saveUser();
 
-    HackChatConnector.createClient(nickname)
-        .then(() => {
-            UI.addSystem(`Connected as ${nickname}`);
-            state.localId = nickname;
+    UI.addSystem('Attempting login...');
 
-            if (elements.meName) elements.meName.textContent = nickname;
-            if (elements.nickInputSettings) elements.nickInputSettings.value = nickname;
-        })
-        .catch(e => Logger.error('Login failed', e));
+    try {
+        await HackChatConnector.createClient(nickname);
+        UI.addSystem(`Connected as ${nickname}`);
+        state.localId = nickname;
+
+        if (elements.meName) elements.meName.textContent = nickname;
+        if (elements.nickInputSettings) elements.nickInputSettings.value = nickname;
+    } catch (e) {
+        Logger.error('Login failed', e);
+        elements.login.style.display = 'block';
+    }
 }
 
 // Attach login button click
