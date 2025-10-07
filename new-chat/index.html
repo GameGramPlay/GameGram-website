@@ -6,13 +6,14 @@
   <title>Lobby Chat</title>
   <link rel="stylesheet" href="styles.css" />
   <style>
-    body { font-family: sans-serif; margin:0; background:#222; color:#eee; }
+    body { font-family:sans-serif; margin:0; background:#222; color:#eee; }
     #login { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.85); display:flex; justify-content:center; align-items:center; }
     .box { background:#333; padding:20px; border-radius:8px; }
     #messages { height:300px; overflow:auto; border:1px solid #555; padding:5px; margin-bottom:5px; }
     .system-message { color: #ff0; font-style: italic; margin:2px 0; }
     .message { margin:2px 0; }
     .nick { font-weight:bold; margin-right:5px; }
+    #status { margin-top:5px; font-size:0.9em; color:#0f0; }
     input, button { margin:2px 0; }
   </style>
 </head>
@@ -26,6 +27,7 @@
       <input id="roomInput" placeholder="Room name" value="public"/>
       <button id="loginBtn">Join Lobby</button>
       <div id="loginMessages"></div>
+      <div id="status"></div>
     </div>
   </div>
 
@@ -35,9 +37,9 @@
     <div id="messages"></div>
     <input id="input" placeholder="Type a message..." />
     <button id="send">Send</button>
+    <div id="health" style="margin-top:5px;font-size:0.9em;color:#0f0;"></div>
   </div>
 
-  <!-- Load hackchat-engine (v1.0.3 works in browser) -->
   <script src="https://cdn.jsdelivr.net/npm/hackchat-engine@1.0.3/dist/hackchat-engine.min.js"></script>
   <script src="script.js"></script>
 </body>
