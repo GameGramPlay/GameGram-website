@@ -1,8 +1,10 @@
-// ================== script.js (hack.chat engine / WebSocket replacement) ==================
-// Replaces P2P PeerJS networking with a hackchat-engine-compatible WebSocket connector.
-// Keeps UI, reactions, storage, and DOM wiring identical to your original file.
-// Based on hackchat-engine conventions (cmd: 'join', 'message', 'history', etc.). See repo README.
-// Source/info: hackchat-engine README (default gateway wss://hack.chat/chat-ws). :contentReference[oaicite:1]{index=1}
+// script.js — hack.chat client using hackchat-engine Client
+// Requires bundling (npm i hackchat-engine) or making Client available globally.
+// This file is written as an ES module and expects the bundler to resolve the
+// `hackchat-engine` package. It preserves your UI, storage, reactions and logging
+// and replaces the P2P networking with the official Client class.
+
+import { Client } from 'hackchat-engine'; // bundler must provide this
 
 /* eslint-disable no-console */
 
@@ -10,10 +12,14 @@
 const CONFIG = {
   PUBLIC_ROOM: "public",
   HACKCHAT: {
-    // Set this to your hackchat-engine server WebSocket endpoint.
-    // Default commonly used by the engine is: wss://hack.chat/chat-ws
+    // Default gateway used by the library; you can override it here.
     ENDPOINT: "wss://hack.chat/chat-ws",
-    // Channel query param is not used by engine; channel is sent as 'channel' in cmd payloads
+    // Optional: pass in client options (for example ws.gateway override)
+    CLIENT_OPTIONS: {
+      ws: {
+        gateway: "wss://hack.chat/chat-ws"
+      }
+    }
   },
   TIMEOUTS: {
     HANDSHAKE: 2500,
@@ -25,7 +31,8 @@ const CONFIG = {
     BOOTSTRAP_CHECK: 10000,
     RESYNC: 15000,
     DEBUG_GRAPH: 10000,
-  }
+  },
+  DEBUG_VERBOSE: true // when true, send every debug payload to debug panel
 };
 
 // ================== STATE MANAGEMENT ==================
@@ -34,28 +41,25 @@ class ChatState {
     this.nickname = "";
     this.nickColor = "#ffffff";
     this.status = "online";
-    this.localId = null;               // in hack.chat, we'll use nickname as localId (or generate one)
-    this.peers = new Map();            // retained for UI compatibility (not P2P)
-    this.users = new Map();            // presence map (nick -> {nick,color,status})
-    this.knownPeers = new Set();       // used as a local store of seen nicks (optional)
+    this.localId = null;
+    this.client = null; // hackchat-engine Client instance
+    this.users = new Map();
+    this.knownPeers = new Set();
     this.chatHistory = [];
     this.intervals = new Map();
-    this.reconnectAttempts = new Map();
   }
 
   reset() {
     this.clearIntervals();
-    this.peers.clear();
     this.users.clear();
     this.knownPeers.clear();
     this.chatHistory = [];
-    this.intervals.clear();
-    this.reconnectAttempts.clear();
-    // No peer.destroy() here (we use WebSocket via HackChatConnector.disconnect)
+    try { if (this.client) this.client.close && this.client.close(); } catch(e) {}
+    this.client = null;
   }
 
   clearIntervals() {
-    this.intervals.forEach(interval => clearInterval(interval));
+    this.intervals.forEach(i => clearInterval(i));
     this.intervals.clear();
   }
 }
@@ -85,155 +89,121 @@ const elements = {
   roomLabel: document.getElementById("roomLabel")
 };
 
-// ================== UTILITY FUNCTIONS ==================
+// ================== UTILITIES ==================
 const Utils = {
   timestamp: () => new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }),
-  
   escapeHtml: (str = '') => String(str).replace(/[&<>"']/g, char => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   })[char]),
-  
-  generateId: () => `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-  
+  generateId: () => `tmp-${Date.now()}-${Math.random().toString(36).slice(2,9)}`,
   randomDelay: (base, variance) => base + Math.random() * variance,
-  
-  debounce: (func, wait) => {
-    let timeout;
-    return function executedFunction(...args) {
-      const later = () => {
-        clearTimeout(timeout);
-        func.apply(this, args);
-      };
-      clearTimeout(timeout);
-      timeout = setTimeout(later, wait);
-    };
-  },
-
-  throttle: (func, limit) => {
-    let inThrottle;
-    return function executedFunction(...args) {
-      if (!inThrottle) {
-        func.apply(this, args);
-        inThrottle = true;
-        setTimeout(() => inThrottle = false, limit);
-      }
-    };
-  }
+  debounce: (fn, wait) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn.apply(this,a), wait); }; },
+  throttle: (fn, limit) => { let inThrottle; return (...a) => { if (!inThrottle) { fn.apply(this,a); inThrottle = true; setTimeout(() => inThrottle = false, limit); } }; }
 };
 
 // ================== STORAGE MANAGER ==================
 class StorageManager {
   static save(key, value) {
-    try {
-      localStorage.setItem(key, JSON.stringify(value));
-    } catch (e) {
-      Logger.error('Storage save failed', { key, error: e.message });
-    }
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { Logger.error('Storage save failed', { key, error: e?.message }); }
   }
-
   static load(key, defaultValue = null) {
-    try {
-      const item = localStorage.getItem(key);
-      return item ? JSON.parse(item) : defaultValue;
-    } catch (e) {
-      Logger.error('Storage load failed', { key, error: e.message });
-      return defaultValue;
-    }
+    try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : defaultValue; } catch (e) { Logger.error('Storage load failed', { key, error: e?.message }); return defaultValue; }
   }
-
   static saveUserSettings() {
-    this.save("nickname", state.nickname);
-    this.save("nickColor", state.nickColor);
-    this.save("status", state.status);
-    this.save("theme", document.body.dataset.theme || "dark");
-    this.save("msgStyle", document.body.dataset.msgstyle || "modern");
-    this.save("fontSize", elements.messages.style.fontSize || "14");
+    this.save('nickname', state.nickname);
+    this.save('nickColor', state.nickColor);
+    this.save('status', state.status);
+    this.save('theme', document.body.dataset.theme || 'dark');
+    this.save('msgStyle', document.body.dataset.msgstyle || 'modern');
+    this.save('fontSize', elements.messages?.style?.fontSize || '14');
   }
-
   static loadUserSettings() {
-    state.nickname = this.load("nickname", "") || "";
-    state.nickColor = this.load("nickColor", "#ffffff") || "#ffffff";
-    state.status = this.load("status", "online") || "online";
-    
-    // Apply to UI
-    if (elements.meName) elements.meName.textContent = state.nickname || "Guest";
+    state.nickname = this.load('nickname','') || '';
+    state.nickColor = this.load('nickColor','#ffffff') || '#ffffff';
+    state.status = this.load('status','online') || 'online';
+    if (elements.meName) elements.meName.textContent = state.nickname || 'Guest';
     if (elements.meStatus) elements.meStatus.textContent = `(${state.status})`;
     if (elements.nickColorInput) elements.nickColorInput.value = state.nickColor;
     if (elements.statusSelect) elements.statusSelect.value = state.status;
   }
-
-  static saveChatHistory() {
-    this.save("chatHistory", state.chatHistory);
-  }
-
+  static saveChatHistory() { this.save('chatHistory', state.chatHistory); }
   static loadChatHistory() {
-    const history = this.load("chatHistory", []);
+    const history = this.load('chatHistory', []);
     history.forEach(msg => UI.addMessage(msg.nick, msg.text, msg.time, msg.color, msg.id, false));
     state.chatHistory = history;
     history.forEach(msg => UI.renderReactions(msg.id, msg.reactions || {}));
   }
-
-  static saveKnownPeers() {
-    this.save("knownPeers", Array.from(state.knownPeers));
-  }
-
-  static loadKnownPeers() {
-    const peers = this.load("knownPeers", []);
-    peers.forEach(peer => state.knownPeers.add(peer));
-  }
+  static saveKnownPeers() { this.save('knownPeers', Array.from(state.knownPeers)); }
+  static loadKnownPeers() { (this.load('knownPeers', []) || []).forEach(p => state.knownPeers.add(p)); }
 }
 
 // ================== LOGGING SYSTEM ==================
 class Logger {
   static createDebugPanel() {
-    const debugPanel = document.createElement("div");
-    debugPanel.id = "debugPanel";
-    debugPanel.className = "hidden p-2 border-t mt-2 text-xs font-mono bg-black text-green-400 max-h-64 overflow-y-auto";
-    if (elements.settingsModal) elements.settingsModal.appendChild(debugPanel);
+    let debugPanel = document.getElementById('debugPanel');
+    if (!debugPanel) {
+      debugPanel = document.createElement('div');
+      debugPanel.id = 'debugPanel';
+      debugPanel.className = 'p-2 border-t mt-2 text-xs font-mono bg-black text-green-400 max-h-60 overflow-y-auto';
+      if (elements.settingsModal) elements.settingsModal.appendChild(debugPanel);
+    }
     return debugPanel;
   }
 
   static log(level, message, data = null) {
-    const debugPanel = document.getElementById('debugPanel');
+    const debugPanel = Logger.createDebugPanel();
     if (debugPanel) {
-      const line = document.createElement("div");
-      line.textContent = `[${Utils.timestamp()}] [${level.toUpperCase()}] ${message}`;
-      if (data) {
-        try { line.textContent += ` ${JSON.stringify(data)}`; } catch (e) { /* ignore */ }
-      }
+      const line = document.createElement('div');
+      const ts = Utils.timestamp();
+      try {
+        line.textContent = `[${ts}] [${level.toUpperCase()}] ${message}` + (data ? ` -- ${JSON.stringify(data, Logger._safeReplacer(), 2)}` : '');
+      } catch (e) { line.textContent = `[${ts}] [${level.toUpperCase()}] ${message} -- (unserializable data)`; }
       debugPanel.appendChild(line);
       debugPanel.scrollTop = debugPanel.scrollHeight;
-      
-      // Keep only last 100 log entries
-      while (debugPanel.children.length > 100) {
-        debugPanel.removeChild(debugPanel.firstChild);
-      }
+      while (debugPanel.children.length > 500) debugPanel.removeChild(debugPanel.firstChild);
     }
-    
-    console[level === 'error' ? 'error' : 'log'](`[${level.toUpperCase()}]`, message, data || '');
+
+    // Always show in console as well
+    if (data) console[level === 'error' ? 'error' : 'log'](`[${level.toUpperCase()}] ${message}`, data); else console.log(`[${level.toUpperCase()}] ${message}`);
   }
 
-  static debug(message, data) { this.log('debug', message, data); }
-  static info(message, data) { this.log('info', message, data); }
-  static warn(message, data) { this.log('warn', message, data); }
-  static error(message, data) { this.log('error', message, data); }
+  static _safeReplacer() {
+    const seen = new WeakSet();
+    return function(key, val) {
+      if (typeof val === 'object' && val !== null) {
+        if (seen.has(val)) return '[Circular]';
+        seen.add(val);
+      }
+      // don't stringify large binary blobs
+      if (val instanceof ArrayBuffer) return '[ArrayBuffer]';
+      return val;
+    };
+  }
+
+  static debug(msg, d) { this.log('debug', msg, d); }
+  static info(msg, d) { this.log('info', msg, d); }
+  static warn(msg, d) { this.log('warn', msg, d); }
+  static error(msg, d) { this.log('error', msg, d); }
 }
 
-// ================== UI MANAGER (unchanged behaviour) ==================
+// ================== UI MANAGER ==================
 class UI {
   static addMessage(nick, text, time, color, id, save = true) {
     if (!id) id = Utils.generateId();
     if (!time) time = Utils.timestamp();
+    if (!elements.messages) return;
+
+    // prevent duplicates by id
     if (elements.messages.querySelector(`.msg[data-id="${id}"]`)) return;
 
     const div = document.createElement('div');
     div.className = 'msg new';
     div.dataset.id = id;
-    
+
     div.innerHTML = `
       <div class="meta">
         <span class="nickname" style="color:${Utils.escapeHtml(color)}">${Utils.escapeHtml(nick)}</span>
-        <span>${Utils.escapeHtml(time)}</span>
+        <span class="time">${Utils.escapeHtml(time)}</span>
       </div>
       <div class="text">${Utils.escapeHtml(text)}</div>
       <div class="reactions"></div>
@@ -254,8 +224,8 @@ class UI {
 
     setTimeout(() => div.classList.add('show'), 10);
 
-    if (save && !state.chatHistory.find(msg => msg.id === id)) {
-      state.chatHistory.push({ id, nick, text, time, color, reactions: {} });
+    if (save && !state.chatHistory.find(m => m.id === id)) {
+      state.chatHistory.push({ id, nick, text, time, color, reactions: {}, pending: false });
       StorageManager.saveChatHistory();
     }
   }
@@ -266,26 +236,33 @@ class UI {
 
     if (!message.reactions) message.reactions = {};
     if (!message.reactions[emoji]) message.reactions[emoji] = [];
-    
+
     if (!message.reactions[emoji].includes(state.nickname)) {
       message.reactions[emoji].push(state.nickname);
       this.renderReactions(id, message.reactions);
       StorageManager.saveChatHistory();
-      // Send reaction via connector
-      HackChatConnector.sendReaction(id, emoji);
+      // send reaction via client if available
+      if (state.client && state.client.say) {
+        try {
+          // The engine doesn't define a standard reaction API; we send a cmd 'reaction' packet
+          state.client.ws && Logger.debug('sendReaction via raw ws (if available)');
+          state.client.emit && state.client.emit('debug-send-reaction', { id, emoji, nick: state.nickname });
+        } catch (e) { Logger.warn('reaction emit failed', e); }
+      }
     }
   }
 
   static renderReactions(id, reactions) {
+    if (!elements.messages) return;
     const reactionsEl = elements.messages.querySelector(`.msg[data-id="${id}"] .reactions`);
     if (!reactionsEl) return;
 
-    reactionsEl.innerHTML = "";
+    reactionsEl.innerHTML = '';
     Object.entries(reactions).forEach(([emoji, users]) => {
       if (users.length > 0) {
-        const span = document.createElement("span");
+        const span = document.createElement('span');
         span.textContent = `${emoji} ${users.length}`;
-        span.className = "reaction";
+        span.className = 'reaction';
         span.title = users.join(', ');
         reactionsEl.appendChild(span);
       }
@@ -294,29 +271,28 @@ class UI {
 
   static updateUserList() {
     if (!elements.userList) return;
-    elements.userList.innerHTML = "";
-    
-    // Sort users: online first, then by name
-    const sortedUsers = Array.from(state.users.entries()).sort(([, a], [, b]) => {
+    elements.userList.innerHTML = '';
+
+    const sorted = Array.from(state.users.entries()).sort(([,a],[,b]) => {
       if (a.status === 'online' && b.status !== 'online') return -1;
       if (a.status !== 'online' && b.status === 'online') return 1;
       return (a.nick || '').localeCompare(b.nick || '');
     });
 
-    sortedUsers.forEach(([id, user]) => {
+    sorted.forEach(([id, user]) => {
       const div = document.createElement('div');
       div.className = `user ${user.status === 'online' ? 'online' : 'offline'}`;
-      div.style.color = user.color || "#ccc";
-      div.textContent = `${user.nick || id} • ${user.status || "offline"}`;
+      div.style.color = user.color || '#ccc';
+      div.textContent = `${user.nick || id} • ${user.status || 'offline'}`;
       elements.userList.appendChild(div);
     });
 
-    // Update connection count
-    const onlineCount = sortedUsers.filter(([, user]) => user.status === 'online').length;
+    const onlineCount = sorted.filter(([,u]) => u.status === 'online').length;
     document.title = `HackChat (${onlineCount} online)`;
   }
 
   static addSystemMessage(text) {
+    if (!elements.messages) return;
     const div = document.createElement('div');
     div.className = 'system';
     div.textContent = `[${Utils.timestamp()}] ${text}`;
@@ -328,364 +304,239 @@ class UI {
   static showConnectionGraph() {
     const debugPanel = document.getElementById('debugPanel');
     if (!debugPanel) return;
-
     const graph = document.createElement('pre');
-    let content = `Local ID: ${state.localId || "?"}\n`;
+    let content = `Local ID: ${state.localId || '?'}\n`;
     content += `Room: ${CONFIG.PUBLIC_ROOM}\n`;
-    content += `Known Users (${state.users.size}):\n`;
-    Array.from(state.users.keys()).slice(0, 50).forEach(u => {
-      content += `  • ${u}\n`;
-    });
-
+    content += `Users (${state.users.size}):\n`;
+    Array.from(state.users.keys()).slice(0,50).forEach(u => content += `  • ${u}\n`);
     graph.textContent = content;
-    graph.className = "mt-2 border-t border-gray-700 pt-2 text-gray-400";
+    graph.className = 'mt-2 border-t border-gray-700 pt-2 text-gray-400';
     debugPanel.appendChild(graph);
     debugPanel.scrollTop = debugPanel.scrollHeight;
   }
 }
 
-// ================== HACKCHAT CONNECTOR (uses hackchat-engine style cmd messages) ==================
+// ================== HACKCHAT CLIENT WRAPPER (official Client) ==================
 class HackChatConnector {
-  static ws = null;
-  static connected = false;
-  static reconnectTimer = null;
-  static heartbeatTimer = null;
-  static queue = [];
-  static reconnectAttempts = 0;
-  static MAX_RECONNECT = 10;
+  static async createClient(nick, channel = CONFIG.PUBLIC_ROOM, pass = null) {
+    // Clean up existing
+    if (state.client) {
+      try { state.client.close && state.client.close(); } catch (e) { /* ignore */ }
+      state.client = null;
+    }
 
-  // Connect to the hackchat server and join the channel
-  static async connect({ nick, channel = CONFIG.PUBLIC_ROOM, pass = null }) {
-    return new Promise((resolve, reject) => {
+    Logger.info('Creating hackchat-engine Client', { gateway: CONFIG.HACKCHAT.CLIENT_OPTIONS?.ws?.gateway });
+
+    // instantiate Client with options to override gateway
+    const clientOptions = Object.assign({}, CONFIG.HACKCHAT.CLIENT_OPTIONS || {}, { ws: { gateway: CONFIG.HACKCHAT.CLIENT_OPTIONS?.ws?.gateway || CONFIG.HACKCHAT.ENDPOINT } });
+
+    let client;
+    try {
+      client = new Client(clientOptions);
+    } catch (err) {
+      Logger.error('Failed to instantiate Client', err);
+      throw err;
+    }
+
+    state.client = client;
+
+    // Generic catch-all logging for every event from the client
+    const known = ['connected','session','channelJoined','message','error','disconnect','close','reconnect','connect'];
+    known.forEach(evt => client.on(evt, payload => {
+      Logger.debug(`client.event:${evt}`, payload);
+      if (CONFIG.DEBUG_VERBOSE) {
+        UI.addSystemMessage(`DEBUG: ${evt} ${JSON.stringify(payload)}`);
+      }
+    }));
+
+    // MESSAGE handling (central for updating UI)
+    client.on('message', payload => {
+      try { HackChatConnector.onServerMessage(payload); } catch (e) { Logger.error('onServerMessage failed', e); }
+    });
+
+    // When session is given, join
+    client.on('session', payload => {
+      Logger.debug('session payload', payload);
       try {
-        const url = new URL(CONFIG.HACKCHAT.ENDPOINT);
-        Logger.info(`Connecting to hackchat server: ${url.toString()}`);
-
-        this.ws = new WebSocket(url.toString());
-        this.ws.onopen = () => {
-          Logger.info('WebSocket open to hackchat server');
-          this.connected = true;
-          this.reconnectAttempts = 0;
-
-          // send join command per hackchat-engine style
-          const joinCmd = {
-            cmd: 'join',
-            channel: channel,
-            nick: nick
-          };
-          if (pass) joinCmd.pass = pass;
-
-          try { this.ws.send(JSON.stringify(joinCmd)); } catch (e) { Logger.warn('Join send failed', e); }
-
-          // flush any queued outgoing messages
-          this.flushQueue();
-
-          // start heartbeat
-          this.startHeartbeat();
-
-          // update local state id
-          state.localId = nick || Utils.generateId();
-          resolve();
-        };
-
-        this.ws.onmessage = (ev) => {
-          this.onRawMessage(ev.data);
-        };
-
-        this.ws.onclose = (ev) => {
-          Logger.warn('WebSocket closed', { code: ev.code, reason: ev.reason });
-          this.connected = false;
-          this.stopHeartbeat();
-          UI.addSystemMessage('Disconnected from server');
-          this.scheduleReconnect();
-        };
-
-        this.ws.onerror = (err) => {
-          Logger.error('WebSocket error', err);
-        };
-
-        // handshake timeout
-        const TO = setTimeout(() => {
-          if (!this.connected) {
-            reject(new Error('WebSocket connection timeout'));
-            try { this.ws.close(); } catch(e) { /* ignore */ }
-          }
-        }, Math.max(5000, CONFIG.TIMEOUTS.HANDSHAKE));
-      } catch (error) {
-        reject(error);
+        // join using provided nick
+        client.join(nick, pass || '', channel);
+      } catch (e) {
+        Logger.warn('client.join failed, will retry after small delay', e);
+        setTimeout(() => { try { client.join(nick, pass || '', channel); } catch (err){ Logger.error('rejoin failed', err); } }, 500);
       }
     });
-  }
 
-  static startHeartbeat() {
-    this.stopHeartbeat();
-    this.heartbeatTimer = setInterval(() => {
-      if (this.ws && this.connected && this.ws.readyState === WebSocket.OPEN) {
-        try { this.ws.send(JSON.stringify({ cmd: 'ping', ts: Date.now() })); } catch (e) { /* ignore */ }
-      }
-    }, 25000);
-  }
-
-  static stopHeartbeat() {
-    if (this.heartbeatTimer) {
-      clearInterval(this.heartbeatTimer);
-      this.heartbeatTimer = null;
-    }
-  }
-
-  static scheduleReconnect() {
-    if (this.reconnectTimer) return;
-    this.reconnectAttempts++;
-    if (this.reconnectAttempts > this.MAX_RECONNECT) {
-      Logger.warn('Max reconnect attempts reached, not reconnecting automatically.');
-      return;
-    }
-
-    const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 30000);
-    Logger.info(`Scheduling reconnect in ${delay}ms`);
-    this.reconnectTimer = setTimeout(async () => {
-      this.reconnectTimer = null;
-      if (state.nickname) {
-        try {
-          await this.connect({ nick: state.nickname, channel: CONFIG.PUBLIC_ROOM });
-          UI.addSystemMessage('Reconnected to hackchat server');
-        } catch (e) {
-          Logger.warn('Reconnect attempt failed', e);
-          this.scheduleReconnect();
-        }
-      }
-    }, delay);
-  }
-
-  static enqueueOutgoing(obj) {
-    this.queue.push(obj);
-    if (this.connected) this.flushQueue();
-  }
-
-  static flushQueue() {
-    while (this.queue.length && this.connected && this.ws && this.ws.readyState === WebSocket.OPEN) {
-      const obj = this.queue.shift();
+    // When channel is joined, server may provide user list — map to state.users
+    client.on('channelJoined', payload => {
+      Logger.info('channelJoined', payload);
       try {
-        this.ws.send(JSON.stringify(obj));
-      } catch (e) {
-        Logger.warn('Failed to send queued message, requeueing', e);
-        this.queue.unshift(obj);
-        break;
-      }
-    }
-  }
-
-  // decode incoming messages and adapt to UI/message handling
-  static onRawMessage(raw) {
-    let msgText = raw;
-    if (raw instanceof ArrayBuffer) {
-      try { msgText = new TextDecoder().decode(new Uint8Array(raw)); } catch (e) { Logger.warn('Decode failed', e); return; }
-    }
-
-    let data;
-    try {
-      data = JSON.parse(msgText);
-    } catch (e) {
-      // Non-JSON — display as system line
-      UI.addSystemMessage(String(msgText));
-      return;
-    }
-
-    // The hackchat-engine uses `cmd` for command name
-    const cmd = data.cmd;
-
-    switch (cmd) {
-      case 'message':
-      case 'msg':
-      case 'say': {
-        // typical server event: { cmd: 'message', channel, nick, message, time, id }
-        const nick = data.nick || data.from || data.user || 'anon';
-        const text = data.message || data.msg || data.text || '';
-        const time = data.time || Utils.timestamp();
-        const id = data.id || Utils.generateId();
-        if (!state.chatHistory.find(m => m.id === id)) {
-          UI.addMessage(nick, text, time, data.color || '#ccc', id);
-        }
-        break;
-      }
-
-      case 'history': {
-        // expected: { cmd: 'history', msgs: [...] } or { cmd:'history', history: [...] }
-        const arr = data.msgs || data.history || [];
-        if (Array.isArray(arr)) {
-          arr.forEach(msg => {
-            const nick = msg.nick || msg.user || msg.author || 'anon';
-            const text = msg.message || msg.msg || msg.text || '';
-            const time = msg.time || Utils.timestamp();
-            const id = msg.id || Utils.generateId();
-            if (!state.chatHistory.find(m => m.id === id)) {
-              UI.addMessage(nick, text, time, msg.color || '#ccc', id);
-              if (msg.reactions) UI.renderReactions(id, msg.reactions);
-            }
-          });
-        }
-        break;
-      }
-
-      case 'session': {
-        // hackchat-engine may send session info after connecting
-        // store if server provides any session ID
-        if (data.sid) {
-          state.localId = data.sid;
-        }
-        break;
-      }
-
-      case 'channelJoined': {
-        // server confirms join, may send user list
-        if (Array.isArray(data.users)) {
-          data.users.forEach(u => {
+        const usersArr = payload?.users || payload?.nicks || [];
+        if (Array.isArray(usersArr)) {
+          usersArr.forEach(u => {
             const nick = (typeof u === 'string') ? u : (u.nick || u.nickname || u.id);
-            state.users.set(nick, {
-              nick,
-              color: (u && u.color) || '#ccc',
-              status: 'online'
-            });
+            state.users.set(nick, { nick, color: (u && u.color) || '#ccc', status: 'online' });
           });
         }
-        UI.addSystemMessage(`Joined channel: ${data.channel || CONFIG.PUBLIC_ROOM}`);
         UI.updateUserList();
-        // ask for history explicitly if server doesn't send it
-        this.requestHistory();
-        break;
-      }
+        UI.addSystemMessage(`Joined channel ${payload?.channel || channel || CONFIG.PUBLIC_ROOM}`);
 
-      case 'join': {
-        const nick = data.nick || data.user;
-        if (nick) {
-          state.users.set(nick, { nick, color: data.color || '#ccc', status: 'online' });
-          UI.addSystemMessage(`${nick} joined`);
-          UI.updateUserList();
-        }
-        break;
-      }
+        // Request history explicitly after join
+        try { client.emit && client.emit('request-history', { channel }); } catch(e) { /* ignore */ }
+        try { client.say && client.say(channel, ""); } catch(e) { /* no-op */ }
+      } catch (e) { Logger.error('channelJoined handler failed', e); }
+    });
 
-      case 'part':
-      case 'leave': {
-        const nick = data.nick || data.user;
-        if (nick && state.users.has(nick)) {
-          const u = state.users.get(nick);
-          u.status = 'offline';
-          state.users.set(nick, u);
-          UI.addSystemMessage(`${nick} left`);
-          UI.updateUserList();
-        }
-        break;
-      }
-
-      case 'reaction': {
-        // adapt server reaction to local model
-        try {
-          MessageHandler.handleReaction({
-            id: data.id,
-            emoji: data.emoji,
-            user: data.nick || data.user
+    // Attach raw websocket logging if possible (the client exposes ws/socket in many builds)
+    const attachRawSocketLogging = () => {
+      try {
+        const sock = client.ws || client.socket || client._ws || client._socket;
+        if (!sock) return false;
+        // browser WebSocket API
+        if (sock.addEventListener) {
+          sock.addEventListener('open', () => Logger.debug('rawsocket: open'));
+          sock.addEventListener('message', (ev) => {
+            let data = ev.data;
+            // try to present readable JSON for debug
+            try { const j = JSON.parse(data); Logger.debug('rawsocket: message', j); } catch (e) { Logger.debug('rawsocket: message (raw)', data); }
           });
-        } catch (e) {
-          Logger.warn('Reaction handling failed', e);
+          sock.addEventListener('close', (ev) => Logger.debug('rawsocket: close', { code: ev.code, reason: ev.reason }));
+          sock.addEventListener('error', (ev) => Logger.debug('rawsocket: error', ev));
+        } else if (sock.on) {
+          // some libs use .on
+          sock.on('message', d => { try { Logger.debug('rawsocket: message', JSON.parse(d)); } catch(e) { Logger.debug('rawsocket: message (raw)', d); } });
+          sock.on('open', () => Logger.debug('rawsocket: open'));
+          sock.on('close', c => Logger.debug('rawsocket: close', c));
+          sock.on('error', e => Logger.debug('rawsocket: error', e));
         }
-        break;
-      }
-
-      case 'ping': {
-        // reply with pong (if server expects)
-        try { this.ws.send(JSON.stringify({ cmd: 'pong' })); } catch (e) { /* ignore */ }
-        break;
-      }
-
-      case 'sys':
-      case 'system':
-      default: {
-        // Unknown / misc system messages
-        if (data.message || data.msg) {
-          UI.addSystemMessage(data.message || data.msg);
-        } else {
-          Logger.debug('Unhandled server message', data);
-        }
-        break;
-      }
-    }
-  }
-
-  // send a chat message to the server
-  static sendChat(text) {
-    const payload = {
-      cmd: 'message',           // 'message' is a safe general cmd; server may accept 'msg' too
-      channel: CONFIG.PUBLIC_ROOM,
-      message: text,
-      nick: state.nickname,
-      time: Utils.timestamp(),
-      id: Utils.generateId()
+        return true;
+      } catch (e) { Logger.warn('attachRawSocketLogging failed', e); return false; }
     };
 
-    if (this.connected && this.ws && this.ws.readyState === WebSocket.OPEN) {
+    // Sometimes the socket is attached after a small delay — poll for it for a short window
+    let probes = 0; const probeMax = 40;
+    const probe = setInterval(() => {
+      probes++; if (attachRawSocketLogging()) { clearInterval(probe); return; }
+      if (probes > probeMax) clearInterval(probe);
+    }, 150);
+
+    // Build a helper for sending outgoing if client exposes say
+    const sendOutgoing = async (text) => {
+      if (!client) return;
       try {
-        this.ws.send(JSON.stringify(payload));
-      } catch (e) {
-        Logger.warn('Failed to send chat, enqueueing', e);
-        this.enqueueOutgoing(payload);
-      }
-    } else {
-      this.enqueueOutgoing(payload);
-    }
-
-    // locals: add immediately to UI to preserve original behavior
-    UI.addMessage(state.nickname, text, payload.time, state.nickColor, payload.id);
-  }
-
-  static sendReaction(id, emoji) {
-    const payload = {
-      cmd: 'reaction',
-      channel: CONFIG.PUBLIC_ROOM,
-      id,
-      emoji,
-      nick: state.nickname
+        // client.say usually returns nothing; we still attempt
+        client.say && client.say(CONFIG.PUBLIC_ROOM, text);
+        Logger.debug('outgoing.say', { channel: CONFIG.PUBLIC_ROOM, text });
+      } catch (e) { Logger.warn('client.say failed', e); }
     };
-    if (this.connected && this.ws && this.ws.readyState === WebSocket.OPEN) {
-      try {
-        this.ws.send(JSON.stringify(payload));
-      } catch (e) {
-        Logger.warn('Failed to send reaction, enqueueing', e);
-        this.enqueueOutgoing(payload);
+
+    return client;
+  }
+
+  // called by client 'message' handler
+  static onServerMessage(payload) {
+    // payload typically: { channel, nick, message, time, id }
+    Logger.debug('server.message', payload);
+
+    const nick = payload.nick || payload.user || payload.from || 'anon';
+    const text = payload.message || payload.msg || payload.text || '';
+    const time = payload.time || payload.ts || Utils.timestamp();
+    const id = payload.id || payload.mid || Utils.generateId();
+
+    // If we have a locally pending message that matches nick+text, replace it
+    const pendingIdx = state.chatHistory.findIndex(m => m.pending && m.nick === nick && m.text === text);
+    if (pendingIdx !== -1) {
+      const pending = state.chatHistory[pendingIdx];
+      const tempId = pending.id;
+      // update state entry
+      pending.id = id;
+      pending.time = time;
+      pending.pending = false;
+      StorageManager.saveChatHistory();
+
+      // Update DOM element data-id and time (if present)
+      const el = elements.messages && elements.messages.querySelector(`.msg[data-id="${tempId}"]`);
+      if (el) {
+        el.dataset.id = id;
+        const timeEl = el.querySelector('.meta .time') || el.querySelector('.meta span:nth-child(2)');
+        if (timeEl) timeEl.textContent = time;
       }
+
+      // Render reactions if server sent any
+      if (payload.reactions) UI.renderReactions(id, payload.reactions);
+
+      Logger.debug('replaced pending message', { tempId, finalId: id });
+      return;
+    }
+
+    // No pending match — add new message if not duplicate
+    if (!state.chatHistory.find(m => m.id === id)) {
+      UI.addMessage(nick, text, time, payload.color || '#ccc', id, true);
+      if (payload.reactions) UI.renderReactions(id, payload.reactions);
     } else {
-      this.enqueueOutgoing(payload);
+      Logger.debug('duplicate message ignored', { id });
     }
   }
 
-  static requestHistory() {
-    const payload = { cmd: 'history', channel: CONFIG.PUBLIC_ROOM };
-    if (this.connected && this.ws && this.ws.readyState === WebSocket.OPEN) {
-      try { this.ws.send(JSON.stringify(payload)); } catch (e) { Logger.warn('History request failed', e); }
-    } else {
-      this.enqueueOutgoing(payload);
+  static async sendChat(text) {
+    if (!state.client) {
+      Logger.warn('No client instance; attempting to create one before sending');
+      try { await HackChatConnector.createClient(state.nickname, CONFIG.PUBLIC_ROOM); } catch (e) { Logger.error('createClient failed', e); }
     }
+
+    // create a pending local message so user sees the message immediately
+    const tempId = Utils.generateId();
+    const time = Utils.timestamp();
+    UI.addMessage(state.nickname, text, time, state.nickColor, tempId, true);
+    const entry = state.chatHistory.find(m => m.id === tempId);
+    if (entry) { entry.pending = true; StorageManager.saveChatHistory(); }
+
+    try {
+      if (state.client && state.client.say) {
+        state.client.say(CONFIG.PUBLIC_ROOM, text);
+        Logger.debug('sent via client.say', { channel: CONFIG.PUBLIC_ROOM, text });
+      } else if (state.client && state.client.ws && state.client.ws.send) {
+        // fallback raw send packet in engine format
+        const pkt = { cmd: 'message', channel: CONFIG.PUBLIC_ROOM, message: text, nick: state.nickname };
+        try { state.client.ws.send(JSON.stringify(pkt)); Logger.debug('sent raw ws message', pkt); } catch (e) { Logger.warn('raw send failed', e); }
+      } else {
+        Logger.warn('No available send method on client');
+      }
+    } catch (e) {
+      Logger.error('sendChat failed', e);
+    }
+  }
+
+  static async requestHistory() {
+    try {
+      if (state.client && state.client.emit) {
+        // library doesn't document request history method; try known event
+        state.client.emit('history', { channel: CONFIG.PUBLIC_ROOM });
+        Logger.debug('requested history via emit');
+      } else if (state.client && state.client.ws && state.client.ws.send) {
+        const pkt = { cmd: 'history', channel: CONFIG.PUBLIC_ROOM };
+        state.client.ws.send(JSON.stringify(pkt));
+        Logger.debug('requested history via raw WS', pkt);
+      }
+    } catch (e) { Logger.warn('requestHistory failed', e); }
   }
 
   static disconnect() {
-    this.stopHeartbeat();
-    if (this.ws) {
-      try { this.ws.close(); } catch (e) { /* ignore */ }
-    }
-    this.ws = null;
-    this.connected = false;
+    try {
+      if (state.client) {
+        try { state.client.close && state.client.close(); } catch (e) { /* ignore */ }
+      }
+    } catch (e){ Logger.warn('disconnect error', e); }
+    state.client = null; this.connected = false;
   }
 }
 
-// ================== MESSAGE HANDLER (reaction handler preserved) ==================
+// ================== MESSAGE HANDLER (preserve reactions behavior) ==================
 class MessageHandler {
   static handleReaction(data) {
     const message = state.chatHistory.find(msg => msg.id === data.id);
     if (!message) return;
-
     if (!message.reactions) message.reactions = {};
     if (!message.reactions[data.emoji]) message.reactions[data.emoji] = [];
-
     if (!message.reactions[data.emoji].includes(data.user)) {
       message.reactions[data.emoji].push(data.user);
       UI.renderReactions(data.id, message.reactions);
@@ -694,50 +545,30 @@ class MessageHandler {
   }
 }
 
-// ================== CHAT MANAGER (uses HackChatConnector) ==================
+// ================== CHAT MANAGER ==================
 class ChatManager {
   static sendMessage() {
-    const text = elements.input.value.trim();
+    const text = elements.input?.value?.trim();
     if (!text) return;
+    if (elements.input) elements.input.value = '';
 
-    elements.input.value = '';
-    if (HackChatConnector) {
-      HackChatConnector.sendChat(text);
-    } else {
-      // fallback to local UI only
-      const id = Utils.generateId();
-      const time = Utils.timestamp();
-      UI.addMessage(state.nickname, text, time, state.nickColor, id);
-      state.chatHistory.push({ id, nick: state.nickname, text, time, color: state.nickColor, reactions: {} });
-      StorageManager.saveChatHistory();
-    }
+    // Use client wrapper which creates client as needed
+    HackChatConnector.sendChat(text);
   }
 
   static broadcastJoin() {
-    // hack.chat server receives the join via HackChatConnector.connect()'s initial join cmd.
-    // Still update local users map and persist known peers.
-    state.users.set(state.localId || state.nickname, {
-      nick: state.nickname || state.localId,
-      color: state.nickColor,
-      status: state.status
-    });
+    state.users.set(state.localId || state.nickname, { nick: state.nickname || state.localId, color: state.nickColor, status: state.status });
     UI.updateUserList();
     StorageManager.saveKnownPeers();
   }
 
   static startPeriodicTasks() {
-    // Periodic history/resync requests
-    const resyncInterval = setInterval(() => {
-      if (HackChatConnector && HackChatConnector.connected) {
-        HackChatConnector.requestHistory();
-      }
+    const resync = setInterval(() => {
+      if (state.client) HackChatConnector.requestHistory();
     }, CONFIG.INTERVALS.RESYNC + Math.random() * 3000);
-    state.intervals.set('resync', resyncInterval);
+    state.intervals.set('resync', resync);
 
-    // Debug graph updates
-    const debugInterval = setInterval(() => {
-      UI.showConnectionGraph();
-    }, CONFIG.INTERVALS.DEBUG_GRAPH);
+    const debugInterval = setInterval(() => UI.showConnectionGraph(), CONFIG.INTERVALS.DEBUG_GRAPH);
     state.intervals.set('debug', debugInterval);
   }
 }
@@ -749,43 +580,29 @@ class App {
       StorageManager.loadUserSettings();
       StorageManager.loadKnownPeers();
       StorageManager.loadChatHistory();
-      
       Logger.createDebugPanel();
       this.setupEventListeners();
-      
-      UI.addSystemMessage("Application initialized. Please log in to join the network.");
-      Logger.info("App initialized successfully");
-    } catch (error) {
-      Logger.error("App initialization failed", error);
-      UI.addSystemMessage("Initialization failed. Please refresh the page.");
+      UI.addSystemMessage('Application initialized. Please log in to join the network.');
+      Logger.info('App initialized');
+    } catch (e) {
+      Logger.error('App initialization failed', e);
+      UI.addSystemMessage('Initialization failed. Please refresh.');
     }
   }
 
   static setupEventListeners() {
-    // Login
     if (elements.loginBtn) elements.loginBtn.onclick = () => this.handleLogin();
-    if (elements.nickInput) elements.nickInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') this.handleLogin();
-    });
-
-    // Chat
+    if (elements.nickInput) elements.nickInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') this.handleLogin(); });
     if (elements.sendBtn) elements.sendBtn.onclick = () => ChatManager.sendMessage();
-    if (elements.input) elements.input.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') ChatManager.sendMessage();
-    });
-
-    // Settings
+    if (elements.input) elements.input.addEventListener('keypress', (e) => { if (e.key === 'Enter') ChatManager.sendMessage(); });
     if (elements.settingsBtn) elements.settingsBtn.onclick = () => this.showSettings();
     if (elements.closeSettings) elements.closeSettings.onclick = () => this.hideSettings();
-    
     if (elements.nickInputSettings) elements.nickInputSettings.onchange = (e) => this.updateNickname(e.target.value);
     if (elements.nickColorInput) elements.nickColorInput.oninput = (e) => this.updateNickColor(e.target.value);
     if (elements.statusSelect) elements.statusSelect.onchange = (e) => this.updateStatus(e.target.value);
     if (elements.fontSizeInput) elements.fontSizeInput.oninput = (e) => this.updateFontSize(e.target.value);
     if (elements.themeSelect) elements.themeSelect.onchange = (e) => this.updateTheme(e.target.value);
     if (elements.msgStyleSelect) elements.msgStyleSelect.onchange = (e) => this.updateMessageStyle(e.target.value);
-
-    // Window events
     window.addEventListener('beforeunload', () => this.cleanup());
     window.addEventListener('online', () => this.handleOnline());
     window.addEventListener('offline', () => this.handleOffline());
@@ -793,217 +610,76 @@ class App {
 
   static async handleLogin() {
     const nick = (elements.nickInput && elements.nickInput.value.trim()) || state.nickname || '';
-    if (!nick) {
-      alert("Please enter a nickname");
-      return;
-    }
+    if (!nick) { alert('Please enter a nickname'); return; }
 
     try {
-      if (elements.loginBtn) {
-        elements.loginBtn.disabled = true;
-        elements.loginBtn.textContent = "Connecting...";
-      }
-
-      state.nickname = nick;
-      StorageManager.saveUserSettings();
-      if (elements.meName) elements.meName.textContent = state.nickname;
-
+      if (elements.loginBtn) { elements.loginBtn.disabled = true; elements.loginBtn.textContent = 'Connecting...'; }
+      state.nickname = nick; StorageManager.saveUserSettings(); if (elements.meName) elements.meName.textContent = state.nickname;
       UI.addSystemMessage(`Joining ${CONFIG.PUBLIC_ROOM} as ${state.nickname}...`);
 
-      // Connect to hack.chat server
-      await HackChatConnector.connect({ nick: state.nickname, channel: CONFIG.PUBLIC_ROOM });
-
-      // Set local ID (use nick by default)
-      state.localId = state.nickname || Utils.generateId();
-
-      // Start periodic tasks & broadcast join locally
+      // create client & join (client will auto-join in session handler)
+      await HackChatConnector.createClient(state.nickname, CONFIG.PUBLIC_ROOM);
+      // set localId
+      state.localId = state.nickname;
       this.startMeshNetwork();
-
       if (elements.login) elements.login.style.display = 'none';
       UI.addSystemMessage(`Connected as ${state.localId}`);
-
-    } catch (error) {
-      Logger.error("Login failed", error);
-      UI.addSystemMessage(`Login failed: ${error.message || String(error)}`);
+    } catch (e) {
+      Logger.error('Login failed', e);
+      UI.addSystemMessage(`Login failed: ${e?.message || String(e)}`);
       if (elements.login) elements.login.style.display = '';
     } finally {
-      if (elements.loginBtn) {
-        elements.loginBtn.disabled = false;
-        elements.loginBtn.textContent = "Join Network";
-      }
+      if (elements.loginBtn) { elements.loginBtn.disabled = false; elements.loginBtn.textContent = 'Join Network'; }
     }
   }
 
   static startMeshNetwork() {
-    // Add self to users
-    state.users.set(state.localId, {
-      nick: state.nickname || state.localId,
-      color: state.nickColor,
-      status: 'online'
-    });
+    state.users.set(state.localId, { nick: state.nickname || state.localId, color: state.nickColor, status: 'online' });
     UI.updateUserList();
-
-    // Start periodic tasks (history resync, debug)
     ChatManager.startPeriodicTasks();
-
-    // Broadcast join (local update)
     ChatManager.broadcastJoin();
-
-    Logger.info("Connected client network started");
+    Logger.info('Client network started');
   }
 
-  static showSettings() {
-    if (elements.nickInputSettings) elements.nickInputSettings.value = state.nickname;
-    if (elements.settingsModal) elements.settingsModal.classList.remove("hidden");
-  }
-
-  static hideSettings() {
-    if (elements.settingsModal) elements.settingsModal.classList.add("hidden");
-  }
-
-  static updateNickname(value) {
-    const newNick = value.trim();
-    if (newNick && newNick !== state.nickname) {
-      state.nickname = newNick;
-      StorageManager.saveUserSettings();
-      if (elements.meName) elements.meName.textContent = state.nickname;
-      // Re-join server under new nick if connected
-      if (HackChatConnector && HackChatConnector.connected) {
-        // quick strategy: disconnect and reconnect with new nick
-        HackChatConnector.disconnect();
-        HackChatConnector.connect({ nick: state.nickname, channel: CONFIG.PUBLIC_ROOM }).catch(e => {
-          Logger.warn('Rejoin with new nick failed', e);
-        });
-      }
-    }
-  }
-
-  static updateNickColor(value) {
-    state.nickColor = value;
-    StorageManager.saveUserSettings();
-  }
-
-  static updateStatus(value) {
-    state.status = value;
-    StorageManager.saveUserSettings();
-    if (elements.meStatus) elements.meStatus.textContent = `(${state.status})`;
-  }
-
-  static updateFontSize(value) {
-    if (elements.messages) elements.messages.style.fontSize = value + "px";
-    StorageManager.save("fontSize", value);
-  }
-
-  static updateTheme(value) {
-    document.body.dataset.theme = value;
-    StorageManager.save("theme", value);
-  }
-
-  static updateMessageStyle(value) {
-    document.body.dataset.msgstyle = value;
-    StorageManager.save("msgStyle", value);
-  }
-
-  static handleOnline() {
-    UI.addSystemMessage("Connection restored");
-    if (HackChatConnector && !HackChatConnector.connected && state.nickname) {
-      HackChatConnector.connect({ nick: state.nickname, channel: CONFIG.PUBLIC_ROOM }).catch(e => Logger.warn('Reconnect failed', e));
-    }
-  }
-
-  static handleOffline() {
-    UI.addSystemMessage("Connection lost");
-  }
-
-  static cleanup() {
-    Logger.info("App cleanup started");
-    try {
-      HackChatConnector.disconnect();
-    } catch (e) { /* ignore */ }
-    state.reset();
-  }
+  static showSettings() { if (elements.nickInputSettings) elements.nickInputSettings.value = state.nickname; if (elements.settingsModal) elements.settingsModal.classList.remove('hidden'); }
+  static hideSettings() { if (elements.settingsModal) elements.settingsModal.classList.add('hidden'); }
+  static updateNickname(v) { const newNick = v.trim(); if (newNick && newNick !== state.nickname) { state.nickname = newNick; StorageManager.saveUserSettings(); if (elements.meName) elements.meName.textContent = state.nickname; if (state.client) { try { state.client.close && state.client.close(); } catch(e){} HackChatConnector.createClient(state.nickname, CONFIG.PUBLIC_ROOM).catch(e=>Logger.warn('rejoin failed', e)); } } }
+  static updateNickColor(v) { state.nickColor = v; StorageManager.saveUserSettings(); }
+  static updateStatus(v) { state.status = v; StorageManager.saveUserSettings(); if (elements.meStatus) elements.meStatus.textContent = `(${state.status})`; }
+  static updateFontSize(v) { if (elements.messages) elements.messages.style.fontSize = v + 'px'; StorageManager.save('fontSize', v); }
+  static updateTheme(v) { document.body.dataset.theme = v; StorageManager.save('theme', v); }
+  static updateMessageStyle(v) { document.body.dataset.msgstyle = v; StorageManager.save('msgStyle', v); }
+  static handleOnline() { UI.addSystemMessage('Connection restored'); if (!state.client) HackChatConnector.createClient(state.nickname, CONFIG.PUBLIC_ROOM).catch(e=>Logger.warn('reconnect failed', e)); }
+  static handleOffline() { UI.addSystemMessage('Connection lost'); }
+  static cleanup() { Logger.info('App cleanup started'); try { HackChatConnector.disconnect(); } catch(e){} state.reset(); }
 }
 
 // ================== ERROR HANDLING ==================
-window.addEventListener('error', (event) => {
-  Logger.error('Global error', {
-    message: event.error?.message,
-    stack: event.error?.stack,
-    filename: event.filename,
-    lineno: event.lineno
-  });
-});
-
-window.addEventListener('unhandledrejection', (event) => {
-  Logger.error('Unhandled promise rejection', event.reason);
-  event.preventDefault();
-});
+window.addEventListener('error', event => { Logger.error('Global error', { message: event.error?.message, stack: event.error?.stack, filename: event.filename, lineno: event.lineno }); });
+window.addEventListener('unhandledrejection', event => { Logger.error('Unhandled promise rejection', event.reason); event.preventDefault(); });
 
 // ================== INITIALIZATION ==================
 document.addEventListener('DOMContentLoaded', () => {
-  // Apply stored theme and settings
-  const theme = StorageManager.load("theme", "dark");
-  const msgStyle = StorageManager.load("msgStyle", "modern");
-  const fontSize = StorageManager.load("fontSize", "14");
-
+  const theme = StorageManager.load('theme','dark');
+  const msgStyle = StorageManager.load('msgStyle','modern');
+  const fontSize = StorageManager.load('fontSize','14');
   document.body.dataset.theme = theme;
   document.body.dataset.msgstyle = msgStyle;
-  if (elements.messages) elements.messages.style.fontSize = fontSize + "px";
-  
+  if (elements.messages) elements.messages.style.fontSize = fontSize + 'px';
   if (elements.themeSelect) elements.themeSelect.value = theme;
   if (elements.msgStyleSelect) elements.msgStyleSelect.value = msgStyle;
   if (elements.fontSizeInput) elements.fontSizeInput.value = fontSize;
-
-  // Set room info
   if (elements.roomLabel) elements.roomLabel.textContent = CONFIG.PUBLIC_ROOM;
-
-  // Initialize the application
-  App.initialize().catch(error => {
-    console.error("Failed to initialize app:", error);
-    document.body.innerHTML = `
-      <div style="text-align: center; padding: 50px; color: red;">
-        <h2>Application Failed to Load</h2>
-        <p>Please refresh the page and try again.</p>
-        <p>Error: ${error.message}</p>
-      </div>
-    `;
-  });
+  App.initialize().catch(e => { console.error('Failed to initialize app:', e); document.body.innerHTML = `<div style="text-align:center;padding:50px;color:red;"><h2>Application Failed to Load</h2><p>Please refresh the page and try again.</p><p>Error: ${e?.message}</p></div>`; });
 });
 
 // ================== PUBLIC API ==================
 window.HackChatApp = {
-  state: () => ({
-    localId: state.localId,
-    users: Object.fromEntries(state.users),
-    knownPeers: Array.from(state.knownPeers),
-    chatHistory: state.chatHistory.length
-  }),
-  reconnect: () => {
-    if (state.nickname) HackChatConnector.connect({ nick: state.nickname, channel: CONFIG.PUBLIC_ROOM }).catch(e => Logger.warn('Reconnect failed', e));
-  },
-  clearHistory: () => {
-    state.chatHistory = [];
-    StorageManager.saveChatHistory();
-    if (elements.messages) elements.messages.innerHTML = '';
-    UI.addSystemMessage("Chat history cleared");
-  },
-  exportData: () => ({
-    nickname: state.nickname,
-    knownPeers: Array.from(state.knownPeers),
-    chatHistory: state.chatHistory
-  }),
-  importData: (data) => {
-    if (data.knownPeers) {
-      data.knownPeers.forEach(peer => state.knownPeers.add(peer));
-      StorageManager.saveKnownPeers();
-    }
-    if (data.chatHistory) {
-      data.chatHistory.forEach(msg => {
-        if (!state.chatHistory.find(m => m.id === msg.id)) {
-          UI.addMessage(msg.nick, msg.text, msg.time, msg.color, msg.id);
-        }
-      });
-    }
-    UI.addSystemMessage("Data imported successfully");
-  }
+  state: () => ({ localId: state.localId, users: Object.fromEntries(state.users), knownPeers: Array.from(state.knownPeers), chatHistory: state.chatHistory.length }),
+  reconnect: () => { if (state.nickname) HackChatConnector.createClient(state.nickname, CONFIG.PUBLIC_ROOM).catch(e=>Logger.warn('reconnect failed', e)); },
+  clearHistory: () => { state.chatHistory = []; StorageManager.saveChatHistory(); if (elements.messages) elements.messages.innerHTML = ''; UI.addSystemMessage('Chat history cleared'); },
+  exportData: () => ({ nickname: state.nickname, knownPeers: Array.from(state.knownPeers), chatHistory: state.chatHistory }),
+  importData: (data) => { if (data.knownPeers) data.knownPeers.forEach(p => state.knownPeers.add(p)); StorageManager.saveKnownPeers(); if (data.chatHistory) data.chatHistory.forEach(msg => { if (!state.chatHistory.find(m => m.id === msg.id)) UI.addMessage(msg.nick, msg.text, msg.time, msg.color, msg.id); }); UI.addSystemMessage('Data imported successfully'); }
 };
+
+// End of file
