@@ -4,14 +4,138 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Hack.Chat Client</title>
-  <script src="https://cdn.jsdelivr.net/gh/hack-chat/engine@0.0.5/dist/hackchat-engine.min.js"></script>
+  <script type="module">
+    import { Client } from 'https://cdn.jsdelivr.net/npm/hackchat-engine/dist/hackchat-engine.esm.js';
+
+    let client;
+    let nickname = 'Guest';
+    let room = 'public';
+    let lastPingTime = Date.now();
+    let reconnectAttempts = 0;
+
+    const UI = {
+      chatDiv: document.getElementById('chat'),
+      statusDiv: document.getElementById('status'),
+      messageInput: document.getElementById('message'),
+      sendButton: document.getElementById('send'),
+      joinButton: document.getElementById('join'),
+      nicknameInput: document.getElementById('nickname'),
+      roomInput: document.getElementById('room'),
+
+      addMessage(nick, text) {
+        const div = document.createElement('div');
+        div.className = 'message';
+        div.innerHTML = `<span class="nick">${nick}:</span> <span>${text}</span>`;
+        this.chatDiv.appendChild(div);
+        this.chatDiv.scrollTop = this.chatDiv.scrollHeight;
+      },
+
+      addSystemMessage(text) {
+        const div = document.createElement('div');
+        div.className = 'system-message';
+        div.textContent = text;
+        this.chatDiv.appendChild(div);
+        this.chatDiv.scrollTop = this.chatDiv.scrollHeight;
+      },
+
+      updateStatus(text) {
+        this.statusDiv.textContent = text;
+      },
+
+      clearInput() {
+        this.messageInput.value = '';
+      },
+
+      disableInput() {
+        this.messageInput.disabled = true;
+        this.sendButton.disabled = true;
+      },
+
+      enableInput() {
+        this.messageInput.disabled = false;
+        this.sendButton.disabled = false;
+      }
+    };
+
+    function updatePingStatus() {
+      const pingInterval = setInterval(() => {
+        const pingTime = Date.now();
+        const latency = pingTime - lastPingTime;
+        UI.updateStatus(`Latency: ${latency}ms`);
+        lastPingTime = pingTime;
+      }, 1000);
+
+      client.on('disconnect', () => {
+        clearInterval(pingInterval);
+        UI.updateStatus('Disconnected. Reconnecting...');
+        reconnectAttempts++;
+        setTimeout(() => {
+          UI.addSystemMessage(`Attempting to reconnect... (${reconnectAttempts})`);
+          connectToServer();
+        }, 3000);
+      });
+    }
+
+    function connectToServer() {
+      client = new Client({ ws: { gateway: 'wss://hack.chat/chat-ws' } });
+
+      client.on('session', () => {
+        client.join(nickname, '', room);
+        UI.addSystemMessage(`Joined room "${room}" as "${nickname}"`);
+        UI.enableInput();
+        updatePingStatus();
+      });
+
+      client.on('message', payload => {
+        const nick = payload.nick || 'anon';
+        const text = payload.text || '';
+        UI.addMessage(nick, text);
+      });
+
+      client.on('onlineAdd', payload => {
+        UI.addSystemMessage(`${payload.nick} joined the room.`);
+      });
+
+      client.on('onlineRemove', payload => {
+        UI.addSystemMessage(`${payload.nick} left the room.`);
+      });
+
+      client.on('error', err => {
+        UI.addSystemMessage(`Error: ${err.message}`);
+      });
+    }
+
+    UI.joinButton.addEventListener('click', () => {
+      nickname = UI.nicknameInput.value.trim() || 'Guest';
+      room = UI.roomInput.value.trim() || 'public';
+      UI.addSystemMessage(`Connecting as "${nickname}" to room "${room}"...`);
+      UI.disableInput();
+      connectToServer();
+    });
+
+    UI.sendButton.addEventListener('click', () => {
+      const message = UI.messageInput.value.trim();
+      if (message && client) {
+        client.say(message);
+        UI.addMessage(nickname, message);
+        UI.clearInput();
+      }
+    });
+
+    UI.messageInput.addEventListener('keypress', e => {
+      if (e.key === 'Enter') {
+        UI.sendButton.click();
+      }
+    });
+  </script>
   <style>
-    body { font-family:sans-serif; background:#222; color:#eee; padding:20px; }
-    #chat { border:1px solid #555; height:300px; overflow:auto; padding:5px; margin:10px 0; }
-    .message { margin:2px 0; }
-    .nick { font-weight:bold; margin-right:5px; }
-    .system-message { font-style:italic; color:#ff0; margin:2px 0; }
-    input, button { margin:2px 0; }
+    body { font-family: sans-serif; background: #222; color: #eee; padding: 20px; }
+    #chat { border: 1px solid #555; height: 300px; overflow: auto; padding: 5px; margin: 10px 0; }
+    .message { margin: 2px 0; }
+    .nick { font-weight: bold; margin-right: 5px; }
+    .system-message { font-style: italic; color: #ff0; margin: 2px 0; }
+    input, button { margin: 2px 0; }
+    #status { font-size: 0.9em; color: #ccc; margin-top: 10px; }
   </style>
 </head>
 <body>
@@ -25,79 +149,6 @@
   <input id="message" placeholder="Type a message..." />
   <button id="send">Send</button>
 
-  <script>
-    let client;
-    let nickname = '';
-    let room = 'public';
-
-    // ================= UI =================
-    const UI = {
-      chatDiv: document.getElementById('chat'),
-      addMessage(nick, text) {
-        const div = document.createElement('div');
-        div.className = 'message';
-        div.innerHTML = `<span class="nick">${nick}:</span> <span>${text}</span>`;
-        this.chatDiv.appendChild(div);
-        this.chatDiv.scrollTop = this.chatDiv.scrollHeight;
-      },
-      addSystem(text) {
-        const div = document.createElement('div');
-        div.className = 'system-message';
-        div.textContent = text;
-        this.chatDiv.appendChild(div);
-        this.chatDiv.scrollTop = this.chatDiv.scrollHeight;
-      }
-    };
-
-    // ================= LOGIN =================
-    document.getElementById('join').addEventListener('click', () => {
-      nickname = document.getElementById('nickname').value.trim() || 'Guest';
-      room = document.getElementById('room').value.trim() || 'public';
-
-      UI.addSystem(`Connecting as "${nickname}" to room "${room}"...`);
-
-      client = new Client({ ws: { gateway: 'wss://hack.chat/chat-ws' } });
-
-      client.on('session', () => {
-        client.join(nickname, '', room);
-      });
-
-      client.on('channelJoined', () => {
-        UI.addSystem(`Joined room "${room}" successfully!`);
-      });
-
-      client.on('message', payload => {
-        const nick = payload.nick || 'anon';
-        const text = payload.text || '';
-        UI.addMessage(nick, text);
-      });
-
-      client.on('onlineAdd', payload => {
-        UI.addSystem(`${payload.nick} joined the room.`);
-      });
-
-      client.on('onlineRemove', payload => {
-        UI.addSystem(`${payload.nick} left the room.`);
-      });
-
-      client.on('disconnect', () => {
-        UI.addSystem('Disconnected from server. Reconnecting...');
-        setTimeout(() => document.getElementById('join').click(), 3000);
-      });
-    });
-
-    // ================= SEND MESSAGE =================
-    document.getElementById('send').addEventListener('click', () => {
-      const text = document.getElementById('message').value.trim();
-      if (!text || !client) return;
-      client.say(text);
-      UI.addMessage(nickname, text);
-      document.getElementById('message').value = '';
-    });
-
-    document.getElementById('message').addEventListener('keypress', e => {
-      if (e.key === 'Enter') document.getElementById('send').click();
-    });
-  </script>
+  <div id="status">Status: Disconnected</div>
 </body>
 </html>
