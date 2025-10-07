@@ -8,11 +8,15 @@ const chatDiv = document.querySelector('.chat');
 const sendBtn = document.getElementById('send');
 const inputField = document.getElementById('input');
 const roomLabel = document.getElementById('roomLabel');
+const healthDiv = document.getElementById('health');
+const statusDiv = document.getElementById('status');
 
 // State
 let client = null;
 let nickname = '';
 let room = 'public';
+let heartbeatInterval = null;
+let lastPing = null;
 
 // ================= UI =================
 const UI = {
@@ -29,6 +33,12 @@ const UI = {
     div.textContent = text;
     messagesDiv.appendChild(div);
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  },
+  updateHealth(text) {
+    healthDiv.textContent = text;
+  },
+  updateStatus(text) {
+    statusDiv.textContent = text;
   }
 };
 
@@ -41,6 +51,7 @@ async function doLogin() {
   roomLabel.textContent = room;
 
   UI.addSystem('Attempting login...');
+  UI.updateStatus('Connecting...');
 
   try {
     client = new Client({ ws: { gateway: 'wss://hack.chat/chat-ws' } });
@@ -51,6 +62,8 @@ async function doLogin() {
 
     client.on('channelJoined', () => {
       UI.addSystem(`Joined room "${room}" as ${nickname}`);
+      UI.updateStatus('Connected');
+      startHeartbeat();
     });
 
     client.on('message', payload => {
@@ -69,6 +82,8 @@ async function doLogin() {
 
     client.on('disconnect', () => {
       UI.addSystem('Disconnected. Retrying in 3s...');
+      UI.updateStatus('Disconnected');
+      stopHeartbeat();
       setTimeout(() => doLogin(), 3000);
     });
 
@@ -79,12 +94,53 @@ async function doLogin() {
   }
 }
 
+// ================= HEARTBEAT / LATENCY =================
+function startHeartbeat() {
+  stopHeartbeat();
+  heartbeatInterval = setInterval(() => {
+    if (!client || client.ws.readyState !== WebSocket.OPEN) {
+      UI.updateHealth('Offline');
+      return;
+    }
+    lastPing = Date.now();
+    client.ws.send(JSON.stringify({ type: 'ping' }));
+  }, 5000); // every 5 seconds
+}
+
+function stopHeartbeat() {
+  if (heartbeatInterval) clearInterval(heartbeatInterval);
+  heartbeatInterval = null;
+}
+
+if (window.WebSocket) {
+  const originalSend = WebSocket.prototype.send;
+  WebSocket.prototype.send = function (data) {
+    if (data === '{"type":"pong"}') return originalSend.apply(this, [data]);
+    return originalSend.apply(this, [data]);
+  };
+}
+
+// Capture pong responses to measure latency
+function patchClientPing() {
+  if (!client) return;
+  client.on('*', payload => {
+    if (payload.type === 'pong' && lastPing) {
+      const latency = Date.now() - lastPing;
+      UI.updateHealth(`Latency: ${latency} ms`);
+      lastPing = null;
+    }
+  });
+}
+
 // ================= EVENTS =================
-loginBtn.addEventListener('click', doLogin);
+loginBtn.addEventListener('click', async () => { await doLogin(); patchClientPing(); });
 
 [nickInput, roomInput].forEach(inputEl => {
-  inputEl.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') doLogin();
+  inputEl.addEventListener('keypress', async (e) => {
+    if (e.key === 'Enter') { 
+      await doLogin(); 
+      patchClientPing();
+    }
   });
 });
 
