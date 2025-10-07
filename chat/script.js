@@ -64,11 +64,13 @@ class Utils {
 // ================= LOGGER =================
 class Logger {
     static debug(type, data) {
-        console.log(`[DEBUG] ${type}:`, data);
+        // Display debug messages in chat UI
+        UI.addSystem(`[DEBUG] ${type}: ${typeof data === 'string' ? data : JSON.stringify(data)}`);
     }
-    
+
     static error(message, error) {
-        console.error(`[ERROR] ${message}:`, error);
+        const errMsg = error ? (error.message || JSON.stringify(error)) : '';
+        UI.addSystem(`[ERROR] ${message}${errMsg ? ': ' + errMsg : ''}`);
     }
 }
 
@@ -259,8 +261,12 @@ class App {
         // Event listeners
         elements.loginBtn?.addEventListener('click', () => App.handleLogin());
         elements.nickInput?.addEventListener('keypress', e => {
-            if (e.key === 'Enter') App.handleLogin();
+            if (e.key === 'Enter') {
+                UI.addSystem('Enter pressed in nickname input, attempting login...');
+                App.handleLogin();
+            }
         });
+
         elements.sendBtn?.addEventListener('click', () => App.sendMessage());
         elements.input?.addEventListener('keypress', e => {
             if (e.key === 'Enter') App.sendMessage();
