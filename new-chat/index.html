@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lobby Chat</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    body { font-family: sans-serif; margin:0; background:#222; color:#eee; }
+    #login { position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.85); display:flex; justify-content:center; align-items:center; }
+    .box { background:#333; padding:20px; border-radius:8px; }
+    #messages { height:300px; overflow:auto; border:1px solid #555; padding:5px; margin-bottom:5px; }
+    .system-message { color: #ff0; font-style: italic; margin:2px 0; }
+    .message { margin:2px 0; }
+    .nick { font-weight:bold; margin-right:5px; }
+    input, button { margin:2px 0; }
+  </style>
+</head>
+<body>
+
+  <!-- Login overlay -->
+  <div id="login">
+    <div class="box">
+      <h1>Enter Lobby</h1>
+      <input id="nickInput" placeholder="Nickname" />
+      <input id="roomInput" placeholder="Room name" value="public"/>
+      <button id="loginBtn">Join Lobby</button>
+      <div id="loginMessages"></div>
+    </div>
+  </div>
+
+  <!-- Chat area -->
+  <div class="chat" style="padding:10px; display:none;">
+    <div>Room: <span id="roomLabel">public</span></div>
+    <div id="messages"></div>
+    <input id="input" placeholder="Type a message..." />
+    <button id="send">Send</button>
+  </div>
+
+  <!-- Load hackchat-engine (v1.0.3 works in browser) -->
+  <script src="https://cdn.jsdelivr.net/npm/hackchat-engine@1.0.3/dist/hackchat-engine.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
