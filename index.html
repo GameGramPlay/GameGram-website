@@ -182,26 +182,115 @@
         );
     };
   
-    const loadSeraphGames = async () => {
-      const gamesSiteBase = "https://games-site.github.io/";
+    const loadSeraphGames = () => {
+      const gamesSiteBase = "https://games-site.github.io/projects/";
     
-      try {
-        const response = await fetch(`${gamesSiteBase}games/index.json`);
-        const gameFiles = await response.json();
+      const seraphGamesList = [
+        "1v1.lol/index.html",
+        "2048/index.html",
+        "9007199254740992/index.html",
+        "ages-of-conflict/index.html",
+        "among-us/index.html",
+        "a-small-world-cup/index.html",
+        "baldis-basics/index.html",
+        "ball-sort-puzzle/index.html",
+        "basket-and-ball/index.html",
+        "bitlife/index.html",
+        "blackjack/index.html",
+        "block-the-pig/index.html",
+        "cell-machine/index.html",
+        "chrome-dino/index.html",
+        "circlo/index.html",
+        "cookie-clicker/index.html",
+        "core-ball/index.html",
+        "crazy-cattle-3d/index.html",
+        "cut-the-rope/index.html",
+        "death-run-3d/index.html",
+        "doodle-jump/index.html",
+        "drift-boss/index.html",
+        "drift-hunters/index.html",
+        "eaglercraft/index.html",
+        "edge-surf/index.html",
+        "flappy-bird/index.html",
+        "fruit-ninja/index.html",
+        "geometry-dash/index.html",
+        "google-feud/index.html",
+        "google-snake/index.html",
+        "hextris/index.html",
+        "idle-breakout/index.html",
+        "little-alchemy-2/index.html",
+        "madalin-stunt-cars-2/index.html",
+        "madalin-stunt-cars-3/index.html",
+        "mario/index.html",
+        "minecraft-classic/index.html",
+        "minesweeper/index.html",
+        "pacman/index.html",
+        "paper-io-2/index.html",
+        "papery-planes/index.html",
+        "poker/index.html",
+        "project-sand/index.html",
+        "retro-bowl/index.html",
+        "retro-bowl-college/index.html",
+        "rocketpult/index.html",
+        "rooftop-snipers/index.html",
+        "sand-tetris/index.html",
+        "save-the-doge/index.html",
+        "slope/index.html",
+        "smash-karts/index.html",
+        "solitaire/index.html",
+        "solitaire-ms/index.html",
+        "stack/index.html",
+        "subway-surfers/index.html",
+        "tomb-of-the-mask/index.html",
+        "waterworks/index.html",
+        "we-become-what-we-behold/index.html",
+        "fireboy-and-watergirl-1-forest/index.html",
+        "fireboy-and-watergirl-2-light/index.html",
+        "fireboy-and-watergirl-3-ice/index.html",
+        "fireboy-and-watergirl-4-crystal/index.html",
+        "fireboy-and-watergirl-5-elements/index.html",
+        "fireboy-and-watergirl-6-fairy-tales/index.html",
+        "fnaf-1/index.html",
+        "fnaf-2/index.html",
+        "fnaf-3/index.html",
+        "fnaf-4/index.html",
+        "sister-location/index.html",
+        "fnaf-ucn/index.html",
+        "moto-x3m/index.html",
+        "moto-x3m-2/index.html",
+        "moto-x3m-winter/index.html",
+        "moto-x3m-pool-party/index.html",
+        "moto-x3m-spooky-land/index.html",
+        "ovo/index.html",
+        "ovo-2/index.html",
+        "ovo-dimensions/index.html",
+        "basket-random/index.html",
+        "boxing-random/index.html",
+        "soccer-random/index.html",
+        "volley-random/index.html",
+        "snail-bob/index.html",
+        "snail-bob-2/index.html",
+        "snail-bob-3/index.html",
+        "snail-bob-4/index.html",
+        "snail-bob-5/index.html",
+        "snail-bob-6/index.html",
+        "snail-bob-7/index.html",
+        "snail-bob-8/index.html",
+        "vex-3/index.html",
+        "vex-4/index.html",
+        "vex-5/index.html",
+        "vex-6/index.html"
+      ];
     
-        // Limit to 100 games and sort alphabetically
-        const limitedGames = gameFiles.slice(0, 100).sort();
-    
-        return limitedGames.map(file => ({
-          name: file.replace('.html', '').replace(/[-_]/g, ' '),
-          fullUrl: `${gamesSiteBase}games/${file}`,
+      return Promise.resolve(
+        seraphGamesList.map(file => ({
+          name: file.replace('/index.html', '').replace(/[-_]/g, ' '),
+          fullUrl: `${gamesSiteBase}${file}`,
           source: 'seraph'
-        }));
-      } catch (error) {
-        console.error("Failed to load games:", error);
-        return [];
-      }
+        }))
+      );
     };
+
   
     const loadGames = async () => {
       showSpinner();
