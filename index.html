@@ -181,6 +181,31 @@
           }))
         );
     };
+
+    const loadCouchfriendsGames = () => {
+      const baseUrl = "https://couchfriends.com/src/games/";
+    
+      const couchGamesList = [
+        "spaceshooter/index.html",
+        "breakout/index.html",
+        "bombergirl/index.html",
+        "spacegpt/index.html",
+        "drakonas/index.html",
+        "mad-science-tower-defense/index.html",
+        "threejs-tower-defense/index.html",
+        "asteroids/index.html",
+        "soccer/index.html"
+      ];
+    
+      return Promise.resolve(
+        couchGamesList.map(file => ({
+          name: file.replace('/index.html', '').replace(/[-_]/g, ' '),
+          fullUrl: `${baseUrl}${file}`,
+          source: 'couchfriends'
+        }))
+      );
+    };
+
   
     const loadSeraphGames = () => {
       const gamesSiteBase = "https://games-site.github.io/projects/";
@@ -296,17 +321,20 @@
       showSpinner();
     
       try {
-        const [localGames, seraphGames] = await Promise.all([
+        const [localGames, seraphGames, couchGames] = await Promise.all([
           loadLocalGames(),
-          loadSeraphGames()
+          loadSeraphGames(),
+          loadCouchfriendsGames() // Added Couchfriends games
         ]);
     
-        allGames = [...localGames, ...seraphGames];
+        // Combine all sources
+        allGames = [...localGames, ...seraphGames, ...couchGames];
     
         if (!Array.isArray(allGames) || allGames.length === 0) {
           throw new Error("No games were returned from sources.");
         }
     
+        // Render first page
         renderGames(allGames, 1);
       } catch (err) {
         console.error("⚠️ Error loading games:");
@@ -321,14 +349,13 @@
           <ul style="font-size: 0.9em;">
             <li>Is <code>games/index.json</code> available?</li>
             <li>Are CORS settings or hosting issues preventing fetch?</li>
-            <li>Is the <code>seraphList</code> defined properly?</li>
+            <li>Are the external game lists defined properly?</li>
           </ul>
         `;
       } finally {
         hideSpinner();
       }
     };
-
   
     document.addEventListener("DOMContentLoaded", () => {
       loadGames();
