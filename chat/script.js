@@ -48,8 +48,8 @@ const elements = {
 // ================= UTILITIES =================
 class Utils {
     static timestamp() { return Date.now(); }
-    static generateId() { return Math.random().toString(36).slice(2, 11); } // slightly longer ID
-    static formatTime(ts) { return new Date(ts).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}); }
+    static generateId() { return Math.random().toString(36).slice(2, 11); }
+    static formatTime(ts) { return new Date(ts).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); }
 }
 
 // ================= LOGGER =================
@@ -66,12 +66,8 @@ class Logger {
 // ================= STORAGE =================
 class StorageManager {
     static saveUser() {
-        localStorage.setItem('chatUser', JSON.stringify({
-            nickname: state.nickname,
-            nickColor: state.nickColor
-        }));
+        localStorage.setItem('chatUser', JSON.stringify({ nickname: state.nickname, nickColor: state.nickColor }));
     }
-
     static loadUser() {
         const data = localStorage.getItem('chatUser');
         if (!data) return;
@@ -81,11 +77,9 @@ class StorageManager {
             state.nickColor = parsed.nickColor || '#00ff00';
         } catch { console.warn('Invalid user data'); }
     }
-
     static saveChat() {
         localStorage.setItem('chatHistory', JSON.stringify(state.chatHistory));
     }
-
     static loadChat() {
         const data = localStorage.getItem('chatHistory');
         if (!data) return;
@@ -129,7 +123,7 @@ class UI {
         if (!elements.userList) return;
         elements.userList.innerHTML = '';
         Array.from(state.users.values())
-            .sort((a, b) => a.nick.localeCompare(b.nick))
+            .sort((a,b) => a.nick.localeCompare(b.nick))
             .forEach(u => {
                 const div = document.createElement('div');
                 div.textContent = `${u.nick} • ${u.status || 'online'}`;
@@ -142,11 +136,12 @@ class UI {
 class HackChatConnector {
     static async createClient(nick, room = CONFIG.PUBLIC_ROOM) {
         if (!window.Client) {
-            UI.addSystem('❌ hackchat-engine Client not found.');
+            UI.addSystem('❌ hackchat-engine Client not found. Make sure assets/Client.js is loaded.');
             return;
         }
 
         if (state.client) try { state.client.close(); } catch(e) { Logger.error('Closing old client failed', e); }
+
         const client = new Client({ ws: { gateway: CONFIG.HACKCHAT.ENDPOINT } });
         state.client = client;
         state.room = room;
@@ -155,14 +150,10 @@ class HackChatConnector {
         client.on('session', () => client.join(nick, '', room));
         client.on('channelJoined', payload => UI.addSystem(`✅ Joined room: ${payload.channel || room}`));
         client.on('message', HackChatConnector.onMessage);
-        client.on('onlineSet', p => {
-            state.users.clear();
-            (p.users || []).forEach(u => state.users.set(u.nick, u));
-            UI.updateUserList();
-        });
-        client.on('onlineAdd', p => { state.users.set(p.nick, p); UI.updateUserList(); UI.addSystem(`👋 ${p.nick} joined`); });
+        client.on('onlineSet', p => { state.users.clear(); (p.users||[]).forEach(u=>state.users.set(u.nick,u)); UI.updateUserList(); });
+        client.on('onlineAdd', p => { state.users.set(p.nick,p); UI.updateUserList(); UI.addSystem(`👋 ${p.nick} joined`); });
         client.on('onlineRemove', p => { state.users.delete(p.nick); UI.updateUserList(); UI.addSystem(`🚪 ${p.nick} left`); });
-        client.on('disconnect', () => { UI.addSystem('⚠️ Disconnected. Reconnecting...'); setTimeout(() => HackChatConnector.createClient(nick, room), CONFIG.TIMEOUTS.RECONNECT); });
+        client.on('disconnect', () => { UI.addSystem('⚠️ Disconnected. Reconnecting...'); setTimeout(()=>HackChatConnector.createClient(nick, room), CONFIG.TIMEOUTS.RECONNECT); });
 
         return client;
     }
@@ -172,14 +163,14 @@ class HackChatConnector {
         const text = payload.text || '';
         const time = payload.time || Utils.timestamp();
         const id = payload.id || Utils.generateId();
-        if (!state.chatHistory.find(m => m.id === id)) UI.addMessage(nick, text, time, payload.color || '#ccc', id, true);
+        if (!state.chatHistory.find(m=>m.id===id)) UI.addMessage(nick,text,time,payload.color||'#ccc',id,true);
     }
 
     static async sendChat(text) {
-        if (!state.client) await HackChatConnector.createClient(state.nickname, state.room);
+        if (!state.client) await HackChatConnector.createClient(state.nickname,state.room);
         const tempId = Utils.generateId();
-        UI.addMessage(state.nickname, text, Utils.timestamp(), state.nickColor, tempId, true);
-        state.client?.say?.(state.room, text);
+        UI.addMessage(state.nickname,text,Utils.timestamp(),state.nickColor,tempId,true);
+        state.client?.say?.(state.room,text);
     }
 }
 
@@ -207,24 +198,24 @@ class App {
         StorageManager.loadChat();
 
         elements.loginBtn?.addEventListener('click', doLogin);
-        [elements.nickInput, elements.roomInput].forEach(el => el?.addEventListener('keypress', e => { if (e.key === 'Enter') doLogin(); }));
+        [elements.nickInput,elements.roomInput].forEach(el=>el?.addEventListener('keypress',e=>{ if(e.key==='Enter') doLogin(); }));
 
-        elements.sendBtn?.addEventListener('click', () => App.sendMessage());
-        elements.input?.addEventListener('keypress', e => { if (e.key === 'Enter') App.sendMessage(); });
+        elements.sendBtn?.addEventListener('click',()=>App.sendMessage());
+        elements.input?.addEventListener('keypress',e=>{ if(e.key==='Enter') App.sendMessage(); });
 
-        elements.settingsBtn?.addEventListener('click', App.openSettings);
-        elements.closeSettings?.addEventListener('click', App.closeSettings);
+        elements.settingsBtn?.addEventListener('click',App.openSettings);
+        elements.closeSettings?.addEventListener('click',App.closeSettings);
 
-        elements.nickColor?.addEventListener('change', e => { state.nickColor = e.target.value; StorageManager.saveUser(); });
-        elements.themeSelect?.addEventListener('change', e => { document.body.dataset.theme = e.target.value; });
-        elements.msgStyle?.addEventListener('change', e => { document.body.dataset.msgstyle = e.target.value; });
-        elements.fontSize?.addEventListener('input', e => { document.body.style.fontSize = `${e.target.value}px`; });
+        elements.nickColor?.addEventListener('change',e=>{ state.nickColor=e.target.value; StorageManager.saveUser(); });
+        elements.themeSelect?.addEventListener('change',e=>{ document.body.dataset.theme=e.target.value; });
+        elements.msgStyle?.addEventListener('change',e=>{ document.body.dataset.msgstyle=e.target.value; });
+        elements.fontSize?.addEventListener('input',e=>{ document.body.style.fontSize=`${e.target.value}px`; });
     }
 
     static async sendMessage() {
         const text = elements.input?.value.trim();
-        if (!text) return;
-        elements.input.value = '';
+        if(!text) return;
+        elements.input.value='';
         await HackChatConnector.sendChat(text);
     }
 
@@ -237,7 +228,7 @@ class App {
     static closeSettings() {
         elements.settingsModal?.classList.add('hidden');
         const newNick = elements.nickInputSettings.value.trim();
-        if (newNick && newNick !== state.nickname) {
+        if(newNick && newNick!==state.nickname) {
             state.nickname = newNick;
             StorageManager.saveUser();
             elements.meName.textContent = newNick;
@@ -246,6 +237,4 @@ class App {
 }
 
 // ================= INIT =================
-document.addEventListener('DOMContentLoaded', () => {
-    App.init().catch(e => Logger.error('Init failed', e));
-});
+document.addEventListener('DOMContentLoaded',()=>{ App.init().catch(e=>Logger.error('Init failed',e)); });
