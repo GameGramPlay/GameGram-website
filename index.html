@@ -357,7 +357,7 @@
       showSpinner();
     
       try {
-        const [localGames, seraphGames, couchGames] = await Promise.all([
+        const [localGames, seraphGames, couchGames, Js13kGames] = await Promise.all([
           loadLocalGames(),
           loadSeraphGames(),
           loadCouchfriendsGames(), // Added Couchfriends games
@@ -365,7 +365,7 @@
         ]);
     
         // Combine all sources
-        allGames = [...localGames, ...seraphGames, ...couchGames];
+        allGames = [...localGames, ...seraphGames, ...couchGames, ...Js13kGames];
     
         if (!Array.isArray(allGames) || allGames.length === 0) {
           throw new Error("No games were returned from sources.");
