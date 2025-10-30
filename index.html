@@ -182,6 +182,42 @@
         );
     };
 
+    const loadJs13kGames = () => {
+      const baseUrl = "https://js13kgames.com/games/";
+    
+      const js13kList = [
+        "back-to-the-couch/index.html",
+        "base-13/index.html",
+        "astro-farm-tycoon/index.html",
+        "crashdown/index.html",
+        "data-miner/index.html",
+        "galactic-rift/index.html",
+        "haunted-halls/index.html",
+        "nano-wars/index.html",
+        "pixel-escape/index.html",
+        "rocket-slinger/index.html",
+        "shapeshifter/index.html",
+        "space-junker/index.html",
+        "tiny-tanks/index.html",
+        "under-siege/index.html",
+        "warp-drive/index.html",
+        "zombie-express/index.html",
+        "sneaky-steve/index.html",
+        "the-last-frontier/index.html",
+        "neon-drift/index.html",
+        "mind-maze/index.html"
+      ];
+    
+      return Promise.resolve(
+        js13kList.map(file => ({
+          name: file.replace('/index.html', '').replace(/[-_]/g, ' '),
+          fullUrl: `${baseUrl}${file}`,
+          source: 'js13k'
+        }))
+      );
+    };
+
+
     const loadCouchfriendsGames = () => {
       const baseUrl = "https://couchfriends.com/src/games/";
     
@@ -324,7 +360,8 @@
         const [localGames, seraphGames, couchGames] = await Promise.all([
           loadLocalGames(),
           loadSeraphGames(),
-          loadCouchfriendsGames() // Added Couchfriends games
+          loadCouchfriendsGames(), // Added Couchfriends games
+          loadJs13kGames()
         ]);
     
         // Combine all sources
