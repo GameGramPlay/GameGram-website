@@ -2,8 +2,6 @@
 <html lang="en">
 <head>
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Offline</title>
@@ -20,10 +18,23 @@
     p {
       color: #666;
     }
+    button {
+      padding: 10px 20px;
+      cursor: pointer;
+      background-color: #444;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      margin-top: 10px;
+    }
+    button:hover {
+      background-color: #666;
+    }
   </style>
 </head>
 <body>
   <h1>You're offline</h1>
   <p>It looks like you're not connected to the internet. Try again later.</p>
+  <button onclick="window.location.reload()">Retry</button>
 </body>
 </html>
