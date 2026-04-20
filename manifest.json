@@ -1,24 +1,43 @@
 {
-  "name": "Gamegram – Play Web Games Instantly",
-  "short_name": "Gamegram",
-  "start_url": ".",
+  "name": "GameGram – Play Web Games Instantly",
+  "short_name": "GameGram",
+  "id": "/",
+  "start_url": "/?source=pwa",
+  "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "background_color": "#ffffff",
   "theme_color": "#6600cc",
+  "description": "GameGram is a free browser-based platform for playing web games instantly while chatting. No downloads, no installs, no ads.",
+  "lang": "en",
+  "dir": "ltr",
+  "orientation": "any",
+  "categories": ["games", "entertainment", "social"],
+  "prefer_related_applications": false,
   "icons": [
     {
-      "src": "icons/icon-192.png",
+      "src": "/icons/icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "icons/icon-512.png",
+      "src": "/icons/icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-192-maskable.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
-  ],
-  "description": "Instant, no-install web games in a full-screen app.",
-  "orientation": "any",
-  "scope": ".",
-  "lang": "en"
+  ]
 }
