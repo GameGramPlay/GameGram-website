@@ -1,40 +1,215 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Offline</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#6600cc">
+  <title>GameGram | You’re Offline</title>
+  <meta name="description" content="GameGram is currently offline. Check your connection and try again to continue playing and chatting.">
+  <link rel="icon" type="image/png" href="./images/gamegram.png">
   <style>
+    :root {
+      color-scheme: light;
+      --bg: #f8f7ff;
+      --card: #ffffff;
+      --text: #1f1f2a;
+      --muted: #5f6472;
+      --accent: #6600cc;
+      --accent-hover: #5100a3;
+      --border: #e6ddff;
+      --shadow: 0 20px 60px rgba(102, 0, 204, 0.12);
+      --radius: 24px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
       font-family: Arial, sans-serif;
+      background:
+        radial-gradient(circle at top, rgba(102, 0, 204, 0.12), transparent 36%),
+        linear-gradient(180deg, #ffffff 0%, var(--bg) 100%);
+      color: var(--text);
+    }
+
+    main {
+      width: min(100%, 720px);
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 40px 28px;
       text-align: center;
-      padding: 50px;
-      background-color: #f9f9f9;
     }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      border-radius: 999px;
+      background: rgba(102, 0, 204, 0.08);
+      color: var(--accent);
+      font-weight: 700;
+      font-size: 0.95rem;
+      letter-spacing: 0.02em;
+      margin-bottom: 22px;
+    }
+
     h1 {
-      color: #444;
+      margin: 0;
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      line-height: 1.05;
+      letter-spacing: -0.04em;
     }
+
     p {
-      color: #666;
+      margin: 16px auto 0;
+      max-width: 58ch;
+      color: var(--muted);
+      font-size: 1.05rem;
+      line-height: 1.7;
     }
-    button {
-      padding: 10px 20px;
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 28px;
+    }
+
+    a.button,
+    button.button {
+      appearance: none;
+      border: 0;
+      border-radius: 14px;
+      padding: 12px 18px;
+      font: inherit;
+      font-weight: 700;
       cursor: pointer;
-      background-color: #444;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      margin-top: 10px;
+      text-decoration: none;
+      transition: transform 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
     }
-    button:hover {
-      background-color: #666;
+
+    a.button:hover,
+    button.button:hover {
+      transform: translateY(-1px);
+    }
+
+    .primary {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 10px 24px rgba(102, 0, 204, 0.22);
+    }
+
+    .primary:hover {
+      background: var(--accent-hover);
+    }
+
+    .secondary {
+      background: #f2ebff;
+      color: var(--accent);
+      border: 1px solid #e1d3ff;
+    }
+
+    .secondary:hover {
+      background: #eadfff;
+    }
+
+    .status {
+      margin-top: 18px;
+      font-size: 0.95rem;
+      color: var(--muted);
+    }
+
+    .links {
+      margin-top: 26px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 14px;
+      font-size: 0.95rem;
+    }
+
+    .links a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    .links a:hover {
+      text-decoration: underline;
+    }
+
+    @media (max-width: 480px) {
+      main {
+        padding: 32px 20px;
+        border-radius: 20px;
+      }
+
+      .actions {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      a.button,
+      button.button {
+        width: 100%;
+      }
     }
   </style>
 </head>
 <body>
-  <h1>You're offline</h1>
-  <p>It looks like you're not connected to the internet. Try again later.</p>
-  <button onclick="window.location.reload()">Retry</button>
+  <main role="main" aria-labelledby="offline-title">
+    <div class="badge" aria-hidden="true">⚡ GameGram offline</div>
+    <h1 id="offline-title">You’re offline</h1>
+    <p>
+      It looks like your internet connection dropped. Check your connection and try again to keep chatting and playing in GameGram.
+    </p>
+
+    <div class="actions">
+      <button class="button primary" type="button" onclick="window.location.reload()">Retry</button>
+      <a class="button secondary" href="./index.html">Go to Home</a>
+    </div>
+
+    <div class="links" aria-label="Offline navigation">
+      <a href="./about/">About</a>
+      <a href="./features/">Features</a>
+    </div>
+
+    <p class="status" id="status">Waiting for connection...</p>
+  </main>
+
+  <script>
+    const statusEl = document.getElementById('status');
+
+    function updateStatus() {
+      const online = navigator.onLine;
+      statusEl.textContent = online
+        ? 'You are back online. Reloading now...'
+        : 'Still offline. Once you reconnect, tap Retry.';
+      if (online) {
+        window.location.reload();
+      }
+    }
+
+    window.addEventListener('online', updateStatus);
+    window.addEventListener('offline', () => {
+      statusEl.textContent = 'Connection lost. You can keep this page open and try again when you’re back online.';
+    });
+
+    if (navigator.onLine) {
+      statusEl.textContent = 'You are online now. Try reloading the page.';
+    }
+  </script>
 </body>
 </html>
