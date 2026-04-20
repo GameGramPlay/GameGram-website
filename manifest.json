@@ -14,6 +14,26 @@
   "orientation": "any",
   "categories": ["games", "entertainment", "social"],
   "prefer_related_applications": false,
+    "shortcuts": [
+    {
+      "name": "Home",
+      "short_name": "Home",
+      "url": "/index.html",
+      "description": "Go to GameGram homepage"
+    },
+    {
+      "name": "Features",
+      "short_name": "Features",
+      "url": "/features/index.html",
+      "description": "Explore GameGram features"
+    },
+    {
+      "name": "About",
+      "short_name": "About",
+      "url": "/about/index.html",
+      "description": "Learn about GameGram"
+    }
+  ],
   "icons": [
     {
       "src": "/icons/icon-192.png",
