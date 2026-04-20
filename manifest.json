@@ -14,7 +14,7 @@
   "orientation": "any",
   "categories": ["games", "entertainment", "social"],
   "prefer_related_applications": false,
-    "shortcuts": [
+  "shortcuts": [
     {
       "name": "Home",
       "short_name": "Home",
