@@ -1,0 +1,106 @@
+# Site settings
+title: GameGram
+email: aeahb003805mg@ahbs.ae
+description: >-
+  GameGram is your go-to platform for gaming news, gameplay guides,
+  walkthroughs, reviews, and the latest updates in the gaming world.
+baseurl: "/GameGram-website" # the subpath of your site
+url: "https://gamegramplay.github.io"
+
+# SEO settings
+lang: en_US
+timezone: Asia/Dubai
+
+# Author info
+author:
+  name: GameGram Team
+  twitter: gamegramplay
+
+# Social profiles
+twitter_username: gamegramplay
+github_username: gamegramplay
+
+# Theme (GitHub Pages supported themes)
+theme: minima
+
+# Plugins (GitHub Pages safe plugins)
+plugins:
+  - jekyll-seo-tag
+  - jekyll-sitemap
+  - jekyll-feed
+
+# SEO plugin settings
+seo:
+  title: GameGram - Gaming News, Reviews & Guides
+  description: Best gaming website for news, gameplay, walkthroughs and reviews.
+  author: GameGram
+  logo: /assets/images/logo.png
+
+# Open Graph / Social sharing
+defaults:
+  - scope:
+      path: ""
+    values:
+      image: /assets/images/preview.png
+
+# Collections (for games, guides, etc.)
+collections:
+  about:
+    output: true
+    permalink: /about/:name/
+  features:
+    output: true
+    permalink: /features/:name/
+  games:
+    output: true
+    permalink: /games/:name/
+
+# Pagination
+paginate: 6
+paginate_path: "/page:num/"
+
+# Markdown settings
+markdown: kramdown
+highlighter: rouge
+
+# Permalink structure (SEO friendly)
+permalink: /:categories/:title/
+
+# Exclude files
+exclude:
+  - node_modules
+  - vendor
+  - Gemfile
+  - Gemfile.lock
+  - README.md
+
+# Include files
+include:
+  - _pages
+
+# Defaults for posts
+defaults:
+  - scope:
+      path: ""
+      type: "posts"
+    values:
+      layout: post
+      author: GameGram Team
+
+# Navigation (optional)
+nav:
+  - name: Home
+    link: /
+  - name: About
+    link: /about/
+  - name: Features
+    link: /features/
+
+# Sitemap settings
+sitemap:
+  changefreq: weekly
+  priority: 0.7
+
+# Feed settings
+feed:
+  path: atom.xml
