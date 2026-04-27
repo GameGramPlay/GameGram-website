@@ -5,7 +5,7 @@ description: >-
   GameGram is your go-to platform for gaming news, gameplay guides,
   walkthroughs, reviews, and the latest updates in the gaming world.
 baseurl: "/GameGram-website" # the subpath of your site
-url: "https://gamegramplay.github.io"
+url: "https://gamegramplay.github.io/GameGram-website"
 
 # SEO settings
 lang: en_US
