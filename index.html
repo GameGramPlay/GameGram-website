@@ -177,6 +177,41 @@
     sandbox="allow-scripts allow-same-origin allow-popups allow-top-navigation-by-user-activation">
   </iframe>
 
+  <!-- ===== LIVE CHAT SECTION ===== -->
+  <section class="chat-section" id="chatSection" aria-label="Live Chat">
+    <div class="chat-section-header">
+      <span class="chat-section-title">Live Chat</span>
+      <span class="chat-section-sub">Powered by hack.chat · Room: <strong id="cs-roomLabel">gamegram</strong></span>
+      <button class="chat-toggle-btn" id="chatToggleBtn" aria-expanded="true" aria-controls="chatBody">
+        <span id="chatToggleIcon">▲ Collapse</span>
+      </button>
+    </div>
+
+    <div class="chat-body" id="chatBody">
+      <!-- Join form -->
+      <div class="cs-login" id="csLogin">
+        <input id="csNick" placeholder="Nickname" autocomplete="off" maxlength="24" />
+        <input id="csRoom" placeholder="Room (default: gamegram)" autocomplete="off" maxlength="48" />
+        <button id="csJoinBtn">Join Chat</button>
+      </div>
+
+      <!-- Chat UI (hidden until joined) -->
+      <div class="cs-chat hidden" id="csChat">
+        <div class="cs-sidebar">
+          <div class="cs-sidebar-label">Online</div>
+          <div id="csUserList"></div>
+        </div>
+        <div class="cs-main">
+          <div id="csMessages"></div>
+          <div class="cs-input-row">
+            <input id="csInput" type="text" placeholder="Message…" autocomplete="off" />
+            <button id="csSend">Send</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <footer>
     <p>Games from <a href="https://github.com/Metroxe/one-html-page-challenge" target="_blank" rel="noopener">One HTML Page Challenge</a>, <a href="https://definitelynotblocked.vercel.app/games/index.html" target="_blank" rel="noopener">Seraph</a>, etc</p>
     <p>// all games playable on this website are complete copyright & property of their respective owners \\</p>
@@ -512,32 +547,155 @@
     }
   </script>
 
-  <!-- Chat Widget -->
-  <script id="cid0020000407496477604" data-cfasync="false" async src="//st.chatango.com/js/gz/emb.js" style="width: 200px;height: 300px;">
-    {
-      "handle": "gamegramapp",
-      "arch": "js",
-      "styles": {
-        "a": "6600cc",
-        "b": 100,
-        "c": "FFFFFF",
-        "d": "FFFFFF",
-        "k": "6600cc",
-        "l": "6600cc",
-        "m": "6600cc",
-        "n": "FFFFFF",
-        "p": "10",
-        "q": "6600cc",
-        "r": 100,
-        "cv": 1,
-        "cvfnt": "'Avant Garde', Avantgarde, 'Century Gothic', CenturyGothic, AppleGothic, sans-serif",
-        "cvfntsz": "15px",
-        "cvfntw": "lighter",
-        "cvbg": "6600cc",
-        "cvw": 75,
-        "cvh": 30
-      }
+  <!-- Embedded Chat Script -->
+  <script>
+  (function () {
+    const WS_URL       = 'wss://hack.chat/chat-ws';
+    const DEFAULT_ROOM = 'gamegram';
+    const RECONNECT_MS = 4000;
+
+    let ws    = null;
+    let csNick = '';
+    let csRoom = DEFAULT_ROOM;
+    let reconnectTimer = null;
+    let joined = false;
+
+    const $ = id => document.getElementById(id);
+
+    function fmtTime(ts) {
+      return new Date(ts || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
+    function san(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+    function scrollBottom() {
+      const m = $('csMessages'); if (m) m.scrollTop = m.scrollHeight;
+    }
+
+    function addMsg(nick, text, ts, color) {
+      const m = $('csMessages'); if (!m) return;
+      const d = document.createElement('div');
+      d.className = 'cs-msg';
+      d.innerHTML = `<span class="cs-time">${fmtTime(ts)}</span>`
+                  + `<span class="cs-nick" style="color:${san(color||'#9090b0')}">${san(nick)}</span>`
+                  + `<span class="cs-text">${san(text)}</span>`;
+      m.appendChild(d); scrollBottom();
+    }
+
+    function addSys(text, cls) {
+      const m = $('csMessages'); if (!m) return;
+      const d = document.createElement('div');
+      d.className = 'cs-sys' + (cls ? ' ' + cls : '');
+      d.textContent = text;
+      m.appendChild(d); scrollBottom();
+    }
+
+    function renderUsers(users) {
+      const ul = $('csUserList'); if (!ul) return;
+      ul.innerHTML = '';
+      (users || []).sort((a,b)=>(a.nick||a).localeCompare(b.nick||b)).forEach(u => {
+        const d = document.createElement('div');
+        d.className = 'cs-user';
+        d.style.color = san(u.color || '#9090b0');
+        d.textContent = u.nick || u;
+        ul.appendChild(d);
+      });
+    }
+
+    function connect() {
+      clearTimeout(reconnectTimer);
+      if (ws) { try { ws.close(); } catch(_){} }
+
+      ws = new WebSocket(WS_URL);
+
+      ws.onopen = () => {
+        ws.send(JSON.stringify({ cmd: 'join', nick: csNick, channel: csRoom }));
+      };
+
+      ws.onmessage = e => {
+        let data; try { data = JSON.parse(e.data); } catch { return; }
+        switch (data.cmd) {
+          case 'onlineSet':
+            addSys(`Joined #${csRoom} · ${(data.users||[]).length} online`);
+            renderUsers(data.users || []);
+            break;
+          case 'chat':
+            addMsg(data.nick, data.text, data.time ? data.time * 1000 : null, data.color);
+            break;
+          case 'emote':
+            addSys(`* ${data.nick} ${data.text}`, 'emote');
+            break;
+          case 'onlineAdd': {
+            addSys(`→ ${data.nick} joined`);
+            const ul = $('csUserList');
+            if (ul) {
+              const d = document.createElement('div');
+              d.className = 'cs-user';
+              d.style.color = san(data.color || '#9090b0');
+              d.textContent = data.nick;
+              ul.appendChild(d);
+            }
+            break;
+          }
+          case 'onlineRemove': {
+            addSys(`← ${data.nick} left`);
+            const ul = $('csUserList');
+            if (ul) [...ul.querySelectorAll('.cs-user')].forEach(el => { if (el.textContent === data.nick) el.remove(); });
+            break;
+          }
+          case 'warn': addSys(`⚠ ${data.text}`, 'warn'); break;
+          case 'info': addSys(`ℹ ${data.text}`); break;
+        }
+      };
+
+      ws.onerror = () => {};
+      ws.onclose = () => {
+        if (joined) {
+          addSys('Disconnected — reconnecting…');
+          reconnectTimer = setTimeout(connect, RECONNECT_MS);
+        }
+      };
+    }
+
+    function sendMessage() {
+      const inp = $('csInput');
+      const text = inp?.value.trim();
+      if (!text || !ws || ws.readyState !== WebSocket.OPEN) return;
+      ws.send(JSON.stringify({ cmd: 'chat', text }));
+      inp.value = '';
+    }
+
+    function doJoin() {
+      csNick = ($('csNick')?.value.trim()) || 'Guest' + Math.floor(Math.random() * 9000 + 1000);
+      csRoom = ($('csRoom')?.value.trim()) || DEFAULT_ROOM;
+      $('csLogin')?.classList.add('hidden');
+      $('csChat')?.classList.remove('hidden');
+      const rl = $('cs-roomLabel'); if (rl) rl.textContent = csRoom;
+      joined = true;
+      connect();
+    }
+
+    // Toggle collapse
+    function initToggle() {
+      const btn  = $('chatToggleBtn');
+      const body = $('chatBody');
+      const icon = $('chatToggleIcon');
+      if (!btn || !body) return;
+      btn.addEventListener('click', () => {
+        const collapsed = body.classList.toggle('collapsed');
+        if (icon) icon.textContent = collapsed ? '▼ Expand' : '▲ Collapse';
+        btn.setAttribute('aria-expanded', String(!collapsed));
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      initToggle();
+      $('csJoinBtn')?.addEventListener('click', doJoin);
+      [$('csNick'), $('csRoom')].forEach(el => el?.addEventListener('keypress', e => { if (e.key === 'Enter') doJoin(); }));
+      $('csSend')?.addEventListener('click', sendMessage);
+      $('csInput')?.addEventListener('keypress', e => { if (e.key === 'Enter') sendMessage(); });
+    });
+  })();
   </script>
 
   <noscript>

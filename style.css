@@ -570,6 +570,291 @@ footer a:hover { color: var(--accent-cyan); }
   main { padding: 0 16px; }
 }
 
+/* ── Embedded Chat Section ── */
+.chat-section {
+  width: min(100%, 1200px);
+  margin: 0 auto 48px;
+  padding: 0 24px;
+}
+
+.chat-section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  flex-wrap: wrap;
+}
+
+.chat-section-title {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-primary);
+}
+
+.chat-section-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  flex: 1;
+}
+
+.chat-section-sub strong {
+  color: var(--accent-cyan);
+}
+
+.chat-toggle-btn {
+  background: rgba(124,58,237,0.1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+}
+.chat-toggle-btn:hover {
+  background: rgba(124,58,237,0.2);
+  color: var(--text-primary);
+}
+
+.chat-body {
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  overflow: hidden;
+  transition: max-height 0.35s cubic-bezier(0.4,0,0.2,1);
+  max-height: 520px;
+}
+
+.chat-body.collapsed {
+  max-height: 0;
+  border-bottom-color: transparent;
+}
+
+/* Join form */
+.cs-login {
+  display: flex;
+  gap: 10px;
+  padding: 16px 20px;
+  background: var(--bg-card);
+  align-items: center;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--border);
+}
+
+.cs-login.hidden { display: none; }
+
+.cs-login input {
+  flex: 1;
+  min-width: 140px;
+  padding: 9px 14px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--text-primary);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  outline: none;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+.cs-login input::placeholder { color: var(--text-muted); }
+.cs-login input:focus {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 0 3px rgba(6,182,212,0.10);
+}
+
+.cs-login button {
+  padding: 9px 20px;
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent), var(--accent-cyan));
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: opacity var(--transition), transform var(--transition);
+  white-space: nowrap;
+}
+.cs-login button:hover  { opacity: 0.88; transform: translateY(-1px); }
+.cs-login button:active { transform: translateY(0); }
+
+/* Chat UI */
+.cs-chat {
+  display: flex;
+  height: 400px;
+  background: var(--bg-base);
+}
+.cs-chat.hidden { display: none; }
+
+/* Sidebar */
+.cs-sidebar {
+  width: 160px;
+  flex-shrink: 0;
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.cs-sidebar-label {
+  font-family: var(--font-display);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 10px 12px 4px;
+}
+
+#csUserList {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 8px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+#csUserList .cs-user {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: 5px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  transition: background var(--transition);
+}
+#csUserList .cs-user:hover { background: rgba(124,58,237,0.08); }
+#csUserList .cs-user::before {
+  content: '';
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  flex-shrink: 0;
+}
+
+/* Messages */
+.cs-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#csMessages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.cs-msg {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 3px 6px;
+  border-radius: 5px;
+  font-size: 13px;
+  line-height: 1.5;
+  transition: background var(--transition);
+  animation: card-in 0.15s ease both;
+}
+.cs-msg:hover { background: rgba(255,255,255,0.03); }
+
+.cs-msg .cs-time {
+  font-size: 10px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  min-width: 36px;
+}
+
+.cs-msg .cs-nick {
+  font-weight: 600;
+  font-size: 12px;
+  flex-shrink: 0;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cs-msg .cs-nick::after { content: ':'; opacity: 0.4; margin-left: 1px; }
+
+.cs-msg .cs-text {
+  color: var(--text-primary);
+  word-break: break-word;
+  flex: 1;
+}
+
+.cs-sys {
+  font-size: 11px;
+  color: var(--text-muted);
+  padding: 2px 6px;
+  animation: card-in 0.15s ease both;
+}
+.cs-sys.warn  { color: #f59e0b; }
+.cs-sys.emote { color: var(--accent-cyan); font-style: italic; }
+
+/* Input row */
+.cs-input-row {
+  display: flex;
+  gap: 8px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-surface);
+}
+
+#csInput {
+  flex: 1;
+  padding: 8px 14px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--text-primary);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  outline: none;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+#csInput::placeholder { color: var(--text-muted); }
+#csInput:focus {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 0 3px rgba(6,182,212,0.10);
+}
+
+#csSend {
+  padding: 8px 18px;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #fff;
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--transition), transform var(--transition);
+  flex-shrink: 0;
+}
+#csSend:hover  { background: #6d28d9; transform: translateY(-1px); }
+#csSend:active { transform: translateY(0); }
+
+@media (max-width: 600px) {
+  .cs-sidebar { display: none; }
+  .chat-section { padding: 0 12px; }
+}
+
 /* ── Inner page content (about / features) ── */
 .skip-link {
   position: absolute;
