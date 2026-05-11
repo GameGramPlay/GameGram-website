@@ -58,9 +58,9 @@
   }
   </script>
 
-  <!-- PRELOAD CRITICAL FONT + CSS -->
-  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
-  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap"></noscript>
+  <!-- PRELOAD CRITICAL FONTS + CSS -->
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@400;500;600&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@400;500;600&display=swap"></noscript>
 
   <!-- ORIGINAL HEAD LINES START HERE (UNCHANGED) -->
   <meta charset="UTF-8" />
@@ -77,8 +77,8 @@
   <link rel="icon" type="image/png" href="images/gamegram.png" />
   <link rel="canonical" href="https://gamegramplay.github.io/GameGram-website/" />
   <link rel="manifest" href="/manifest.json" />
-  <link rel="stylesheet" href="style.css?v=4" />
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css?v=5" />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
     <!-- Popup Modal -->
   <div id="popup" class="popup-overlay">
     <div class="popup-window">
@@ -137,15 +137,13 @@
     <div class="bar"></div><div class="bar"></div><div class="bar"></div>
   </section>
 
-  <p></p>
-  <h>Visitor Counter:</h>
-  <div id="visitor-counter" class="feature-bubble" aria-label="Visitor Counter">
+  <div id="visitor-counter" aria-label="Visitor Counter">
+    <span>Visitors</span>
     <img 
       src="https://profile-counter.glitch.me/GameGramPlay/count.svg" 
       alt="Visitor count badge" 
-      width="220" 
-      height="60" 
-      style="border-radius: 30px;" 
+      width="180" 
+      height="40" 
     />
   </div>
 
@@ -163,7 +161,6 @@
     </div>
   </main>
 
-  <div id="gameGrid"></div>
   <div id="paginationControls" style="display: none;">
     <button id="prevPage">Previous</button>
     <span id="pageInfo"></span>
