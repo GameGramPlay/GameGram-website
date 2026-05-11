@@ -155,6 +155,9 @@
       <input type="text" id="searchInput" placeholder="Search games..." aria-label="Search games" />
     </div>
 
+    <!-- Category Filters -->
+    <div class="cat-filters" id="catFilters"></div>
+
     <div class="game-grid" id="gameGrid">
       <div id="loadingSpinner" class="loading-spinner"></div>
     </div>
@@ -204,8 +207,15 @@
         <div class="cs-main">
           <div id="csMessages"></div>
           <div class="cs-input-row">
+            <button id="csGameBtn" class="cs-game-btn" title="Share a game in chat">🎮</button>
             <input id="csInput" type="text" placeholder="Message…" autocomplete="off" />
             <button id="csSend">Send</button>
+          </div>
+          <!-- Game picker popup -->
+          <div class="cs-game-picker hidden" id="csGamePicker">
+            <div class="cgp-header">Share a game</div>
+            <input id="cgpSearch" placeholder="Search games…" autocomplete="off" />
+            <div id="cgpList"></div>
           </div>
         </div>
       </div>
@@ -221,52 +231,280 @@
   <script>
     let allGames = [];
     let currentPage = 1;
+    let currentCat = 'all';
     const gamesPerPage = 24;
-  
+
+    /* ── Game metadata: keyword → {cat, icon, color} ── */
+    const GAME_META = [
+      ['basketball',      { cat:'Sports',      icon:'🏀', color:'#f97316' }],
+      ['soccer',          { cat:'Sports',      icon:'⚽', color:'#22c55e' }],
+      ['ping-pong',       { cat:'Sports',      icon:'🏓', color:'#22c55e' }],
+      ['volley',          { cat:'Sports',      icon:'🏐', color:'#22c55e' }],
+      ['retro-bowl',      { cat:'Sports',      icon:'🏈', color:'#f97316' }],
+      ['retrobowl',       { cat:'Sports',      icon:'🏈', color:'#f97316' }],
+      ['a-small-world',   { cat:'Sports',      icon:'⚽', color:'#22c55e' }],
+      ['soccer-random',   { cat:'Sports',      icon:'⚽', color:'#22c55e' }],
+      ['boxing-random',   { cat:'Fighting',    icon:'🥊', color:'#ef4444' }],
+      ['basket-random',   { cat:'Sports',      icon:'🏀', color:'#f97316' }],
+      ['basket-and-ball', { cat:'Sports',      icon:'🏀', color:'#f97316' }],
+      ['mariokart',       { cat:'Racing',      icon:'🏎️', color:'#ef4444' }],
+      ['mario-kart',      { cat:'Racing',      icon:'🏎️', color:'#ef4444' }],
+      ['motorx3m',        { cat:'Racing',      icon:'🏍️', color:'#ef4444' }],
+      ['moto-x3m',        { cat:'Racing',      icon:'🏍️', color:'#ef4444' }],
+      ['slope',           { cat:'Racing',      icon:'⚡',  color:'#06b6d4' }],
+      ['drift',           { cat:'Racing',      icon:'🏎️', color:'#ef4444' }],
+      ['madalin',         { cat:'Racing',      icon:'🏎️', color:'#ef4444' }],
+      ['cross-road',      { cat:'Racing',      icon:'🚗', color:'#ef4444' }],
+      ['2048',            { cat:'Puzzle',      icon:'🔢', color:'#a855f7' }],
+      ['9007199',         { cat:'Puzzle',      icon:'🔢', color:'#a855f7' }],
+      ['checkers',        { cat:'Board',       icon:'♟️', color:'#8b5cf6' }],
+      ['blackjack',       { cat:'Board',       icon:'🃏', color:'#8b5cf6' }],
+      ['poker',           { cat:'Board',       icon:'🃏', color:'#8b5cf6' }],
+      ['solitaire',       { cat:'Board',       icon:'🃏', color:'#8b5cf6' }],
+      ['tic-tac-toe',     { cat:'Board',       icon:'❌', color:'#8b5cf6' }],
+      ['minesweeper',     { cat:'Puzzle',      icon:'💣', color:'#6b7280' }],
+      ['riddle',          { cat:'Puzzle',      icon:'🧩', color:'#a855f7' }],
+      ['tower-blocks',    { cat:'Puzzle',      icon:'🏗️', color:'#f59e0b' }],
+      ['block-the-pig',   { cat:'Puzzle',      icon:'🐷', color:'#f59e0b' }],
+      ['ball-sort',       { cat:'Puzzle',      icon:'🔵', color:'#a855f7' }],
+      ['hextris',         { cat:'Puzzle',      icon:'🔷', color:'#8b5cf6' }],
+      ['sand-tetris',     { cat:'Puzzle',      icon:'🟨', color:'#f59e0b' }],
+      ['little-alchemy',  { cat:'Puzzle',      icon:'⚗️', color:'#a855f7' }],
+      ['mind-maze',       { cat:'Puzzle',      icon:'🧠', color:'#a855f7' }],
+      ['data-miner',      { cat:'Puzzle',      icon:'💾', color:'#8b5cf6' }],
+      ['snake',           { cat:'Classic',     icon:'🐍', color:'#16a34a' }],
+      ['flappy',          { cat:'Classic',     icon:'🐦', color:'#eab308' }],
+      ['breakout',        { cat:'Classic',     icon:'🧱', color:'#f97316' }],
+      ['pacman',          { cat:'Classic',     icon:'👾', color:'#eab308' }],
+      ['edgesurf',        { cat:'Classic',     icon:'🏄', color:'#06b6d4' }],
+      ['edge-surf',       { cat:'Classic',     icon:'🏄', color:'#06b6d4' }],
+      ['chrome-dino',     { cat:'Classic',     icon:'🦕', color:'#6b7280' }],
+      ['google-snake',    { cat:'Classic',     icon:'🐍', color:'#22c55e' }],
+      ['doodle-jump',     { cat:'Classic',     icon:'🟢', color:'#22c55e' }],
+      ['avoid',           { cat:'Action',      icon:'🚴', color:'#06b6d4' }],
+      ['knight',          { cat:'Action',      icon:'⚔️', color:'#ef4444' }],
+      ['arena',           { cat:'Action',      icon:'⚔️', color:'#ef4444' }],
+      ['fnafshooter',     { cat:'Action',      icon:'🔫', color:'#ef4444' }],
+      ['fnaf',            { cat:'Horror',      icon:'🐻', color:'#7c3aed' }],
+      ['funnyshooter',    { cat:'Action',      icon:'🔫', color:'#ef4444' }],
+      ['funny-shooter',   { cat:'Action',      icon:'🔫', color:'#ef4444' }],
+      ['csgo',            { cat:'Action',      icon:'🎯', color:'#6b7280' }],
+      ['deadrails',       { cat:'Action',      icon:'🚂', color:'#6b7280' }],
+      ['deathrun',        { cat:'Action',      icon:'💀', color:'#ef4444' }],
+      ['death-run',       { cat:'Action',      icon:'💀', color:'#ef4444' }],
+      ['clusterrush',     { cat:'Action',      icon:'🚛', color:'#f97316' }],
+      ['bankrobbery',     { cat:'Action',      icon:'💰', color:'#f59e0b' }],
+      ['badtimesim',      { cat:'Action',      icon:'💀', color:'#ef4444' }],
+      ['supersmash',      { cat:'Fighting',    icon:'👊', color:'#ef4444' }],
+      ['smash-karts',     { cat:'Racing',      icon:'🏎️', color:'#ef4444' }],
+      ['fruit',           { cat:'Action',      icon:'🍉', color:'#22c55e' }],
+      ['geodash',         { cat:'Action',      icon:'⬛', color:'#06b6d4' }],
+      ['geodashsubzero',  { cat:'Action',      icon:'❄️', color:'#06b6d4' }],
+      ['geometry-dash',   { cat:'Action',      icon:'⬛', color:'#06b6d4' }],
+      ['roof',            { cat:'Action',      icon:'🔫', color:'#ef4444' }],
+      ['rooftop',         { cat:'Action',      icon:'🔫', color:'#ef4444' }],
+      ['1v1',             { cat:'Action',      icon:'⚔️', color:'#ef4444' }],
+      ['ages-of-conflict',{ cat:'Action',      icon:'⚔️', color:'#ef4444' }],
+      ['among-us',        { cat:'Action',      icon:'🚀', color:'#ef4444' }],
+      ['galactic-rift',   { cat:'Action',      icon:'🚀', color:'#3b82f6' }],
+      ['space',           { cat:'Action',      icon:'🚀', color:'#3b82f6' }],
+      ['nano-wars',       { cat:'Action',      icon:'⚔️', color:'#ef4444' }],
+      ['under-siege',     { cat:'Action',      icon:'🏰', color:'#6b7280' }],
+      ['zombie',          { cat:'Action',      icon:'🧟', color:'#22c55e' }],
+      ['marioboom',       { cat:'Action',      icon:'💣', color:'#ef4444' }],
+      ['mario',           { cat:'Platformer',  icon:'🍄', color:'#ef4444' }],
+      ['smb',             { cat:'Platformer',  icon:'🍄', color:'#ef4444' }],
+      ['smc',             { cat:'Platformer',  icon:'🍄', color:'#ef4444' }],
+      ['celeste',         { cat:'Platformer',  icon:'🍓', color:'#ec4899' }],
+      ['vex',             { cat:'Platformer',  icon:'🏃', color:'#06b6d4' }],
+      ['ovo',             { cat:'Platformer',  icon:'🥚', color:'#f59e0b' }],
+      ['onlyup',          { cat:'Platformer',  icon:'⬆️', color:'#a855f7' }],
+      ['fancyp',          { cat:'Platformer',  icon:'🏃', color:'#22c55e' }],
+      ['bald',            { cat:'Platformer',  icon:'🤖', color:'#6b7280' }],
+      ['baldis',          { cat:'Platformer',  icon:'🎒', color:'#f59e0b' }],
+      ['snail-bob',       { cat:'Platformer',  icon:'🐌', color:'#22c55e' }],
+      ['fireboy',         { cat:'Platformer',  icon:'🔥', color:'#ef4444' }],
+      ['celeste',         { cat:'Platformer',  icon:'🍓', color:'#ec4899' }],
+      ['pixel-escape',    { cat:'Platformer',  icon:'🏃', color:'#06b6d4' }],
+      ['sneaky-steve',    { cat:'Platformer',  icon:'🤫', color:'#22c55e' }],
+      ['crashdown',       { cat:'Platformer',  icon:'💥', color:'#f97316' }],
+      ['poke',            { cat:'RPG',         icon:'⚡', color:'#eab308' }],
+      ['pokemon',         { cat:'RPG',         icon:'⚡', color:'#eab308' }],
+      ['metro',           { cat:'RPG',         icon:'👽', color:'#8b5cf6' }],
+      ['mc',              { cat:'Sandbox',     icon:'⛏️', color:'#84cc16' }],
+      ['minecraft',       { cat:'Sandbox',     icon:'⛏️', color:'#84cc16' }],
+      ['eaglercraft',     { cat:'Sandbox',     icon:'⛏️', color:'#84cc16' }],
+      ['project-sand',    { cat:'Sandbox',     icon:'🏜️', color:'#f59e0b' }],
+      ['idle',            { cat:'Idle',        icon:'⛏️', color:'#f59e0b' }],
+      ['cookie',          { cat:'Idle',        icon:'🍪', color:'#f59e0b' }],
+      ['csgoclicker',     { cat:'Idle',        icon:'🎯', color:'#f59e0b' }],
+      ['astro-farm',      { cat:'Idle',        icon:'🌾', color:'#22c55e' }],
+      ['pressim',         { cat:'Simulation',  icon:'🏛️', color:'#8b5cf6' }],
+      ['bitlife',         { cat:'Simulation',  icon:'🎲', color:'#06b6d4' }],
+      ['miicreator',      { cat:'Simulation',  icon:'👤', color:'#ec4899' }],
+      ['mii-creator',     { cat:'Simulation',  icon:'👤', color:'#ec4899' }],
+      ['tower-defense',   { cat:'Strategy',    icon:'🏰', color:'#8b5cf6' }],
+      ['shapeshifter',    { cat:'Strategy',    icon:'🔀', color:'#8b5cf6' }],
+      ['base-13',         { cat:'Strategy',    icon:'🧮', color:'#8b5cf6' }],
+      ['slime',           { cat:'Casual',      icon:'🟢', color:'#22c55e' }],
+      ['gachalife',       { cat:'Casual',      icon:'🎭', color:'#ec4899' }],
+      ['linerider',       { cat:'Casual',      icon:'📏', color:'#06b6d4' }],
+      ['coolbeans',       { cat:'Casual',      icon:'🫘', color:'#22c55e' }],
+      ['peakgame',        { cat:'Casual',      icon:'🐄', color:'#22c55e' }],
+      ['crazy-cattle',    { cat:'Casual',      icon:'🐄', color:'#22c55e' }],
+      ['fishes',          { cat:'Casual',      icon:'🐠', color:'#06b6d4' }],
+      ['annoyingfish',    { cat:'Casual',      icon:'🐟', color:'#06b6d4' }],
+      ['core-ball',       { cat:'Casual',      icon:'⚪', color:'#6b7280' }],
+      ['circlo',          { cat:'Casual',      icon:'🔵', color:'#06b6d4' }],
+      ['save-the-doge',   { cat:'Casual',      icon:'🐕', color:'#f59e0b' }],
+      ['paper-io',        { cat:'Casual',      icon:'📄', color:'#06b6d4' }],
+      ['tomb-of-the-mask',{ cat:'Casual',      icon:'💀', color:'#8b5cf6' }],
+      ['crossyroad',      { cat:'Casual',      icon:'🐔', color:'#eab308' }],
+      ['crossy',          { cat:'Casual',      icon:'🐔', color:'#eab308' }],
+      ['rocketpult',      { cat:'Casual',      icon:'🚀', color:'#f97316' }],
+      ['cut-the-rope',    { cat:'Casual',      icon:'✂️', color:'#22c55e' }],
+      ['waterworks',      { cat:'Casual',      icon:'💧', color:'#06b6d4' }],
+      ['we-become',       { cat:'Casual',      icon:'🎥', color:'#8b5cf6' }],
+      ['google-feud',     { cat:'Casual',      icon:'🔍', color:'#06b6d4' }],
+      ['stack',           { cat:'Casual',      icon:'🧱', color:'#f97316' }],
+      ['papery-planes',   { cat:'Casual',      icon:'✈️', color:'#06b6d4' }],
+      ['back-to-the',     { cat:'Casual',      icon:'🛋️', color:'#8b5cf6' }],
+      ['hallow',          { cat:'Adventure',   icon:'🎃', color:'#f97316' }],
+      ['haunted',         { cat:'Horror',      icon:'👻', color:'#7c3aed' }],
+      ['granny',          { cat:'Horror',      icon:'👵', color:'#7c3aed' }],
+      ['behind',          { cat:'Horror',      icon:'😱', color:'#7c3aed' }],
+      ['subway',          { cat:'Runner',      icon:'🏃', color:'#f97316' }],
+      ['moneytalkss',     { cat:'Runner',      icon:'💰', color:'#22c55e' }],
+      ['unknownsources',  { cat:'Action',      icon:'❓', color:'#7c3aed' }],
+      ['world',           { cat:'Sports',      icon:'⚽', color:'#22c55e' }],
+      ['warp-drive',      { cat:'Racing',      icon:'🚀', color:'#06b6d4' }],
+      ['last-frontier',   { cat:'Action',      icon:'🚀', color:'#3b82f6' }],
+      ['neon-drift',      { cat:'Racing',      icon:'🏎️', color:'#06b6d4' }],
+      ['tiny-tanks',      { cat:'Action',      icon:'🪖', color:'#84cc16' }],
+      ['rocket-slinger',  { cat:'Action',      icon:'🚀', color:'#f97316' }],
+    ];
+
+    function getGameMeta(game) {
+      const hay = (game.fullUrl + ' ' + game.name).toLowerCase();
+      for (const [kw, meta] of GAME_META) {
+        if (hay.includes(kw.toLowerCase())) return meta;
+      }
+      return { cat: 'Game', icon: '🎮', color: '#7c3aed' };
+    }
+
     const showSpinner = () => {
       document.getElementById('loadingSpinner').style.display = 'block';
     };
   
     const hideSpinner = () => {
-      document.getElementById('loadingSpinner').style.display = 'none';
+      const s = document.getElementById('loadingSpinner');
+      if (s) s.style.display = 'none';
     };
-  
+
+    /* ── Category filter ── */
+    function getFilteredGames() {
+      const query = (document.getElementById('searchInput')?.value || '').toLowerCase().trim();
+      return allGames.filter(g => {
+        const matchCat = currentCat === 'all' || getGameMeta(g).cat === currentCat;
+        const matchQ   = !query || g.name.toLowerCase().includes(query);
+        return matchCat && matchQ;
+      });
+    }
+
+    function buildCatFilters() {
+      const bar = document.getElementById('catFilters');
+      if (!bar) return;
+      const catIcons = {
+        'all':'🎮','Sports':'⚽','Racing':'🏎️','Action':'⚔️','Platformer':'🏃',
+        'Puzzle':'🧩','Board':'♟️','Classic':'👾','RPG':'⚡','Sandbox':'⛏️',
+        'Idle':'🍪','Simulation':'🎲','Strategy':'🏰','Casual':'🎉',
+        'Adventure':'🗺️','Horror':'👻','Runner':'🏃','Fighting':'🥊','Game':'🎮'
+      };
+      const cats = new Set(['all']);
+      allGames.forEach(g => cats.add(getGameMeta(g).cat));
+      const order = ['all','Action','Platformer','Racing','Sports','Puzzle','Board','Classic','RPG','Sandbox','Idle','Simulation','Strategy','Casual','Runner','Fighting','Adventure','Horror','Game'];
+      const sorted = [...cats].sort((a,b) => {
+        const ia = order.indexOf(a), ib = order.indexOf(b);
+        return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+      });
+      bar.innerHTML = sorted.map((c, i) =>
+        `<button class="cat-pill${c === currentCat ? ' active' : ''}" data-cat="${c}" style="animation-delay:${i * 0.03}s">
+          ${catIcons[c] || '🎮'} ${c === 'all' ? 'All' : c}
+        </button>`
+      ).join('');
+      bar.querySelectorAll('.cat-pill').forEach(btn => {
+        btn.addEventListener('click', () => {
+          currentCat = btn.dataset.cat;
+          bar.querySelectorAll('.cat-pill').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentPage = 1;
+          renderGames(getFilteredGames(), 1);
+        });
+      });
+    }
+
+    /* ── Rich card renderer ── */
     const renderGames = (games, page = 1) => {
-      const grid = document.getElementById("gameGrid");
+      const grid       = document.getElementById("gameGrid");
       const pagination = document.getElementById("paginationControls");
-      const pageInfo = document.getElementById("pageInfo");
-      const prevBtn = document.getElementById("prevPage");
-      const nextBtn = document.getElementById("nextPage");
-  
+      const pageInfo   = document.getElementById("pageInfo");
+      const prevBtn    = document.getElementById("prevPage");
+      const nextBtn    = document.getElementById("nextPage");
+
       grid.innerHTML = "";
-  
+
       if (games.length === 0) {
-        grid.innerHTML = "<p>No games found.</p>";
+        grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--text-muted);padding:40px 0">No games found.</p>';
         pagination.style.display = "none";
         return;
       }
-  
+
       const totalPages = Math.ceil(games.length / gamesPerPage);
       currentPage = Math.min(Math.max(page, 1), totalPages);
-  
-      const start = (currentPage - 1) * gamesPerPage;
+
+      const start     = (currentPage - 1) * gamesPerPage;
       const pageGames = games.slice(start, start + gamesPerPage);
-  
-      pageGames.forEach(game => {
-        const a = document.createElement("a");
-        a.href = game.fullUrl;
-        a.className = "game-cube";
-        a.target = "_blank";
-        a.textContent = game.name;
-        /* ===== GENERIC ALT FOR GAME ICONS (if you later add <img>) ===== */
-        a.setAttribute("aria-label", `Play ${game.name} on GameGram`);
-        grid.appendChild(a);
+
+      pageGames.forEach((game, idx) => {
+        const meta  = getGameMeta(game);
+        const delay = Math.min(idx * 0.025, 0.4);
+        const label = game.name.replace(/\//g, ' ').replace(/  +/g, ' ').trim();
+
+        const card = document.createElement('a');
+        card.href      = game.fullUrl;
+        card.target    = '_blank';
+        card.rel       = 'noopener noreferrer';
+        card.className = 'game-cube';
+        card.style.cssText = `--cat-color:${meta.color};animation-delay:${delay}s`;
+        card.setAttribute('aria-label', `Play ${label} on GameGram`);
+        card.dataset.cat = meta.cat;
+
+        card.innerHTML = `
+          <div class="gc-thumb">
+            <span class="gc-icon">${meta.icon}</span>
+            <div class="gc-overlay">
+              <span class="gc-play">▶ Play</span>
+              <button class="gc-share-btn" title="Share in chat" aria-label="Share ${label} in chat">💬</button>
+            </div>
+          </div>
+          <div class="gc-body">
+            <span class="gc-name">${label}</span>
+            <span class="gc-tag">${meta.icon} ${meta.cat}</span>
+          </div>`;
+
+        card.querySelector('.gc-share-btn').addEventListener('click', e => {
+          e.preventDefault();
+          e.stopPropagation();
+          shareInChat(label, game.fullUrl);
+        });
+
+        grid.appendChild(card);
       });
-  
+
       pagination.style.display = "flex";
-      pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
-      prevBtn.disabled = currentPage === 1;
-      nextBtn.disabled = currentPage === totalPages;
+      pageInfo.textContent     = `Page ${currentPage} of ${totalPages}`;
+      prevBtn.disabled         = currentPage === 1;
+      nextBtn.disabled         = currentPage === totalPages;
     };
   
     const loadLocalGames = () => {
@@ -470,8 +708,9 @@
           throw new Error("No games were returned from sources.");
         }
     
-        // Render first page
-        renderGames(allGames, 1);
+        // Build category filters, then render first page
+        buildCatFilters();
+        renderGames(getFilteredGames(), 1);
       } catch (err) {
         console.error("⚠️ Error loading games:");
         console.error("Message:", err.message || err);
@@ -493,17 +732,50 @@
       }
     };
   
+    /* ── Share game in chat ── */
+    function shareInChat(name, url) {
+      const chatEl = document.getElementById('csChat');
+      const inp    = document.getElementById('csInput');
+      if (!chatEl || chatEl.classList.contains('hidden')) {
+        alert('Join the Live Chat below first, then share the game!');
+        document.getElementById('chatSection')?.scrollIntoView({ behavior: 'smooth' });
+        return;
+      }
+      if (inp) {
+        inp.value = `🎮 Play "${name}": ${location.origin}/${url}`;
+        inp.focus();
+      }
+    }
+
+    /* ── Chat game picker ── */
+    function buildGamePicker(query) {
+      const list = document.getElementById('cgpList');
+      if (!list) return;
+      const q = (query || '').toLowerCase().trim();
+      const matches = allGames.filter(g => !q || g.name.toLowerCase().includes(q)).slice(0, 30);
+      list.innerHTML = matches.map(g => {
+        const meta  = getGameMeta(g);
+        const label = g.name.replace(/\//g,' ').trim();
+        return `<button class="cgp-item" data-name="${label}" data-url="${g.fullUrl}" style="--cat-color:${meta.color}">
+          <span class="cgp-icon">${meta.icon}</span>
+          <span class="cgp-label">${label}</span>
+          <span class="cgp-cat">${meta.cat}</span>
+        </button>`;
+      }).join('');
+      list.querySelectorAll('.cgp-item').forEach(btn => {
+        btn.addEventListener('click', () => {
+          shareInChat(btn.dataset.name, btn.dataset.url);
+          document.getElementById('csGamePicker')?.classList.add('hidden');
+        });
+      });
+    }
+
     document.addEventListener("DOMContentLoaded", () => {
       loadGames();
   
       const searchInput = document.getElementById("searchInput");
-      const prevBtn = document.getElementById("prevPage");
-      const nextBtn = document.getElementById("nextPage");
-  
-      const getFilteredGames = () => {
-        const query = searchInput.value.toLowerCase();
-        return allGames.filter(game => game.name.toLowerCase().includes(query));
-      };
+      const prevBtn     = document.getElementById("prevPage");
+      const nextBtn     = document.getElementById("nextPage");
   
       searchInput.addEventListener("input", () => {
         currentPage = 1;
@@ -511,17 +783,13 @@
       });
   
       prevBtn.addEventListener("click", () => {
-        if (currentPage > 1) {
-          currentPage--;
-          renderGames(getFilteredGames(), currentPage);
-        }
+        if (currentPage > 1) renderGames(getFilteredGames(), --currentPage);
       });
   
       nextBtn.addEventListener("click", () => {
-        currentPage++;
-        renderGames(getFilteredGames(), currentPage);
+        renderGames(getFilteredGames(), ++currentPage);
       });
-  
+
       document.addEventListener("keydown", (e) => {
         if (e.key === '/' && document.activeElement !== searchInput) {
           e.preventDefault();
@@ -529,8 +797,34 @@
         } else if (e.key === 'Escape') {
           searchInput.value = "";
           searchInput.blur();
+          currentCat = 'all';
+          document.querySelectorAll('.cat-pill').forEach((p,i) => p.classList.toggle('active', i === 0));
           currentPage = 1;
-          renderGames(allGames, currentPage);
+          renderGames(getFilteredGames(), currentPage);
+          document.getElementById('csGamePicker')?.classList.add('hidden');
+        }
+      });
+
+      /* Game picker toggle */
+      const csGameBtn    = document.getElementById('csGameBtn');
+      const csGamePicker = document.getElementById('csGamePicker');
+      const cgpSearch    = document.getElementById('cgpSearch');
+
+      csGameBtn?.addEventListener('click', () => {
+        const hidden = csGamePicker.classList.toggle('hidden');
+        if (!hidden) {
+          buildGamePicker('');
+          cgpSearch?.focus();
+        }
+      });
+
+      cgpSearch?.addEventListener('input', () => buildGamePicker(cgpSearch.value));
+
+      document.addEventListener('click', e => {
+        if (csGamePicker && !csGamePicker.classList.contains('hidden')) {
+          if (!csGamePicker.contains(e.target) && e.target !== csGameBtn) {
+            csGamePicker.classList.add('hidden');
+          }
         }
       });
     });
