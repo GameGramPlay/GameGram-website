@@ -3,8 +3,12 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Lobby Chat</title>
+  <title>GameGram Chat</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" type="image/png" href="../images/gamegram.png">
   <meta http-equiv="Cache-Control" content="no-store" />
 </head>
 <body data-theme="dark" data-msgstyle="cozy">
@@ -12,34 +16,39 @@
   <!-- Login overlay -->
   <div id="login" class="overlay">
     <div class="box">
-      <h1>Enter Lobby</h1>
-      <input id="nickInput" placeholder="Nickname" autocomplete="off" />
-      <input id="roomInput" placeholder="Room name" autocomplete="off" />
-      <button id="loginBtn" class="big-btn">Join Lobby</button>
+      <div class="login-logo">GameGram Chat</div>
+      <p class="login-sub">Public rooms powered by hack.chat</p>
+      <input id="nickInput"  placeholder="Nickname"   autocomplete="off" />
+      <input id="roomInput"  placeholder="Room  (default: gamegram)" autocomplete="off" />
+      <button id="loginBtn" class="big-btn">Join Room</button>
     </div>
   </div>
 
   <!-- Sidebar -->
   <aside class="sidebar">
-    <h2>Online</h2>
+    <div class="sidebar-header">
+      <a href="../" class="back-link" title="Back to games">← Games</a>
+      <span id="roomLabel" class="room-name">#gamegram</span>
+    </div>
+    <div class="sidebar-section-label">Online</div>
     <div id="userList"></div>
     <div class="self">
       <div class="me">
         <span id="meName">Guest</span>
-        <small id="meStatus">(online)</small>
+        <span id="statusDot" class="status-dot disconnected">Connecting…</span>
       </div>
-      <button id="settingsBtn" title="Settings">⚙</button>
+      <button id="settingsBtn" title="Settings" aria-label="Open settings">⚙</button>
     </div>
   </aside>
 
-  <!-- Chat -->
+  <!-- Chat panel -->
   <main class="chat">
-    <header>
-      Public Lobby Chat — <span id="roomLabel">public</span>
+    <header class="chat-header">
+      <span id="chatRoomDisplay">#gamegram</span>
     </header>
     <div id="messages"></div>
-    <footer>
-      <input id="input" type="text" placeholder="Type a message..." autocomplete="off" />
+    <footer class="chat-footer">
+      <input id="input" type="text" placeholder="Message…" autocomplete="off" />
       <button id="send">Send</button>
     </footer>
   </main>
@@ -48,25 +57,15 @@
   <div id="settingsModal" class="modal hidden">
     <div class="modal-content">
       <div class="modal-header">
-        <h2>User Settings</h2>
-        <button id="closeSettings" class="close-btn">✖</button>
+        <h2>Settings</h2>
+        <button id="closeSettings" class="close-btn" aria-label="Close">✕</button>
       </div>
       <div class="settings">
         <label>Nickname
           <input id="nickInputSettings" autocomplete="off" />
         </label>
         <label>Nickname Color
-          <input type="color" id="nickColor" />
-        </label>
-        <label>Status
-          <select id="statusSelect">
-            <option value="online">Online</option>
-            <option value="away">Away</option>
-            <option value="busy">Busy</option>
-          </select>
-        </label>
-        <label>Font Size
-          <input type="range" id="fontSize" min="12" max="20" value="14" />
+          <input type="color" id="nickColor" value="#7c3aed" />
         </label>
         <label>Theme
           <select id="themeSelect">
@@ -80,14 +79,13 @@
             <option value="compact">Compact</option>
           </select>
         </label>
+        <label>Font Size
+          <input type="range" id="fontSize" min="12" max="20" value="14" />
+        </label>
       </div>
     </div>
   </div>
 
-  <!-- ✅ Load Hack.Chat engine locally -->
-  <script src="Client.js"></script>
-
-  <!-- Load your main script -->
   <script src="script.js"></script>
 </body>
 </html>

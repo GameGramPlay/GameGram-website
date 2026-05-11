@@ -1,240 +1,236 @@
-// ================= CONFIGURATION =================
-const CONFIG = {
-    HACKCHAT: {
-        ENDPOINT: 'wss://hack.chat/chat-ws'
-    },
-    PUBLIC_ROOM: 'programming',
-    DEBUG_VERBOSE: true,
-    TIMEOUTS: {
-        RECONNECT: 3000
-    }
-};
+// ── Config ──────────────────────────────────────────────────────────────────
+const WS_URL       = 'wss://hack.chat/chat-ws';
+const DEFAULT_ROOM = 'gamegram';
+const RECONNECT_MS = 4000;
 
-// ================= STATE =================
-const state = {
-    client: null,
-    nickname: '',
-    nickColor: '#00ff00',
-    users: new Map(),
-    chatHistory: [],
-    localId: null,
-    room: CONFIG.PUBLIC_ROOM
-};
+// ── State ────────────────────────────────────────────────────────────────────
+let ws        = null;
+let nick      = '';
+let room      = DEFAULT_ROOM;
+let nickColor = '#7c3aed';
+let reconnectTimer = null;
 
-// ================= DOM ELEMENTS =================
-const elements = {
-    login: document.getElementById('login'),
-    loginBtn: document.getElementById('loginBtn'),
-    nickInput: document.getElementById('nickInput'),
-    roomInput: document.getElementById('roomInput'),
-    sendBtn: document.getElementById('send'),
-    input: document.getElementById('input'),
-    messages: document.getElementById('messages'),
-    userList: document.getElementById('userList'),
-    meName: document.getElementById('meName'),
-    meStatus: document.getElementById('meStatus'),
-    settingsBtn: document.getElementById('settingsBtn'),
-    settingsModal: document.getElementById('settingsModal'),
-    closeSettings: document.getElementById('closeSettings'),
-    nickInputSettings: document.getElementById('nickInputSettings'),
-    nickColor: document.getElementById('nickColor'),
-    statusSelect: document.getElementById('statusSelect'),
-    fontSize: document.getElementById('fontSize'),
-    themeSelect: document.getElementById('themeSelect'),
-    msgStyle: document.getElementById('msgStyle'),
-    roomLabel: document.getElementById('roomLabel')
-};
+// ── DOM refs ─────────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const loginEl       = $('login');
+const loginBtn      = $('loginBtn');
+const nickInput     = $('nickInput');
+const roomInput     = $('roomInput');
+const sendBtn       = $('send');
+const msgInput      = $('input');
+const messages      = $('messages');
+const userList      = $('userList');
+const meName        = $('meName');
+const settingsBtn   = $('settingsBtn');
+const settingsModal = $('settingsModal');
+const closeSettings = $('closeSettings');
+const nickColorPick = $('nickColor');
+const roomLabel     = $('roomLabel');
+const themeSelect   = $('themeSelect');
+const msgStyleSel   = $('msgStyle');
+const fontSizeSl    = $('fontSize');
+const nickSettInput = $('nickInputSettings');
 
-// ================= UTILITIES =================
-class Utils {
-    static timestamp() { return Date.now(); }
-    static generateId() { return Math.random().toString(36).slice(2, 11); }
-    static formatTime(ts) { return new Date(ts).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); }
+// ── Utilities ─────────────────────────────────────────────────────────────────
+function fmtTime(ts) {
+  return new Date(ts || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-// ================= LOGGER =================
-class Logger {
-    static debug(type, data) {
-        if (CONFIG.DEBUG_VERBOSE) UI.addSystem(`[DEBUG] ${type}: ${typeof data === 'string' ? data : JSON.stringify(data)}`);
-    }
-    static error(msg, err) {
-        const e = err ? (err.message || JSON.stringify(err)) : '';
-        UI.addSystem(`[ERROR] ${msg}${e ? ': ' + e : ''}`);
-    }
+function sanitize(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
-// ================= STORAGE =================
-class StorageManager {
-    static saveUser() {
-        localStorage.setItem('chatUser', JSON.stringify({ nickname: state.nickname, nickColor: state.nickColor }));
-    }
-    static loadUser() {
-        const data = localStorage.getItem('chatUser');
-        if (!data) return;
-        try {
-            const parsed = JSON.parse(data);
-            state.nickname = parsed.nickname || '';
-            state.nickColor = parsed.nickColor || '#00ff00';
-        } catch { console.warn('Invalid user data'); }
-    }
-    static saveChat() {
-        localStorage.setItem('chatHistory', JSON.stringify(state.chatHistory));
-    }
-    static loadChat() {
-        const data = localStorage.getItem('chatHistory');
-        if (!data) return;
-        try {
-            const history = JSON.parse(data);
-            history.forEach(msg => UI.addMessage(msg.nick, msg.text, msg.time, msg.color, msg.id, false));
-            state.chatHistory = history;
-        } catch { console.warn('Invalid chat history'); }
-    }
+function scrollBottom() {
+  messages.scrollTop = messages.scrollHeight;
 }
 
-// ================= UI =================
-class UI {
-    static addMessage(nick, text, time, color = '#ccc', id = null, save = false) {
-        if (!elements.messages) return;
-        const msgId = id || Utils.generateId();
-        if (save && !state.chatHistory.find(m => m.id === msgId)) {
-            state.chatHistory.push({ nick, text, time, color, id: msgId });
-            StorageManager.saveChat();
+// ── Render helpers ────────────────────────────────────────────────────────────
+function addMessage(fromNick, text, ts, color) {
+  const wrap = document.createElement('div');
+  wrap.className = 'message';
+  wrap.innerHTML =
+    `<span class="time">${fmtTime(ts)}</span>` +
+    `<span class="nick" style="color:${sanitize(color || '#9090b0')}">${sanitize(fromNick)}</span>` +
+    `<span class="text">${sanitize(text)}</span>`;
+  messages.appendChild(wrap);
+  scrollBottom();
+}
+
+function addSystem(text, type = '') {
+  const wrap = document.createElement('div');
+  wrap.className = `system-message ${type}`;
+  wrap.innerHTML =
+    `<span class="time">${fmtTime()}</span>` +
+    `<span class="text">${sanitize(text)}</span>`;
+  messages.appendChild(wrap);
+  scrollBottom();
+}
+
+function setStatus(text, ok) {
+  const el = $('statusDot');
+  if (!el) return;
+  el.textContent = text;
+  el.className   = 'status-dot ' + (ok ? 'connected' : 'disconnected');
+}
+
+function renderUsers(users) {
+  userList.innerHTML = '';
+  users
+    .slice()
+    .sort((a, b) => (a.nick || a).localeCompare(b.nick || b))
+    .forEach(u => {
+      const d = document.createElement('div');
+      d.className = 'user-entry';
+      const n = u.nick || u;
+      const c = u.color || '#9090b0';
+      d.innerHTML = `<span class="user-dot"></span><span style="color:${sanitize(c)}">${sanitize(n)}</span>`;
+      userList.appendChild(d);
+    });
+}
+
+// ── WebSocket ─────────────────────────────────────────────────────────────────
+function connect() {
+  clearTimeout(reconnectTimer);
+
+  if (ws) {
+    try { ws.close(); } catch (_) {}
+  }
+
+  setStatus('Connecting…', false);
+  ws = new WebSocket(WS_URL);
+
+  ws.onopen = () => {
+    setStatus('Connected', true);
+    ws.send(JSON.stringify({ cmd: 'join', nick, channel: room }));
+  };
+
+  ws.onmessage = e => {
+    let data;
+    try { data = JSON.parse(e.data); } catch { return; }
+
+    switch (data.cmd) {
+      case 'onlineSet':
+        addSystem(`Joined #${room} · ${(data.users || []).length} online`);
+        renderUsers(data.users || []);
+        break;
+
+      case 'chat':
+        addMessage(data.nick, data.text, data.time ? data.time * 1000 : null, data.color);
+        break;
+
+      case 'emote':
+        addSystem(`* ${data.nick} ${data.text}`, 'emote');
+        break;
+
+      case 'onlineAdd': {
+        const existing = [...userList.querySelectorAll('.user-entry')].map(el => el.textContent.trim());
+        if (!existing.some(t => t === (data.nick || ''))) {
+          const d = document.createElement('div');
+          d.className = 'user-entry';
+          d.innerHTML = `<span class="user-dot"></span><span style="color:${sanitize(data.color||'#9090b0')}">${sanitize(data.nick)}</span>`;
+          userList.appendChild(d);
         }
-        const div = document.createElement('div');
-        div.className = 'message';
-        div.innerHTML = `<span class="time">${Utils.formatTime(time)}</span>
-                         <span class="nick" style="color:${color}">${nick}:</span>
-                         <span class="text">${text}</span>`;
-        elements.messages.appendChild(div);
-        elements.messages.scrollTop = elements.messages.scrollHeight;
-    }
+        addSystem(`→ ${data.nick} joined`);
+        break;
+      }
 
-    static addSystem(text) {
-        if (!elements.messages) return;
-        const div = document.createElement('div');
-        div.className = 'system-message';
-        div.innerHTML = `<span class="time">${Utils.formatTime(Date.now())}</span>
-                         <span class="text">${text}</span>`;
-        elements.messages.appendChild(div);
-        elements.messages.scrollTop = elements.messages.scrollHeight;
-    }
+      case 'onlineRemove': {
+        const entries = userList.querySelectorAll('.user-entry');
+        entries.forEach(el => { if (el.textContent.trim() === (data.nick || '')) el.remove(); });
+        addSystem(`← ${data.nick} left`);
+        break;
+      }
 
-    static updateUserList() {
-        if (!elements.userList) return;
-        elements.userList.innerHTML = '';
-        Array.from(state.users.values())
-            .sort((a,b) => a.nick.localeCompare(b.nick))
-            .forEach(u => {
-                const div = document.createElement('div');
-                div.textContent = `${u.nick} • ${u.status || 'online'}`;
-                elements.userList.appendChild(div);
-            });
+      case 'warn':
+        addSystem(`⚠ ${data.text}`, 'warn');
+        break;
+
+      case 'info':
+        addSystem(`ℹ ${data.text}`);
+        break;
+
+      default:
+        break;
     }
+  };
+
+  ws.onerror = () => {
+    setStatus('Error', false);
+  };
+
+  ws.onclose = () => {
+    setStatus('Disconnected', false);
+    addSystem('Disconnected — reconnecting in 4 s…');
+    reconnectTimer = setTimeout(connect, RECONNECT_MS);
+  };
 }
 
-// ================= HACKCHAT CLIENT =================
-class HackChatConnector {
-    static async createClient(nick, room = CONFIG.PUBLIC_ROOM) {
-        if (!window.Client) {
-            UI.addSystem('❌ hackchat-engine Client not found. Make sure assets/Client.js is loaded.');
-            return;
-        }
-
-        if (state.client) try { state.client.close(); } catch(e) { Logger.error('Closing old client failed', e); }
-
-        const client = new Client({ ws: { gateway: CONFIG.HACKCHAT.ENDPOINT } });
-        state.client = client;
-        state.room = room;
-
-        client.on('*', payload => Logger.debug('event', payload));
-        client.on('session', () => client.join(nick, '', room));
-        client.on('channelJoined', payload => UI.addSystem(`✅ Joined room: ${payload.channel || room}`));
-        client.on('message', HackChatConnector.onMessage);
-        client.on('onlineSet', p => { state.users.clear(); (p.users||[]).forEach(u=>state.users.set(u.nick,u)); UI.updateUserList(); });
-        client.on('onlineAdd', p => { state.users.set(p.nick,p); UI.updateUserList(); UI.addSystem(`👋 ${p.nick} joined`); });
-        client.on('onlineRemove', p => { state.users.delete(p.nick); UI.updateUserList(); UI.addSystem(`🚪 ${p.nick} left`); });
-        client.on('disconnect', () => { UI.addSystem('⚠️ Disconnected. Reconnecting...'); setTimeout(()=>HackChatConnector.createClient(nick, room), CONFIG.TIMEOUTS.RECONNECT); });
-
-        return client;
-    }
-
-    static onMessage(payload) {
-        const nick = payload.nick || 'anon';
-        const text = payload.text || '';
-        const time = payload.time || Utils.timestamp();
-        const id = payload.id || Utils.generateId();
-        if (!state.chatHistory.find(m=>m.id===id)) UI.addMessage(nick,text,time,payload.color||'#ccc',id,true);
-    }
-
-    static async sendChat(text) {
-        if (!state.client) await HackChatConnector.createClient(state.nickname,state.room);
-        const tempId = Utils.generateId();
-        UI.addMessage(state.nickname,text,Utils.timestamp(),state.nickColor,tempId,true);
-        state.client?.say?.(state.room,text);
-    }
+function sendMessage() {
+  const text = msgInput.value.trim();
+  if (!text || !ws || ws.readyState !== WebSocket.OPEN) return;
+  ws.send(JSON.stringify({ cmd: 'chat', text }));
+  msgInput.value = '';
 }
 
-// ================= LOGIN =================
-async function doLogin() {
-    const nick = elements.nickInput.value.trim() || 'Guest';
-    const room = elements.roomInput.value.trim() || CONFIG.PUBLIC_ROOM;
-    elements.login?.classList.add('hidden');
-    elements.roomLabel.textContent = room;
-    state.nickname = nick;
-    StorageManager.saveUser();
-    UI.addSystem(`🔌 Connecting as ${nick}...`);
-    try {
-        await HackChatConnector.createClient(nick, room);
-        UI.addSystem(`✅ Connected as ${nick}`);
-        elements.meName.textContent = nick;
-        elements.nickInputSettings.value = nick;
-    } catch (e) { Logger.error('Login failed', e); elements.login?.classList.remove('hidden'); }
+// ── Login ─────────────────────────────────────────────────────────────────────
+function doLogin() {
+  nick = nickInput.value.trim() || 'Guest' + Math.floor(Math.random() * 9000 + 1000);
+  room = roomInput.value.trim() || DEFAULT_ROOM;
+  loginEl.classList.add('hidden');
+  roomLabel.textContent = '#' + room;
+  meName.textContent    = nick;
+  if (nickSettInput) nickSettInput.value = nick;
+  connect();
 }
 
-// ================= APP =================
-class App {
-    static async init() {
-        StorageManager.loadUser();
-        StorageManager.loadChat();
-
-        elements.loginBtn?.addEventListener('click', doLogin);
-        [elements.nickInput,elements.roomInput].forEach(el=>el?.addEventListener('keypress',e=>{ if(e.key==='Enter') doLogin(); }));
-
-        elements.sendBtn?.addEventListener('click',()=>App.sendMessage());
-        elements.input?.addEventListener('keypress',e=>{ if(e.key==='Enter') App.sendMessage(); });
-
-        elements.settingsBtn?.addEventListener('click',App.openSettings);
-        elements.closeSettings?.addEventListener('click',App.closeSettings);
-
-        elements.nickColor?.addEventListener('change',e=>{ state.nickColor=e.target.value; StorageManager.saveUser(); });
-        elements.themeSelect?.addEventListener('change',e=>{ document.body.dataset.theme=e.target.value; });
-        elements.msgStyle?.addEventListener('change',e=>{ document.body.dataset.msgstyle=e.target.value; });
-        elements.fontSize?.addEventListener('input',e=>{ document.body.style.fontSize=`${e.target.value}px`; });
-    }
-
-    static async sendMessage() {
-        const text = elements.input?.value.trim();
-        if(!text) return;
-        elements.input.value='';
-        await HackChatConnector.sendChat(text);
-    }
-
-    static openSettings() {
-        elements.settingsModal?.classList.remove('hidden');
-        elements.nickInputSettings.value = state.nickname;
-        elements.nickColor.value = state.nickColor;
-    }
-
-    static closeSettings() {
-        elements.settingsModal?.classList.add('hidden');
-        const newNick = elements.nickInputSettings.value.trim();
-        if(newNick && newNick!==state.nickname) {
-            state.nickname = newNick;
-            StorageManager.saveUser();
-            elements.meName.textContent = newNick;
-        }
-    }
+// ── Settings ──────────────────────────────────────────────────────────────────
+function openSettings() { settingsModal.classList.remove('hidden'); }
+function closeSettingsModal() {
+  settingsModal.classList.add('hidden');
+  const newNick = nickSettInput?.value.trim();
+  if (newNick && newNick !== nick) { nick = newNick; meName.textContent = nick; }
 }
 
-// ================= INIT =================
-document.addEventListener('DOMContentLoaded',()=>{ App.init().catch(e=>Logger.error('Init failed',e)); });
+// ── Boot ──────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  // Restore saved prefs
+  try {
+    const saved = JSON.parse(localStorage.getItem('ggChatPrefs') || '{}');
+    if (saved.nick)      { nickInput.value = saved.nick; }
+    if (saved.room)      { roomInput.value = saved.room; }
+    if (saved.color)     { nickColor = saved.color; if (nickColorPick) nickColorPick.value = saved.color; }
+    if (saved.theme)     { document.body.dataset.theme = saved.theme; if (themeSelect) themeSelect.value = saved.theme; }
+    if (saved.msgStyle)  { document.body.dataset.msgstyle = saved.msgStyle; if (msgStyleSel) msgStyleSel.value = saved.msgStyle; }
+    if (saved.fontSize)  { document.body.style.fontSize = saved.fontSize + 'px'; if (fontSizeSl) fontSizeSl.value = saved.fontSize; }
+  } catch (_) {}
+
+  function savePrefs() {
+    localStorage.setItem('ggChatPrefs', JSON.stringify({
+      nick: nick || nickInput.value,
+      room: room || roomInput.value,
+      color: nickColor,
+      theme: document.body.dataset.theme,
+      msgStyle: document.body.dataset.msgstyle,
+      fontSize: fontSizeSl?.value,
+    }));
+  }
+
+  loginBtn?.addEventListener('click', doLogin);
+  [nickInput, roomInput].forEach(el => el?.addEventListener('keypress', e => { if (e.key === 'Enter') doLogin(); }));
+
+  sendBtn?.addEventListener('click', sendMessage);
+  msgInput?.addEventListener('keypress', e => { if (e.key === 'Enter') sendMessage(); });
+
+  settingsBtn?.addEventListener('click', openSettings);
+  closeSettings?.addEventListener('click', closeSettingsModal);
+
+  nickColorPick?.addEventListener('change', e => { nickColor = e.target.value; savePrefs(); });
+  themeSelect?.addEventListener('change', e => { document.body.dataset.theme = e.target.value; savePrefs(); });
+  msgStyleSel?.addEventListener('change', e => { document.body.dataset.msgstyle = e.target.value; savePrefs(); });
+  fontSizeSl?.addEventListener('input', e => { document.body.style.fontSize = e.target.value + 'px'; });
+  fontSizeSl?.addEventListener('change', savePrefs);
+});
