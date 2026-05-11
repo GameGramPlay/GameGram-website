@@ -124,6 +124,8 @@
     <a href="chat/">Chat</a>
     <a href="features/">Features</a>
     <a href="about/">About</a>
+    <a href="events/">Events</a>
+    <a href="customize/">Customize</a>
     <a href="lobby/">Online TicTacToe</a>
   </nav>
 
@@ -180,14 +182,45 @@
     sandbox="allow-scripts allow-same-origin allow-popups allow-top-navigation-by-user-activation">
   </iframe>
 
+  <!-- ===== PLAY & CHAT SPLIT-SCREEN OVERLAY ===== -->
+  <div class="pc-overlay hidden" id="playChatOverlay" role="dialog" aria-modal="true" aria-label="Play and Chat">
+    <div class="pc-header">
+      <span class="pc-title-icon">🎮</span>
+      <span class="pc-game-title" id="pcGameTitle">Game</span>
+      <div class="pc-header-actions">
+        <a id="pcOpenTab" href="#" target="_blank" rel="noopener" class="pc-action-btn" title="Open in new tab">⤢ New Tab</a>
+        <button class="pc-action-btn" id="pcClose" title="Close">✕ Close</button>
+      </div>
+    </div>
+    <div class="pc-body">
+      <iframe id="pcGameFrame" class="pc-game" src="" allowfullscreen title="Game"></iframe>
+      <div class="pc-chat-panel">
+        <div class="pc-chat-header">
+          <span>💬 Chat</span>
+          <span id="pcRoomLabel" style="color:var(--accent-cyan);font-size:11px">#gamegram</span>
+        </div>
+        <div class="pc-msgs" id="pcMessages"></div>
+        <div class="pc-input-row">
+          <input id="pcInput" type="text" placeholder="Message…" autocomplete="off" />
+          <button id="pcSend">↑</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== LIVE CHAT SECTION ===== -->
   <section class="chat-section" id="chatSection" aria-label="Live Chat">
     <div class="chat-section-header">
       <span class="chat-section-title">Live Chat</span>
-      <span class="chat-section-sub">Powered by hack.chat · Room: <strong id="cs-roomLabel">gamegram</strong></span>
-      <button class="chat-toggle-btn" id="chatToggleBtn" aria-expanded="true" aria-controls="chatBody">
-        <span id="chatToggleIcon">▲ Collapse</span>
-      </button>
+      <span class="chat-section-sub">hack.chat · Room: <strong id="cs-roomLabel">gamegram</strong></span>
+      <div class="chat-header-actions">
+        <button class="chat-action-btn" id="csProfileBtn" title="Profile settings">👤 Profile</button>
+        <button class="chat-action-btn" id="csShareRoom" title="Copy room link">🔗 Share</button>
+        <button class="chat-action-btn" id="csCmdHelp" title="Chat commands">/? Help</button>
+        <button class="chat-toggle-btn" id="chatToggleBtn" aria-expanded="true" aria-controls="chatBody">
+          <span id="chatToggleIcon">▲ Collapse</span>
+        </button>
+      </div>
     </div>
 
     <div class="chat-body" id="chatBody">
@@ -201,14 +234,16 @@
       <!-- Chat UI (hidden until joined) -->
       <div class="cs-chat hidden" id="csChat">
         <div class="cs-sidebar">
-          <div class="cs-sidebar-label">Online</div>
+          <div class="cs-sidebar-label">Rooms</div>
+          <div id="csRoomPanel" class="cs-room-panel"></div>
+          <div class="cs-sidebar-label" style="margin-top:10px">Online</div>
           <div id="csUserList"></div>
         </div>
         <div class="cs-main">
           <div id="csMessages"></div>
           <div class="cs-input-row">
             <button id="csGameBtn" class="cs-game-btn" title="Share a game in chat">🎮</button>
-            <input id="csInput" type="text" placeholder="Message…" autocomplete="off" />
+            <input id="csInput" type="text" placeholder="Type a message or /help for commands…" autocomplete="off" />
             <button id="csSend">Send</button>
           </div>
           <!-- Game picker popup -->
@@ -217,6 +252,39 @@
             <input id="cgpSearch" placeholder="Search games…" autocomplete="off" />
             <div id="cgpList"></div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Profile modal -->
+    <div class="cs-profile-modal hidden" id="csProfileModal">
+      <div class="cpm-inner">
+        <div class="cpm-header">
+          <span>👤 Your Profile</span>
+          <button class="cpm-close" id="profCancel">✕</button>
+        </div>
+        <div class="cpm-field">
+          <label>Nickname</label>
+          <input type="text" id="profNick" placeholder="Your nick" maxlength="24" autocomplete="off" />
+        </div>
+        <div class="cpm-field">
+          <label>Name Color</label>
+          <div class="cpm-color-row">
+            <input type="color" id="profColor" value="#7c3aed" />
+            <span id="profColorPreview" style="font-family:var(--font-display);font-size:13px;font-weight:700">Preview Name</span>
+          </div>
+        </div>
+        <div class="cpm-field">
+          <label>Avatar Emoji</label>
+          <div class="prof-emoji-grid" id="profEmojiGrid">
+            🎮 🎯 🏆 🚀 ⚔️ 🛡️ 🐉 👾 🎲 🃏 🔥 ⚡ 💎 🌟 🎭 🦊
+            🐺 🐸 🤖 👻 💀 🧙 🥷 🎸 🌈 🌙 ☄️ 🍄 🏴 🎃 🐦 🦁
+          </div>
+          <span id="profEmojiVal" style="display:none">🎮</span>
+        </div>
+        <div class="cpm-actions">
+          <a href="customize/" target="_blank" class="cpm-link">Full Customize Page ↗</a>
+          <button class="cpm-save" id="profSave">💾 Save</button>
         </div>
       </div>
     </div>
@@ -484,6 +552,7 @@
             <span class="gc-icon">${meta.icon}</span>
             <div class="gc-overlay">
               <span class="gc-play">▶ Play</span>
+              <button class="gc-here-btn" title="Play here alongside chat" aria-label="Play ${label} here">⊞</button>
               <button class="gc-share-btn" title="Share in chat" aria-label="Share ${label} in chat">💬</button>
             </div>
           </div>
@@ -491,6 +560,12 @@
             <span class="gc-name">${label}</span>
             <span class="gc-tag">${meta.icon} ${meta.cat}</span>
           </div>`;
+
+        card.querySelector('.gc-here-btn').addEventListener('click', e => {
+          e.preventDefault();
+          e.stopPropagation();
+          window.openPlayChat(game.fullUrl, label);
+        });
 
         card.querySelector('.gc-share-btn').addEventListener('click', e => {
           e.preventDefault();
@@ -841,6 +916,55 @@
     }
   </script>
 
+  <!-- Play & Chat + Chat Commands + Profiles Script -->
+  <script>
+  /* ── Play & Chat global ── */
+  window.openPlayChat = function(url, name) {
+    const overlay = document.getElementById('playChatOverlay');
+    const frame   = document.getElementById('pcGameFrame');
+    const title   = document.getElementById('pcGameTitle');
+    const tab     = document.getElementById('pcOpenTab');
+    const rl      = document.getElementById('pcRoomLabel');
+    if (!overlay || !frame) return;
+    frame.src = url;
+    if (title) title.textContent = name || 'Game';
+    if (tab) tab.href = url;
+    if (rl && window._csRoom) rl.textContent = '#' + window._csRoom;
+    overlay.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    const pcInp = document.getElementById('pcInput');
+    if (pcInp) setTimeout(() => pcInp.focus(), 200);
+  };
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const overlay = document.getElementById('playChatOverlay');
+    document.getElementById('pcClose')?.addEventListener('click', () => {
+      overlay?.classList.add('hidden');
+      document.body.style.overflow = '';
+      document.getElementById('pcGameFrame').src = '';
+    });
+    overlay?.addEventListener('click', e => {
+      if (e.target === overlay) {
+        overlay.classList.add('hidden');
+        document.body.style.overflow = '';
+        document.getElementById('pcGameFrame').src = '';
+      }
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && overlay && !overlay.classList.contains('hidden')) {
+        overlay.classList.add('hidden');
+        document.body.style.overflow = '';
+        document.getElementById('pcGameFrame').src = '';
+      }
+    });
+    // pcSend wired after chat script initialises via window._csSend
+    document.getElementById('pcSend')?.addEventListener('click', () => window._csSend?.('pc'));
+    document.getElementById('pcInput')?.addEventListener('keypress', e => {
+      if (e.key === 'Enter') window._csSend?.('pc');
+    });
+  });
+  </script>
+
   <!-- Embedded Chat Script -->
   <script>
   (function () {
@@ -851,37 +975,94 @@
     let ws    = null;
     let csNick = '';
     let csRoom = DEFAULT_ROOM;
+    let userColor = '#7c3aed';
+    let userEmoji = '🎮';
+    let tttState  = null;
     let reconnectTimer = null;
     let joined = false;
 
     const $ = id => document.getElementById(id);
 
+    // ── Helpers ──────────────────────────────────────────────
     function fmtTime(ts) {
       return new Date(ts || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
     function san(s) {
       return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     }
-    function scrollBottom() {
-      const m = $('csMessages'); if (m) m.scrollTop = m.scrollHeight;
+    function scrollBottom(el) {
+      const m = el || $('csMessages'); if (m) m.scrollTop = m.scrollHeight;
     }
 
-    function addMsg(nick, text, ts, color) {
-      const m = $('csMessages'); if (!m) return;
+    // ── Profile / Room history (localStorage) ─────────────────
+    function loadProfile() {
+      const p = JSON.parse(localStorage.getItem('gg-profile') || '{}');
+      if (p.nick) csNick = p.nick;
+      if (p.color) userColor = p.color;
+      if (p.emoji) userEmoji = p.emoji;
+      const nickEl = $('csNick');
+      if (nickEl && p.nick) nickEl.value = p.nick;
+    }
+    function saveProfile() {
+      localStorage.setItem('gg-profile', JSON.stringify({ nick: csNick, color: userColor, emoji: userEmoji }));
+    }
+    function getRoomHistory() {
+      return JSON.parse(localStorage.getItem('gg-rooms') || '["gamegram"]');
+    }
+    function saveRoomToHistory(room) {
+      let rooms = getRoomHistory();
+      rooms = [room, ...rooms.filter(r => r !== room)].slice(0, 8);
+      localStorage.setItem('gg-rooms', JSON.stringify(rooms));
+    }
+
+    // ── Rich text renderer (game link → interactive card) ──────
+    function renderText(rawText) {
+      const gameRe = /https?:\/\/[^\s<>]+\/games\/[\w%.+-]+\.html/g;
+      const parts = [];
+      let last = 0;
+      let m;
+      while ((m = gameRe.exec(rawText)) !== null) {
+        if (m.index > last) parts.push({ type: 'text', val: rawText.slice(last, m.index) });
+        parts.push({ type: 'game', url: m[0] });
+        last = m.index + m[0].length;
+      }
+      if (last < rawText.length) parts.push({ type: 'text', val: rawText.slice(last) });
+
+      return parts.map(p => {
+        if (p.type === 'text') return `<span>${san(p.val)}</span>`;
+        const raw = p.url;
+        const filename = raw.split('/').pop().replace('.html','').replace(/[-_]/g,' ');
+        const sUrl = san(raw);
+        const sName = san(filename);
+        return `<span class="cs-game-card" style="--card-color:#7c3aed">
+          <span class="cs-gc-icon">🎮</span>
+          <span class="cs-gc-name">${sName}</span>
+          <button class="cs-gc-play" onclick="window.open('${sUrl}','_blank')">▶ Play</button>
+          <button class="cs-gc-split" onclick="window.openPlayChat('${sUrl}','${sName}')">⊞ Here</button>
+        </span>`;
+      }).join('');
+    }
+
+    // ── Message renderers ──────────────────────────────────────
+    function addMsg(nick, text, ts, color, targetId) {
+      const m = $(targetId || 'csMessages'); if (!m) return;
       const d = document.createElement('div');
       d.className = 'cs-msg';
       d.innerHTML = `<span class="cs-time">${fmtTime(ts)}</span>`
                   + `<span class="cs-nick" style="color:${san(color||'#9090b0')}">${san(nick)}</span>`
-                  + `<span class="cs-text">${san(text)}</span>`;
-      m.appendChild(d); scrollBottom();
+                  + `<span class="cs-text">${renderText(text)}</span>`;
+      m.appendChild(d); scrollBottom(m);
+      // Mirror to Play & Chat panel if open
+      if (!targetId) addMsg(nick, text, ts, color, 'pcMessages');
     }
 
-    function addSys(text, cls) {
-      const m = $('csMessages'); if (!m) return;
+    function addSys(text, cls, targetId) {
+      const m = $(targetId || 'csMessages'); if (!m) return;
       const d = document.createElement('div');
       d.className = 'cs-sys' + (cls ? ' ' + cls : '');
       d.textContent = text;
-      m.appendChild(d); scrollBottom();
+      m.appendChild(d); scrollBottom(m);
+      if (!targetId) addSys(text, cls, 'pcMessages');
     }
 
     function renderUsers(users) {
@@ -896,16 +1077,43 @@
       });
     }
 
+    // ── Room panel ─────────────────────────────────────────────
+    function buildRoomPanel() {
+      const panel = $('csRoomPanel'); if (!panel) return;
+      const rooms = getRoomHistory();
+      panel.innerHTML = rooms.map(r =>
+        `<button class="cs-room-btn${r === csRoom ? ' active' : ''}" data-room="${san(r)}">${san(r)}</button>`
+      ).join('') + `<button class="cs-room-new" id="csNewRoomBtn">+ New Room</button>`;
+      panel.querySelectorAll('.cs-room-btn').forEach(btn =>
+        btn.addEventListener('click', () => switchRoom(btn.dataset.room))
+      );
+      $('csNewRoomBtn')?.addEventListener('click', () => {
+        const name = prompt('Room name (letters, numbers, hyphens):');
+        if (name && /^[\w-]+$/.test(name)) switchRoom(name.toLowerCase());
+      });
+    }
+
+    function switchRoom(room) {
+      if (!room || room === csRoom) return;
+      csRoom = room;
+      window._csRoom = room;
+      saveRoomToHistory(room);
+      const rl = $('cs-roomLabel'); if (rl) rl.textContent = room;
+      const pcrl = $('pcRoomLabel'); if (pcrl) pcrl.textContent = '#' + room;
+      if ($('csMessages')) $('csMessages').innerHTML = '';
+      if ($('csUserList')) $('csUserList').innerHTML = '';
+      buildRoomPanel();
+      connect();
+    }
+
+    // ── Connection ─────────────────────────────────────────────
     function connect() {
       clearTimeout(reconnectTimer);
       if (ws) { try { ws.close(); } catch(_){} }
-
       ws = new WebSocket(WS_URL);
-
       ws.onopen = () => {
         ws.send(JSON.stringify({ cmd: 'join', nick: csNick, channel: csRoom }));
       };
-
       ws.onmessage = e => {
         let data; try { data = JSON.parse(e.data); } catch { return; }
         switch (data.cmd) {
@@ -941,39 +1149,149 @@
           case 'info': addSys(`ℹ ${data.text}`); break;
         }
       };
-
       ws.onerror = () => {};
       ws.onclose = () => {
-        if (joined) {
-          addSys('Disconnected — reconnecting…');
-          reconnectTimer = setTimeout(connect, RECONNECT_MS);
-        }
+        if (joined) { addSys('Disconnected — reconnecting…'); reconnectTimer = setTimeout(connect, RECONNECT_MS); }
       };
     }
 
-    function sendMessage() {
-      const inp = $('csInput');
+    // ── Chat commands ──────────────────────────────────────────
+    function handleCommand(text) {
+      const parts = text.trim().split(/\s+/);
+      const cmd = parts[0].toLowerCase();
+      if (!ws || ws.readyState !== WebSocket.OPEN) return false;
+      switch (cmd) {
+        case '/roll': {
+          const sides = parseInt(parts[1]) || 6;
+          const result = Math.floor(Math.random() * sides) + 1;
+          ws.send(JSON.stringify({ cmd:'chat', text:`🎲 rolled a d${sides} and got ${result}!` }));
+          return true;
+        }
+        case '/flip': {
+          const r = Math.random() < 0.5 ? 'Heads 🪙' : 'Tails 🌕';
+          ws.send(JSON.stringify({ cmd:'chat', text:`🪙 flipped a coin: ${r}` }));
+          return true;
+        }
+        case '/ttt': {
+          startTTT();
+          return true;
+        }
+        case '/room': {
+          if (parts[1]) switchRoom(parts[1].toLowerCase());
+          else addSys('Usage: /room <name>');
+          return true;
+        }
+        case '/help': {
+          addSys('Commands: /roll [sides] · /flip · /ttt · /room [name] · /help');
+          return true;
+        }
+        default: return false;
+      }
+    }
+
+    // ── Send ───────────────────────────────────────────────────
+    function sendMessage(source) {
+      const inp = $(source === 'pc' ? 'pcInput' : 'csInput');
       const text = inp?.value.trim();
-      if (!text || !ws || ws.readyState !== WebSocket.OPEN) return;
+      if (!text) return;
+      if (text.startsWith('/') && handleCommand(text)) { inp.value = ''; return; }
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        addSys('Not connected. Please join chat first.');
+        return;
+      }
       ws.send(JSON.stringify({ cmd: 'chat', text }));
       inp.value = '';
     }
+    window._csSend = sendMessage;
 
+    // ── Tic-Tac-Toe mini-game ──────────────────────────────────
+    const TTT_SYM = ['⬜','❌','⭕'];
+    function startTTT() {
+      tttState = { board: Array(9).fill(0), turn: 1, winner: 0 };
+      renderTTT();
+      addSys('Tic-Tac-Toe started! ❌ goes first. Click a square to play.');
+    }
+    function renderTTT() {
+      if (!tttState) return;
+      const m = $('csMessages'); if (!m) return;
+      let el = m.querySelector('.cs-ttt');
+      if (!el) { el = document.createElement('div'); el.className = 'cs-ttt'; m.appendChild(el); }
+      const { board, turn, winner } = tttState;
+      const statusTxt = winner
+        ? (winner === 3 ? "It's a draw!" : `${TTT_SYM[winner]} wins!`)
+        : `${TTT_SYM[turn]}'s turn`;
+      el.innerHTML = `
+        <div class="ttt-header">Tic-Tac-Toe <span class="ttt-status">${statusTxt}</span></div>
+        <div class="ttt-board">
+          ${board.map((c,i) =>
+            `<button class="ttt-cell${c ? ' taken' : ''}" data-i="${i}" ${c||winner?'disabled':''}>${TTT_SYM[c]}</button>`
+          ).join('')}
+        </div>
+        ${winner ? `<button class="ttt-reset">↺ Play Again</button>` : ''}
+      `;
+      el.querySelectorAll('.ttt-cell').forEach(b => b.addEventListener('click', () => tttMove(+b.dataset.i)));
+      el.querySelector('.ttt-reset')?.addEventListener('click', () => { tttState = { board:Array(9).fill(0), turn:1, winner:0 }; renderTTT(); });
+      scrollBottom(m);
+    }
+    function tttMove(i) {
+      if (!tttState || tttState.board[i] || tttState.winner) return;
+      tttState.board[i] = tttState.turn;
+      const w = checkTTT(tttState.board);
+      if (w) {
+        tttState.winner = w;
+        if (ws && ws.readyState === WebSocket.OPEN)
+          ws.send(JSON.stringify({ cmd:'chat', text: w===3 ? `🎮 Tic-Tac-Toe: Draw!` : `🎮 Tic-Tac-Toe: ${TTT_SYM[w]} wins!` }));
+      } else {
+        tttState.turn = tttState.turn === 1 ? 2 : 1;
+      }
+      renderTTT();
+    }
+    function checkTTT(b) {
+      for (const [a,c,d] of [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]])
+        if (b[a] && b[a]===b[c] && b[a]===b[d]) return b[a];
+      return b.every(Boolean) ? 3 : 0;
+    }
+
+    // ── Profile modal ──────────────────────────────────────────
+    function openProfileModal() {
+      const modal = $('csProfileModal'); if (!modal) return;
+      const ni = $('profNick'); if (ni) ni.value = csNick;
+      const ci = $('profColor'); if (ci) ci.value = userColor;
+      const ev = $('profEmojiVal'); if (ev) ev.textContent = userEmoji;
+      updateProfilePreview();
+      modal.classList.remove('hidden');
+    }
+    function updateProfilePreview() {
+      const ci = $('profColor'); if (!ci) return;
+      const prev = $('profColorPreview'); if (prev) { prev.textContent = ($('profNick')?.value||csNick||'Preview'); prev.style.color = ci.value; }
+    }
+    function saveProfileFromModal() {
+      const ni = $('profNick')?.value.trim(); if (ni) csNick = ni;
+      const ci = $('profColor')?.value; if (ci) userColor = ci;
+      const ev = $('profEmojiVal')?.textContent; if (ev) userEmoji = ev;
+      saveProfile();
+      $('csProfileModal')?.classList.add('hidden');
+      addSys(`Profile saved! (${userEmoji} ${csNick}) — rejoin to update your name.`);
+    }
+
+    // ── Join & setup ───────────────────────────────────────────
     function doJoin() {
       csNick = ($('csNick')?.value.trim()) || 'Guest' + Math.floor(Math.random() * 9000 + 1000);
       csRoom = ($('csRoom')?.value.trim()) || DEFAULT_ROOM;
+      saveProfile();
+      saveRoomToHistory(csRoom);
+      window._csRoom = csRoom;
       $('csLogin')?.classList.add('hidden');
       $('csChat')?.classList.remove('hidden');
       const rl = $('cs-roomLabel'); if (rl) rl.textContent = csRoom;
+      const pcrl = $('pcRoomLabel'); if (pcrl) pcrl.textContent = '#' + csRoom;
       joined = true;
+      buildRoomPanel();
       connect();
     }
 
-    // Toggle collapse
     function initToggle() {
-      const btn  = $('chatToggleBtn');
-      const body = $('chatBody');
-      const icon = $('chatToggleIcon');
+      const btn = $('chatToggleBtn'), body = $('chatBody'), icon = $('chatToggleIcon');
       if (!btn || !body) return;
       btn.addEventListener('click', () => {
         const collapsed = body.classList.toggle('collapsed');
@@ -982,12 +1300,65 @@
       });
     }
 
+    // ── Init ──────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', () => {
+      loadProfile();
       initToggle();
+
+      // Join
       $('csJoinBtn')?.addEventListener('click', doJoin);
-      [$('csNick'), $('csRoom')].forEach(el => el?.addEventListener('keypress', e => { if (e.key === 'Enter') doJoin(); }));
-      $('csSend')?.addEventListener('click', sendMessage);
-      $('csInput')?.addEventListener('keypress', e => { if (e.key === 'Enter') sendMessage(); });
+      [$('csNick'), $('csRoom')].forEach(el => el?.addEventListener('keypress', e => { if (e.key==='Enter') doJoin(); }));
+
+      // Send
+      $('csSend')?.addEventListener('click', () => sendMessage('cs'));
+      $('csInput')?.addEventListener('keypress', e => { if (e.key==='Enter') sendMessage('cs'); });
+
+      // Profile
+      $('csProfileBtn')?.addEventListener('click', openProfileModal);
+      $('profSave')?.addEventListener('click', saveProfileFromModal);
+      $('profCancel')?.addEventListener('click', () => $('csProfileModal')?.classList.add('hidden'));
+      $('profColor')?.addEventListener('input', updateProfilePreview);
+      $('profNick')?.addEventListener('input', updateProfilePreview);
+
+      // Emoji grid in profile modal
+      const pg = $('profEmojiGrid');
+      if (pg) {
+        const emojis = pg.textContent.trim().split(/\s+/);
+        pg.innerHTML = emojis.map(e =>
+          `<button class="prof-emoji-opt${e===userEmoji?' selected':''}" type="button">${e}</button>`
+        ).join('');
+        pg.querySelectorAll('.prof-emoji-opt').forEach(btn => {
+          btn.addEventListener('click', () => {
+            pg.querySelectorAll('.prof-emoji-opt').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            const ev = $('profEmojiVal'); if (ev) ev.textContent = btn.textContent;
+            updateProfilePreview();
+          });
+        });
+      }
+
+      // Share room link
+      $('csShareRoom')?.addEventListener('click', () => {
+        if (!joined) { addSys('Join a room first to share its link.'); return; }
+        const url = `${location.origin}${location.pathname}?room=${csRoom}`;
+        navigator.clipboard?.writeText(url)
+          .then(() => addSys(`Room link copied: ${url}`))
+          .catch(() => addSys(`Room link: ${url}`));
+      });
+
+      // Commands help
+      $('csCmdHelp')?.addEventListener('click', () => {
+        addSys('Commands: /roll [sides] · /flip · /ttt · /room [name] · /help');
+        $('chatBody')?.classList.remove('collapsed');
+      });
+
+      // Handle ?room= param from events page
+      const params = new URLSearchParams(location.search);
+      const roomParam = params.get('room');
+      if (roomParam && /^[\w-]+$/.test(roomParam)) {
+        const roomEl = $('csRoom');
+        if (roomEl) roomEl.value = roomParam;
+      }
     });
   })();
   </script>

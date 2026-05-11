@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Customize | GameGram</title>
+  <link rel="icon" type="image/png" href="../images/gamegram.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../style.css?v=6">
+  <style>
+    .cust-wrap {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+    }
+    .cust-hero {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+    .cust-hero h1 {
+      font-family: var(--font-display);
+      font-size: clamp(20px,4vw,34px);
+      background: linear-gradient(135deg, #ec4899, #7c3aed, #06b6d4);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 8px;
+    }
+    .cust-hero p { color: var(--text-muted); font-size: 14px; }
+
+    .cust-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    @media (max-width: 640px) { .cust-grid { grid-template-columns: 1fr; } }
+
+    .cust-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      animation: card-in 0.4s ease both;
+    }
+    .cust-card:nth-child(1) { animation-delay: 0.05s; }
+    .cust-card:nth-child(2) { animation-delay: 0.10s; }
+    .cust-card:nth-child(3) { animation-delay: 0.15s; grid-column: 1 / -1; }
+
+    .cust-card h2 {
+      font-family: var(--font-display);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: var(--text-primary);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .cust-field {
+      margin-bottom: 18px;
+    }
+    .cust-field label {
+      display: block;
+      font-family: var(--font-display);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 7px;
+    }
+    .cust-field input[type="text"],
+    .cust-field input[type="color"] {
+      width: 100%;
+      padding: 9px 14px;
+      font-family: var(--font-body);
+      font-size: 13px;
+      color: var(--text-primary);
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      box-sizing: border-box;
+    }
+    .cust-field input:focus {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 0 3px rgba(6,182,212,0.1);
+    }
+    .cust-field input[type="color"] {
+      padding: 4px 8px;
+      height: 40px;
+      cursor: pointer;
+    }
+
+    .emoji-grid {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 6px;
+    }
+    .emoji-opt {
+      font-size: 22px;
+      cursor: pointer;
+      border-radius: 8px;
+      border: 2px solid transparent;
+      padding: 4px;
+      text-align: center;
+      transition: border-color 0.15s, background 0.15s, transform 0.15s;
+      background: var(--bg-surface);
+    }
+    .emoji-opt:hover { transform: scale(1.15); border-color: var(--border-hover); }
+    .emoji-opt.selected {
+      border-color: var(--accent-cyan);
+      background: rgba(6,182,212,0.12);
+      box-shadow: 0 0 0 2px rgba(6,182,212,0.2);
+    }
+
+    .profile-preview {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 18px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      margin-bottom: 20px;
+    }
+    .preview-avatar {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      background: var(--bg-card);
+      border: 2px solid var(--border);
+      flex-shrink: 0;
+    }
+    .preview-name {
+      font-family: var(--font-display);
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .preview-room {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .cust-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 22px;
+      font-family: var(--font-display);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.2s;
+    }
+    .cust-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+    .cust-btn.primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent-cyan));
+      color: #fff;
+    }
+    .cust-btn.secondary {
+      background: var(--bg-surface);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+    .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    .saved-toast {
+      display: none;
+      padding: 8px 16px;
+      background: rgba(34,197,94,0.15);
+      border: 1px solid rgba(34,197,94,0.3);
+      border-radius: var(--radius-sm);
+      color: #22c55e;
+      font-family: var(--font-display);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      margin-top: 12px;
+    }
+
+    .template-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    .template-card {
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      border: 2px solid var(--border);
+      cursor: pointer;
+      transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+    }
+    .template-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+    .template-card.selected { border-color: var(--accent-cyan); box-shadow: 0 0 0 3px rgba(6,182,212,0.2); }
+    .tc-preview {
+      height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+    }
+    .tc-label {
+      padding: 8px 10px;
+      font-family: var(--font-display);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      background: var(--bg-surface);
+      color: var(--text-secondary);
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="../index.html">Home</a>
+    <a href="../chat/">Chat</a>
+    <a href="../features/">Features</a>
+    <a href="../about/">About</a>
+    <a href="../events/">Events</a>
+    <a href="../customize/" class="active">Customize</a>
+    <a href="../lobby/">Online TicTacToe</a>
+  </nav>
+
+  <div class="cust-wrap">
+    <div class="cust-hero">
+      <h1>🎨 Customize Your Experience</h1>
+      <p>Set your profile, pick a theme, and download a UI template — all saved locally in your browser.</p>
+    </div>
+
+    <div class="cust-grid">
+
+      <!-- Profile Card -->
+      <div class="cust-card">
+        <h2>👤 Your Profile</h2>
+
+        <div class="profile-preview">
+          <div class="preview-avatar" id="prevAvatar">🎮</div>
+          <div>
+            <div class="preview-name" id="prevName" style="color: #7c3aed">Player</div>
+            <div class="preview-room" id="prevRoom">#gamegram</div>
+          </div>
+        </div>
+
+        <div class="cust-field">
+          <label>Nickname</label>
+          <input type="text" id="profNick" placeholder="Your display name" maxlength="24" />
+        </div>
+
+        <div class="cust-field">
+          <label>Name Color</label>
+          <input type="color" id="profColor" value="#7c3aed" />
+        </div>
+
+        <div class="cust-field">
+          <label>Preferred Room</label>
+          <input type="text" id="profRoom" placeholder="gamegram" maxlength="48" />
+        </div>
+
+        <div class="cust-field">
+          <label>Avatar Emoji</label>
+          <div class="emoji-grid" id="emojiGrid">
+            🎮 🎯 🏆 🚀 ⚔️ 🛡️ 🐉 👾 🎲 🃏 🎪 🔥 ⚡ 💎 🌟 🎭
+            🦊 🐺 🐸 🤖 👻 💀 🧙 🥷 🎸 🎵 🌈 🌙 ☄️ 🍄 🏴 🎃
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button class="cust-btn primary" id="saveProfile">💾 Save Profile</button>
+          <button class="cust-btn secondary" id="clearProfile">🗑 Reset</button>
+        </div>
+        <div class="saved-toast" id="savedToast">✓ Profile saved!</div>
+      </div>
+
+      <!-- Theme Card -->
+      <div class="cust-card">
+        <h2>🎨 UI Templates</h2>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:18px">Choose a preset theme, then download it as a CSS file to use as your base for further customization.</p>
+
+        <div class="template-grid" id="templateGrid">
+          <div class="template-card selected" data-theme="midnight">
+            <div class="tc-preview" style="background:linear-gradient(135deg,#08080f,#1a0a2e)">🌙</div>
+            <div class="tc-label">Midnight Purple</div>
+          </div>
+          <div class="template-card" data-theme="neon">
+            <div class="tc-preview" style="background:linear-gradient(135deg,#0a0a0a,#001a1a)">⚡</div>
+            <div class="tc-label">Neon Cyan</div>
+          </div>
+          <div class="template-card" data-theme="fire">
+            <div class="tc-preview" style="background:linear-gradient(135deg,#0f0805,#1a0800)">🔥</div>
+            <div class="tc-label">Fire Red</div>
+          </div>
+          <div class="template-card" data-theme="forest">
+            <div class="tc-preview" style="background:linear-gradient(135deg,#050f08,#081a0a)">🌿</div>
+            <div class="tc-label">Forest Green</div>
+          </div>
+          <div class="template-card" data-theme="ocean">
+            <div class="tc-preview" style="background:linear-gradient(135deg,#050a1a,#080f1a)">🌊</div>
+            <div class="tc-label">Deep Ocean</div>
+          </div>
+          <div class="template-card" data-theme="sakura">
+            <div class="tc-preview" style="background:linear-gradient(135deg,#0f0508,#1a0510)">🌸</div>
+            <div class="tc-label">Sakura Pink</div>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button class="cust-btn primary" id="downloadTemplate">⬇ Download CSS</button>
+          <button class="cust-btn secondary" id="applyTheme">✓ Preview</button>
+        </div>
+        <p style="font-size:11px;color:var(--text-muted);margin-top:12px">Downloaded file: <code style="color:var(--accent-cyan)">gamegram-theme.css</code> — swap this in place of <code>style.css</code></p>
+      </div>
+
+      <!-- Features Summary -->
+      <div class="cust-card">
+        <h2>🎮 GameGram Features Guide</h2>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px">
+          <div style="padding:16px;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-md)">
+            <div style="font-size:24px;margin-bottom:8px">⊞</div>
+            <div style="font-family:var(--font-display);font-size:12px;font-weight:700;color:var(--text-primary);margin-bottom:4px">Play & Chat</div>
+            <div style="font-size:12px;color:var(--text-muted)">Hover a game card and click <strong>Play Here</strong> to open it alongside the live chat — no new tab needed.</div>
+          </div>
+          <div style="padding:16px;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-md)">
+            <div style="font-size:24px;margin-bottom:8px">🏠</div>
+            <div style="font-family:var(--font-display);font-size:12px;font-weight:700;color:var(--text-primary);margin-bottom:4px">Custom Rooms</div>
+            <div style="font-size:12px;color:var(--text-muted)">Create or join any hack.chat room from the chat sidebar. Your room history is saved automatically.</div>
+          </div>
+          <div style="padding:16px;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-md)">
+            <div style="font-size:24px;margin-bottom:8px">🃏</div>
+            <div style="font-family:var(--font-display);font-size:12px;font-weight:700;color:var(--text-primary);margin-bottom:4px">Rich Game Cards</div>
+            <div style="font-size:12px;color:var(--text-muted)">Shared game links render as interactive cards in chat with Play and Play Here buttons.</div>
+          </div>
+          <div style="padding:16px;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-md)">
+            <div style="font-size:24px;margin-bottom:8px">🎲</div>
+            <div style="font-family:var(--font-display);font-size:12px;font-weight:700;color:var(--text-primary);margin-bottom:4px">Chat Commands</div>
+            <div style="font-size:12px;color:var(--text-muted)"><code style="color:var(--accent-cyan)">/roll</code> dice · <code style="color:var(--accent-cyan)">/flip</code> coin · <code style="color:var(--accent-cyan)">/ttt</code> tic-tac-toe · <code style="color:var(--accent-cyan)">/room name</code> · <code style="color:var(--accent-cyan)">/help</code></div>
+          </div>
+          <div style="padding:16px;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-md)">
+            <div style="font-size:24px;margin-bottom:8px">🔍</div>
+            <div style="font-family:var(--font-display);font-size:12px;font-weight:700;color:var(--text-primary);margin-bottom:4px">Category Filters</div>
+            <div style="font-size:12px;color:var(--text-muted)">Filter 200+ games by Action, Racing, RPG, Puzzle, and 13 more categories. Press <kbd style="background:var(--bg-card);padding:1px 5px;border-radius:3px;font-size:10px">/</kbd> to focus search.</div>
+          </div>
+          <div style="padding:16px;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-md)">
+            <div style="font-size:24px;margin-bottom:8px">📢</div>
+            <div style="font-family:var(--font-display);font-size:12px;font-weight:700;color:var(--text-primary);margin-bottom:4px">Events Page</div>
+            <div style="font-size:12px;color:var(--text-muted)">Check upcoming tournaments, community news, and site announcements on the <a href="../events/" style="color:var(--accent-cyan)">Events page</a>.</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <footer>
+    <p>Games from <a href="https://github.com/Metroxe/one-html-page-challenge" target="_blank" rel="noopener">One HTML Page Challenge</a>, <a href="https://definitelynotblocked.vercel.app/games/index.html" target="_blank" rel="noopener">Seraph</a>, etc</p>
+    <p>// all games playable on this website are complete copyright & property of their respective owners \\</p>
+  </footer>
+
+  <script>
+  const THEMES = {
+    midnight: { accent:'#7c3aed', cyan:'#06b6d4', bg:'#08080f', label:'Midnight Purple' },
+    neon:     { accent:'#06b6d4', cyan:'#00ff88', bg:'#0a0a0a', label:'Neon Cyan' },
+    fire:     { accent:'#ef4444', cyan:'#f97316', bg:'#0f0805', label:'Fire Red' },
+    forest:   { accent:'#22c55e', cyan:'#84cc16', bg:'#050f08', label:'Forest Green' },
+    ocean:    { accent:'#3b82f6', cyan:'#06b6d4', bg:'#050a1a', label:'Deep Ocean' },
+    sakura:   { accent:'#ec4899', cyan:'#a855f7', bg:'#0f0508', label:'Sakura Pink' },
+  };
+
+  let selectedTheme = 'midnight';
+  let selectedEmoji = '🎮';
+
+  function loadProfile() {
+    const p = JSON.parse(localStorage.getItem('gg-profile') || '{}');
+    if (p.nick) document.getElementById('profNick').value = p.nick;
+    if (p.color) document.getElementById('profColor').value = p.color;
+    if (p.room) document.getElementById('profRoom').value = p.room;
+    if (p.emoji) {
+      selectedEmoji = p.emoji;
+      document.getElementById('prevAvatar').textContent = p.emoji;
+      document.querySelectorAll('.emoji-opt').forEach(e => {
+        if (e.textContent.trim() === p.emoji) e.classList.add('selected');
+      });
+    }
+    if (p.theme) {
+      selectedTheme = p.theme;
+      document.querySelectorAll('.template-card').forEach(c => {
+        c.classList.toggle('selected', c.dataset.theme === p.theme);
+      });
+    }
+    updatePreview();
+  }
+
+  function updatePreview() {
+    const nick = document.getElementById('profNick').value || 'Player';
+    const color = document.getElementById('profColor').value || '#7c3aed';
+    const room = document.getElementById('profRoom').value || 'gamegram';
+    document.getElementById('prevName').textContent = nick;
+    document.getElementById('prevName').style.color = color;
+    document.getElementById('prevAvatar').textContent = selectedEmoji;
+    document.getElementById('prevRoom').textContent = '#' + room;
+  }
+
+  // Emoji grid
+  const emojiGrid = document.getElementById('emojiGrid');
+  const emojis = emojiGrid.textContent.trim().split(/\s+/);
+  emojiGrid.innerHTML = emojis.map(e =>
+    `<button class="emoji-opt${e === selectedEmoji ? ' selected' : ''}">${e}</button>`
+  ).join('');
+  emojiGrid.querySelectorAll('.emoji-opt').forEach(btn => {
+    btn.addEventListener('click', () => {
+      emojiGrid.querySelectorAll('.emoji-opt').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      selectedEmoji = btn.textContent;
+      updatePreview();
+    });
+  });
+
+  ['profNick','profColor','profRoom'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', updatePreview);
+  });
+
+  // Template selection
+  document.querySelectorAll('.template-card').forEach(card => {
+    card.addEventListener('click', () => {
+      document.querySelectorAll('.template-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      selectedTheme = card.dataset.theme;
+    });
+  });
+
+  // Apply preview
+  document.getElementById('applyTheme').addEventListener('click', () => {
+    const t = THEMES[selectedTheme];
+    if (!t) return;
+    document.documentElement.style.setProperty('--accent', t.accent);
+    document.documentElement.style.setProperty('--accent-purple', t.accent);
+    document.documentElement.style.setProperty('--accent-cyan', t.cyan);
+    document.documentElement.style.setProperty('--bg-base', t.bg);
+  });
+
+  // Save profile
+  document.getElementById('saveProfile').addEventListener('click', () => {
+    const profile = {
+      nick: document.getElementById('profNick').value.trim(),
+      color: document.getElementById('profColor').value,
+      room: document.getElementById('profRoom').value.trim() || 'gamegram',
+      emoji: selectedEmoji,
+      theme: selectedTheme,
+    };
+    localStorage.setItem('gg-profile', JSON.stringify(profile));
+    const toast = document.getElementById('savedToast');
+    toast.style.display = 'block';
+    setTimeout(() => { toast.style.display = 'none'; }, 3000);
+  });
+
+  // Reset
+  document.getElementById('clearProfile').addEventListener('click', () => {
+    if (confirm('Clear your saved profile?')) {
+      localStorage.removeItem('gg-profile');
+      location.reload();
+    }
+  });
+
+  // Download template
+  document.getElementById('downloadTemplate').addEventListener('click', () => {
+    const t = THEMES[selectedTheme];
+    const nick = document.getElementById('profNick').value.trim() || 'GameGram User';
+    const css = `/* GameGram Custom Theme: ${t.label} */
+/* Generated for: ${nick} */
+/* Apply by replacing style.css with this file */
+
+:root {
+  --accent:         ${t.accent};
+  --accent-purple:  ${t.accent};
+  --accent-cyan:    ${t.cyan};
+  --bg-base:        ${t.bg};
+  --bg-surface:     color-mix(in srgb, ${t.bg} 80%, #fff 4%);
+  --bg-card:        color-mix(in srgb, ${t.bg} 70%, #fff 6%);
+  --bg-card-hover:  color-mix(in srgb, ${t.bg} 60%, #fff 10%);
+  --text-primary:   #f0f0ff;
+  --text-secondary: #c0c0d8;
+  --text-muted:     #7070a0;
+  --border:         rgba(255,255,255,0.06);
+  --border-hover:   rgba(255,255,255,0.14);
+  --font-display:   'Orbitron', monospace;
+  --font-body:      'Inter', sans-serif;
+  --radius-sm:      8px;
+  --radius-md:      14px;
+  --radius-lg:      20px;
+  --transition:     0.2s ease;
+}
+
+/* Import this file after your main style.css to override theme colors */
+/* Example: <link rel="stylesheet" href="gamegram-theme.css"> */
+
+/* Tip: change --accent and --accent-cyan to any hex color you like! */
+`;
+    const blob = new Blob([css], { type: 'text/css' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'gamegram-theme.css';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  loadProfile();
+  </script>
+</body>
+</html>

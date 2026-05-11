@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Events & News | GameGram</title>
+  <link rel="icon" type="image/png" href="../images/gamegram.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../style.css?v=6">
+  <style>
+    .events-hero {
+      text-align: center;
+      padding: 60px 24px 32px;
+    }
+    .events-hero h1 {
+      font-family: var(--font-display);
+      font-size: clamp(22px, 4vw, 36px);
+      background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 10px;
+    }
+    .events-hero p { color: var(--text-muted); font-size: 14px; }
+
+    .events-wrap {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 0 24px 80px;
+    }
+
+    .events-tabs {
+      display: flex;
+      gap: 8px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 32px;
+      flex-wrap: wrap;
+    }
+    .ev-tab {
+      padding: 7px 18px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: var(--text-secondary);
+      font-family: var(--font-display);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .ev-tab:hover, .ev-tab.active {
+      background: linear-gradient(135deg, var(--accent), var(--accent-cyan));
+      border-color: transparent;
+      color: #fff;
+    }
+
+    .pinned-banner {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 20px;
+      background: linear-gradient(135deg, rgba(124,58,237,0.15), rgba(6,182,212,0.08));
+      border: 1px solid rgba(124,58,237,0.3);
+      border-radius: var(--radius-md);
+      margin-bottom: 28px;
+      animation: glow-pulse 3s ease-in-out infinite;
+    }
+    @keyframes glow-pulse {
+      0%,100% { box-shadow: 0 0 0 0 rgba(124,58,237,0); }
+      50%      { box-shadow: 0 0 16px rgba(124,58,237,0.25); }
+    }
+    .pinned-banner .pin-icon { font-size: 24px; flex-shrink: 0; }
+    .pinned-banner .pin-text { flex: 1; }
+    .pinned-banner .pin-title { font-family: var(--font-display); font-size: 12px; font-weight: 700; color: var(--accent-cyan); letter-spacing: 0.07em; }
+    .pinned-banner .pin-body { font-size: 13px; color: var(--text-primary); margin-top: 2px; }
+    .pinned-banner .pin-badge {
+      background: var(--accent);
+      color: #fff;
+      font-family: var(--font-display);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      padding: 4px 10px;
+      border-radius: 999px;
+      flex-shrink: 0;
+    }
+
+    .events-timeline {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      position: relative;
+    }
+    .events-timeline::before {
+      content: '';
+      position: absolute;
+      left: 28px;
+      top: 0; bottom: 0;
+      width: 2px;
+      background: linear-gradient(to bottom, var(--accent), transparent);
+      border-radius: 2px;
+    }
+
+    .ev-card {
+      display: flex;
+      gap: 20px;
+      padding: 0 0 28px 0;
+      position: relative;
+      opacity: 0;
+      transform: translateY(16px);
+      animation: card-in 0.4s ease forwards;
+    }
+    .ev-card:nth-child(1) { animation-delay: 0.05s; }
+    .ev-card:nth-child(2) { animation-delay: 0.10s; }
+    .ev-card:nth-child(3) { animation-delay: 0.15s; }
+    .ev-card:nth-child(4) { animation-delay: 0.20s; }
+    .ev-card:nth-child(5) { animation-delay: 0.25s; }
+    .ev-card:nth-child(6) { animation-delay: 0.30s; }
+    .ev-card:nth-child(7) { animation-delay: 0.35s; }
+
+    .ev-dot {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+      z-index: 1;
+      border: 2px solid var(--bg-base);
+      background: var(--bg-surface);
+    }
+    .ev-dot.upcoming { background: linear-gradient(135deg, #7c3aed, #06b6d4); }
+    .ev-dot.live     { background: linear-gradient(135deg, #22c55e, #06b6d4); box-shadow: 0 0 0 3px rgba(34,197,94,0.2); }
+    .ev-dot.past     { background: var(--bg-card); filter: grayscale(0.6); }
+
+    .ev-content {
+      flex: 1;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 16px 20px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .ev-content:hover {
+      border-color: rgba(124,58,237,0.3);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+
+    .ev-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+    .ev-date {
+      font-family: var(--font-display);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+    }
+    .ev-badge {
+      font-family: var(--font-display);
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      padding: 2px 8px;
+      border-radius: 999px;
+      text-transform: uppercase;
+    }
+    .ev-badge.live     { background: rgba(34,197,94,0.15); color: #22c55e; border: 1px solid rgba(34,197,94,0.3); }
+    .ev-badge.upcoming { background: rgba(124,58,237,0.15); color: #a78bfa; border: 1px solid rgba(124,58,237,0.3); }
+    .ev-badge.news     { background: rgba(6,182,212,0.15); color: #06b6d4; border: 1px solid rgba(6,182,212,0.3); }
+    .ev-badge.past     { background: rgba(107,114,128,0.15); color: #9ca3af; border: 1px solid rgba(107,114,128,0.2); }
+    .ev-badge.tournament { background: rgba(234,179,8,0.15); color: #fbbf24; border: 1px solid rgba(234,179,8,0.3); }
+
+    .ev-title {
+      font-family: var(--font-display);
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+    }
+    .ev-desc {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+    .ev-tags {
+      display: flex;
+      gap: 6px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+    .ev-tag {
+      font-size: 11px;
+      padding: 3px 10px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      color: var(--text-muted);
+    }
+    .ev-action {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 12px;
+      padding: 7px 16px;
+      background: rgba(124,58,237,0.12);
+      border: 1px solid rgba(124,58,237,0.3);
+      border-radius: var(--radius-sm);
+      color: #a78bfa;
+      font-family: var(--font-display);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-decoration: none;
+      transition: background 0.2s, color 0.2s;
+    }
+    .ev-action:hover { background: rgba(124,58,237,0.22); color: #c4b5fd; }
+
+    .events-upcoming-header {
+      font-family: var(--font-display);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      padding: 0 0 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .events-upcoming-header::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .ev-submit {
+      margin-top: 48px;
+      padding: 24px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      text-align: center;
+    }
+    .ev-submit h3 {
+      font-family: var(--font-display);
+      font-size: 14px;
+      color: var(--text-primary);
+      margin-bottom: 8px;
+    }
+    .ev-submit p { font-size: 13px; color: var(--text-muted); margin-bottom: 16px; }
+    .ev-submit a {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 24px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-cyan));
+      color: #fff;
+      font-family: var(--font-display);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      border-radius: var(--radius-sm);
+      text-decoration: none;
+      transition: opacity 0.2s;
+    }
+    .ev-submit a:hover { opacity: 0.85; }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="../index.html">Home</a>
+    <a href="../chat/">Chat</a>
+    <a href="../features/">Features</a>
+    <a href="../about/">About</a>
+    <a href="../events/" class="active">Events</a>
+    <a href="../lobby/">Online TicTacToe</a>
+  </nav>
+
+  <div class="events-hero">
+    <h1>Events & Announcements</h1>
+    <p>GameGram community news, tournaments, and upcoming features</p>
+  </div>
+
+  <div class="events-wrap">
+
+    <div class="pinned-banner">
+      <span class="pin-icon">📌</span>
+      <div class="pin-text">
+        <div class="pin-title">PINNED ANNOUNCEMENT</div>
+        <div class="pin-body">Live Chat is now embedded on the main page — join the <strong>#gamegram</strong> room and meet other players while you play!</div>
+      </div>
+      <span class="pin-badge">NEW</span>
+    </div>
+
+    <div class="events-tabs">
+      <button class="ev-tab active" data-filter="all">All</button>
+      <button class="ev-tab" data-filter="live">Live</button>
+      <button class="ev-tab" data-filter="upcoming">Upcoming</button>
+      <button class="ev-tab" data-filter="news">News</button>
+      <button class="ev-tab" data-filter="tournament">Tournaments</button>
+    </div>
+
+    <div class="events-upcoming-header">Latest</div>
+
+    <div class="events-timeline" id="eventsTimeline">
+
+      <div class="ev-card" data-type="live">
+        <div class="ev-dot live">🔴</div>
+        <div class="ev-content">
+          <div class="ev-meta">
+            <span class="ev-date">MAY 2026 · ONGOING</span>
+            <span class="ev-badge live">● LIVE</span>
+          </div>
+          <div class="ev-title">Play & Chat — Live Now</div>
+          <div class="ev-desc">Open any game directly on the main page with the <strong>Play Here</strong> button — plays alongside the live chat without leaving the site. Chat with other players while gaming!</div>
+          <div class="ev-tags">
+            <span class="ev-tag">Chat</span>
+            <span class="ev-tag">Games</span>
+            <span class="ev-tag">Feature</span>
+          </div>
+          <a href="../index.html" class="ev-action">▶ Try It Now</a>
+        </div>
+      </div>
+
+      <div class="ev-card" data-type="upcoming">
+        <div class="ev-dot upcoming">🏆</div>
+        <div class="ev-content">
+          <div class="ev-meta">
+            <span class="ev-date">JUNE 2026</span>
+            <span class="ev-badge tournament">TOURNAMENT</span>
+          </div>
+          <div class="ev-title">GameGram Community Cup #1</div>
+          <div class="ev-desc">Our first community tournament! Play <strong>Slope</strong>, <strong>Geometry Dash</strong>, and <strong>Retro Bowl</strong>. Score screenshots go in the <strong>#gamegram-cup</strong> chat room. Top 3 scores win bragging rights 🏅</div>
+          <div class="ev-tags">
+            <span class="ev-tag">Slope</span>
+            <span class="ev-tag">Geometry Dash</span>
+            <span class="ev-tag">Retro Bowl</span>
+          </div>
+          <a href="../index.html?room=gamegram-cup" class="ev-action">🎮 Join the Room</a>
+        </div>
+      </div>
+
+      <div class="ev-card" data-type="upcoming">
+        <div class="ev-dot upcoming">🎨</div>
+        <div class="ev-content">
+          <div class="ev-meta">
+            <span class="ev-date">COMING SOON</span>
+            <span class="ev-badge upcoming">UPCOMING</span>
+          </div>
+          <div class="ev-title">Custom UI Templates — Download & Share</div>
+          <div class="ev-desc">Personalize your GameGram experience. Download a CSS template, tweak colors and fonts, and share your custom theme with the community. Visit the Customize page to set your profile now.</div>
+          <div class="ev-tags">
+            <span class="ev-tag">Customization</span>
+            <span class="ev-tag">CSS</span>
+            <span class="ev-tag">Themes</span>
+          </div>
+          <a href="../customize/" class="ev-action">🎨 Customize</a>
+        </div>
+      </div>
+
+      <div class="ev-card" data-type="news">
+        <div class="ev-dot">📰</div>
+        <div class="ev-content">
+          <div class="ev-meta">
+            <span class="ev-date">MAY 11, 2026</span>
+            <span class="ev-badge news">NEWS</span>
+          </div>
+          <div class="ev-title">Rich Game Cards + Category Filters</div>
+          <div class="ev-desc">The game grid got a major visual upgrade — every game now has a colored gradient card with a category-specific emoji and animated hover effects. Filter by Action, Racing, RPG, Puzzle, and 13 more categories.</div>
+          <div class="ev-tags"><span class="ev-tag">UI Update</span><span class="ev-tag">Games</span></div>
+        </div>
+      </div>
+
+      <div class="ev-card" data-type="news">
+        <div class="ev-dot">💬</div>
+        <div class="ev-content">
+          <div class="ev-meta">
+            <span class="ev-date">MAY 10, 2026</span>
+            <span class="ev-badge news">NEWS</span>
+          </div>
+          <div class="ev-title">Embedded Live Chat on Homepage</div>
+          <div class="ev-desc">Live Chat is now built directly into the main page — no separate page needed. Join the <strong>#gamegram</strong> room, create your own rooms, and share game links with interactive cards.</div>
+          <div class="ev-tags"><span class="ev-tag">Chat</span><span class="ev-tag">Feature</span></div>
+        </div>
+      </div>
+
+      <div class="ev-card" data-type="news">
+        <div class="ev-dot past">🎮</div>
+        <div class="ev-content">
+          <div class="ev-meta">
+            <span class="ev-date">MAY 2025</span>
+            <span class="ev-badge past">PAST</span>
+          </div>
+          <div class="ev-title">GameGram Launched</div>
+          <div class="ev-desc">GameGram launched on GitHub Pages with 80+ unblocked games, a dark gaming aesthetic, and visitor counter. Free, no login, no ads that block gameplay.</div>
+          <div class="ev-tags"><span class="ev-tag">Launch</span></div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="ev-submit">
+      <h3>Submit an Event or Idea</h3>
+      <p>Got a tournament idea, game suggestion, or feature request? Open a GitHub issue!</p>
+      <a href="https://github.com/gamegramplay/GameGram-website/issues/new" target="_blank" rel="noopener">📩 Open an Issue</a>
+    </div>
+
+  </div>
+
+  <footer>
+    <p>Games from <a href="https://github.com/Metroxe/one-html-page-challenge" target="_blank" rel="noopener">One HTML Page Challenge</a>, <a href="https://definitelynotblocked.vercel.app/games/index.html" target="_blank" rel="noopener">Seraph</a>, etc</p>
+    <p>// all games playable on this website are complete copyright & property of their respective owners \\</p>
+  </footer>
+
+  <script>
+    // Tab filter
+    const tabs = document.querySelectorAll('.ev-tab');
+    const cards = document.querySelectorAll('.ev-card');
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        const f = tab.dataset.filter;
+        cards.forEach(c => {
+          c.style.display = (f === 'all' || c.dataset.type === f) ? '' : 'none';
+        });
+      });
+    });
+
+    // Handle ?room= query param for direct room join
+    const params = new URLSearchParams(location.search);
+    const room = params.get('room');
+    if (room) {
+      const note = document.createElement('div');
+      note.style.cssText = 'position:fixed;bottom:24px;right:24px;background:var(--bg-surface);border:1px solid var(--border);padding:14px 20px;border-radius:12px;font-size:13px;z-index:999;box-shadow:0 8px 32px rgba(0,0,0,0.4)';
+      note.innerHTML = `Go to <a href="../index.html?room=${room}" style="color:#06b6d4;font-weight:600">#${room}</a> on the main page to join this room.`;
+      document.body.appendChild(note);
+      setTimeout(() => note.remove(), 8000);
+    }
+  </script>
+</body>
+</html>
