@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#a8dbfb" />
+  <meta name="description" content="Fishies swimming" />
+  <meta name="keywords" content="fish, game, animation" />
+  <meta name="author" content="William Chung" />
+  <link rel="shortcut icon" href="favicon.gif" type="image/gif" />
+  <title>GameGram FISHIES</title>
+  <style>
+    :root{
+      --bg1:#bfeaff;
+      --bg2:#86cff9;
+      --panel: rgba(255,255,255,.32);
+      --panel-border: rgba(255,255,255,.48);
+      --text:#07324d;
+      --accent:#1d6ea4;
+      --shadow: rgba(0,0,0,.14);
+      --good:#17a34a;
+      --warn:#f59e0b;
+      --bad:#ef4444;
+    }
+    body.dark{
+      --bg1:#09131c;
+      --bg2:#173044;
+      --panel: rgba(10,16,22,.38);
+      --panel-border: rgba(255,255,255,.10);
+      --text:#eaf7ff;
+      --accent:#8ccfff;
+      --shadow: rgba(0,0,0,.34);
+    }
+
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: linear-gradient(to bottom, var(--bg1), var(--bg2));
+      color: var(--text);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      user-select: none;
+      touch-action: none;
+    }
+
+    #game {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    #ui {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .panel {
+      position: absolute;
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      border-radius: 16px;
+      box-shadow: 0 10px 28px var(--shadow);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      pointer-events: auto;
+    }
+
+    #topLeft {
+      top: 12px;
+      left: 12px;
+      padding: 10px 12px;
+      display: grid;
+      gap: 8px;
+      font-size: 13px;
+      min-width: 210px;
+    }
+
+    #scoreBox {
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 14px;
+      font-weight: 800;
+      font-size: 16px;
+      text-align: center;
+      min-width: 250px;
+    }
+
+    #help {
+      top: 12px;
+      right: 12px;
+      padding: 10px 12px;
+      font-size: 12px;
+      max-width: 280px;
+      line-height: 1.35;
+      opacity: .92;
+    }
+
+    #bottomLeft {
+      left: 12px;
+      bottom: 12px;
+      padding: 10px 12px;
+      font-size: 13px;
+      min-width: 190px;
+    }
+
+    #bottomRight {
+      right: 12px;
+      bottom: 12px;
+      display: flex;
+      gap: 10px;
+      pointer-events: auto;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    button {
+      appearance: none;
+      border: 0;
+      border-radius: 14px;
+      padding: 10px 14px;
+      background: var(--accent);
+      color: white;
+      font-weight: 700;
+      box-shadow: 0 10px 28px var(--shadow);
+      cursor: pointer;
+    }
+    button:active { transform: translateY(1px); }
+
+    label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+    input[type="checkbox"] {
+      accent-color: var(--accent);
+      transform: scale(1.05);
+    }
+
+    #pauseBanner, #startScreen, #gameOverScreen {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      pointer-events: auto;
+      background: rgba(0,0,0,.22);
+      backdrop-filter: blur(3px);
+      -webkit-backdrop-filter: blur(3px);
+    }
+
+    .centerCard {
+      width: min(560px, calc(100vw - 24px));
+      padding: 24px;
+      border-radius: 24px;
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      box-shadow: 0 20px 50px var(--shadow);
+      color: var(--text);
+      text-align: center;
+    }
+
+    .title {
+      font-size: clamp(34px, 7vw, 64px);
+      margin: 0 0 8px;
+      letter-spacing: .04em;
+      font-weight: 900;
+    }
+
+    .subtitle {
+      margin: 0 0 18px;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    .row {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 18px;
+    }
+
+    .tiny {
+      font-size: 12px;
+      opacity: .82;
+      margin-top: 12px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 999px;
+      padding: 8px 12px;
+      background: rgba(255,255,255,.12);
+      margin: 4px 6px 0 0;
+      font-size: 12px;
+    }
+
+    #pauseBanner .centerCard { font-size: 20px; }
+  </style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <div id="ui">
+    <div id="topLeft" class="panel">
+      <label><input id="darkToggle" type="checkbox"> Dark Mode</label>
+      <label><input id="autoToggle" type="checkbox"> ConstaSpawn</label>
+      <label><input id="xyToggle" type="checkbox"> Show Coordinates</label>
+      <div class="tiny">P = pause, R = reset, Space = burst, tap/click = burst</div>
+    </div>
+
+    <div id="scoreBox" class="panel">Score: 0 · High Score: 0 · Level 1</div>
+
+    <div id="help" class="panel">
+      Guide the big fish with your pointer or finger.
+      Eat fish for score and combos.
+      Golden pearls trigger frenzy.
+      Watch out for mines, jellyfish, and drifting currents.
+    </div>
+
+    <div id="bottomLeft" class="panel">
+      <div id="coord">X: 0, Y: 0</div>
+      <div id="status">Ready to swim.</div>
+      <div id="lives">Lives: 3</div>
+    </div>
+
+    <div id="bottomRight">
+      <button id="spawnBtn">Spawn More Fish</button>
+      <button id="pauseBtn">Pause</button>
+      <button id="resetBtn">Reset</button>
+    </div>
+
+    <div id="pauseBanner">
+      <div class="centerCard">
+        <h2 class="title" style="font-size:42px;margin-bottom:10px;">Paused</h2>
+        <div class="subtitle">Press P or tap Resume to continue the swim.</div>
+        <div class="row"><button id="resumeBtn">Resume</button></div>
+      </div>
+    </div>
+
+    <div id="startScreen" style="display:flex;">
+      <div class="centerCard">
+        <h1 class="title">FISHIES</h1>
+        <p class="subtitle">
+          Swim, eat, dodge, level up.<br>
+          Growth is slower now, so progress feels more earned.
+        </p>
+        <div>
+          <span class="pill">🎯 Levels</span>
+          <span class="pill">💥 Obstacles</span>
+          <span class="pill">🔊 Sound FX</span>
+          <span class="pill">🐟 Combos</span>
+          <span class="pill">✨ Pearls</span>
+        </div>
+        <div class="row">
+          <button id="startBtn">Start Swimming</button>
+        </div>
+        <div class="tiny">Move your mouse or finger. Press Space for a bonus burst after starting.</div>
+      </div>
+    </div>
+
+    <div id="gameOverScreen">
+      <div class="centerCard">
+        <h2 class="title" style="font-size:44px; margin-bottom: 10px;">Game Over</h2>
+        <div class="subtitle" id="gameOverText">The sea got you.</div>
+        <div class="row">
+          <button id="restartBtn">Play Again</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      const canvas = document.getElementById('game');
+      const ctx = canvas.getContext('2d', { alpha: false });
+      const scoreBox = document.getElementById('scoreBox');
+      const coordEl = document.getElementById('coord');
+      const statusEl = document.getElementById('status');
+      const livesEl = document.getElementById('lives');
+      const darkToggle = document.getElementById('darkToggle');
+      const autoToggle = document.getElementById('autoToggle');
+      const xyToggle = document.getElementById('xyToggle');
+      const spawnBtn = document.getElementById('spawnBtn');
+      const pauseBtn = document.getElementById('pauseBtn');
+      const resetBtn = document.getElementById('resetBtn');
+      const resumeBtn = document.getElementById('resumeBtn');
+      const startBtn = document.getElementById('startBtn');
+      const startScreen = document.getElementById('startScreen');
+      const pauseBanner = document.getElementById('pauseBanner');
+      const gameOverScreen = document.getElementById('gameOverScreen');
+      const restartBtn = document.getElementById('restartBtn');
+      const gameOverText = document.getElementById('gameOverText');
+
+      const STORE_KEY = 'gamegram_fishes_highscore_v3';
+      const state = {
+        w: 0,
+        h: 0,
+        dpr: 1,
+        pointerX: window.innerWidth * 0.5,
+        pointerY: window.innerHeight * 0.5,
+        playerX: window.innerWidth * 0.5,
+        playerY: window.innerHeight * 0.5,
+        playerVX: 0,
+        playerVY: 0,
+        facing: 1,
+        score: 0,
+        highScore: 0,
+        lives: 3,
+        combo: 1,
+        comboTimer: 0,
+        frenzyTimer: 0,
+        level: 1,
+        paused: false,
+        started: false,
+        gameOver: false,
+        autoSpawn: false,
+        showXY: false,
+        dark: false,
+        fish: [],
+        bubbles: [],
+        particles: [],
+        pearls: [],
+        obstacles: [],
+        currents: [],
+        lastTime: performance.now(),
+        spawnTimer: 0,
+        pearlTimer: 0,
+        obstacleTimer: 0,
+        bubbleTimer: 0,
+        currentTimer: 0,
+        shake: 0,
+        soundReady: false,
+        audioCtx: null,
+        master: null
+      };
+
+      const base = {
+        playerW: 82,
+        playerH: 56
+      };
+
+      function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+      function rand(min, max) { return Math.random() * (max - min) + min; }
+      function rndInt(min, max) { return Math.floor(rand(min, max + 1)); }
+      function chance(p) { return Math.random() < p; }
+      function hslColor() { return `hsl(${rndInt(0, 359)} ${rndInt(72, 95)}% ${rndInt(48, 66)}%)`; }
+
+      function loadHighScore() {
+        try {
+          const v = Number(localStorage.getItem(STORE_KEY));
+          return Number.isFinite(v) ? v : 0;
+        } catch {
+          return 0;
+        }
+      }
+
+      function saveHighScore(v) {
+        try { localStorage.setItem(STORE_KEY, String(v)); } catch {}
+      }
+
+      function resize() {
+        state.dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+        state.w = Math.floor(window.innerWidth);
+        state.h = Math.floor(window.innerHeight);
+        canvas.width = Math.floor(state.w * state.dpr);
+        canvas.height = Math.floor(state.h * state.dpr);
+        canvas.style.width = state.w + 'px';
+        canvas.style.height = state.h + 'px';
+        ctx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
+      }
+
+      function updateScoreUI() {
+        scoreBox.textContent = `Score: ${state.score} · High Score: ${state.highScore} · Level ${state.level}`;
+        livesEl.textContent = `Lives: ${state.lives}`;
+      }
+
+      function updateStatus(text) { statusEl.textContent = text; }
+
+      function setOverlay(screen, on) {
+        startScreen.style.display = screen === 'start' && on ? 'flex' : 'none';
+        pauseBanner.style.display = screen === 'pause' && on ? 'flex' : 'none';
+        gameOverScreen.style.display = screen === 'gameover' && on ? 'flex' : 'none';
+      }
+
+      function unlockAudio() {
+        if (state.soundReady) return;
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        state.audioCtx = new AudioContext();
+        state.master = state.audioCtx.createGain();
+        state.master.gain.value = 0.08;
+        state.master.connect(state.audioCtx.destination);
+        state.soundReady = true;
+      }
+
+      function tone(freq, dur = 0.12, type = 'sine', gain = 0.25, slideTo = null) {
+        if (!state.soundReady || !state.audioCtx || !state.master) return;
+        const ctxA = state.audioCtx;
+        const osc = ctxA.createOscillator();
+        const g = ctxA.createGain();
+        osc.type = type;
+        osc.frequency.value = freq;
+        if (slideTo !== null) osc.frequency.exponentialRampToValueAtTime(Math.max(20, slideTo), ctxA.currentTime + dur);
+        g.gain.value = gain;
+        g.gain.exponentialRampToValueAtTime(0.0001, ctxA.currentTime + dur);
+        osc.connect(g).connect(state.master);
+        osc.start();
+        osc.stop(ctxA.currentTime + dur);
+      }
+
+      function sfxEat() { tone(520 + state.combo * 30, 0.09, 'triangle', 0.22, 760); }
+      function sfxPearl() { tone(740, 0.12, 'sine', 0.18, 1100); tone(980, 0.08, 'triangle', 0.10, 1300); }
+      function sfxHit() { tone(180, 0.14, 'sawtooth', 0.22, 80); }
+      function sfxLevel() { tone(440, 0.10, 'square', 0.14, 660); tone(660, 0.12, 'triangle', 0.12, 880); }
+      function sfxStart() { tone(330, 0.08, 'sine', 0.10, 550); tone(550, 0.09, 'sine', 0.10, 770); }
+      function sfxGameOver() { tone(240, 0.16, 'sawtooth', 0.18, 120); tone(120, 0.24, 'sine', 0.16, 60); }
+      function sfxBurst() { tone(300, 0.05, 'square', 0.07, 200); }
+
+      function burst(x, y, count = 12, strong = false) {
+        for (let i = 0; i < count; i++) {
+          state.particles.push({
+            x,
+            y,
+            vx: Math.cos(rand(0, Math.PI * 2)) * rand(strong ? 70 : 35, strong ? 220 : 150),
+            vy: Math.sin(rand(0, Math.PI * 2)) * rand(strong ? 70 : 35, strong ? 220 : 150) - rand(10, 70),
+            life: 0,
+            ttl: rand(250, strong ? 900 : 650),
+            r: rand(strong ? 2 : 1, strong ? 5 : 3),
+            color: chance(0.2) ? 'rgba(246,201,69,.95)' : 'rgba(255,255,255,.92)'
+          });
+        }
+        for (let i = 0; i < Math.max(2, Math.floor(count * 0.4)); i++) {
+          state.bubbles.push({ x, y, r: rand(3, 10), speed: rand(20, 70), life: 0, ttl: rand(900, 1600), drift: rand(-10, 10) });
+        }
+      }
+
+      function spawnFish(count = 1) {
+        const speedBoost = 1 + (state.level - 1) * 0.06;
+        for (let i = 0; i < count; i++) {
+          const fromLeft = Math.random() < 0.5;
+          state.fish.push({
+            x: fromLeft ? -120 : state.w + 120,
+            y: rand(30, state.h - 30),
+            vx: (fromLeft ? rand(50, 170) : -rand(50, 170)) * speedBoost,
+            vy: rand(-20, 20),
+            size: rand(18, 58),
+            hue: rndInt(0, 359),
+            wiggle: rand(0.8, 2.6),
+            phase: rand(0, Math.PI * 2),
+            special: chance(0.08),
+          });
+        }
+      }
+
+      function spawnPearl() {
+        const edge = rndInt(0, 3);
+        let x, y, vx, vy;
+        if (edge === 0) { x = -20; y = rand(40, state.h - 40); vx = rand(40, 90); vy = rand(-18, 18); }
+        else if (edge === 1) { x = state.w + 20; y = rand(40, state.h - 40); vx = -rand(40, 90); vy = rand(-18, 18); }
+        else if (edge === 2) { x = rand(40, state.w - 40); y = -20; vx = rand(-18, 18); vy = rand(40, 90); }
+        else { x = rand(40, state.w - 40); y = state.h + 20; vx = rand(-18, 18); vy = -rand(40, 90); }
+        state.pearls.push({ x, y, vx, vy, r: 10, life: 0, ttl: rand(7000, 11000) });
+      }
+
+      function spawnObstacle() {
+        const kind = chance(0.5) ? 'mine' : 'jelly';
+        const fromLeft = chance(0.5);
+        const y = rand(60, state.h - 60);
+        state.obstacles.push({
+          kind,
+          x: fromLeft ? -80 : state.w + 80,
+          y,
+          vx: fromLeft ? rand(30, 90) : -rand(30, 90),
+          vy: rand(-10, 10),
+          r: kind === 'mine' ? rand(18, 30) : rand(24, 34),
+          phase: rand(0, Math.PI * 2),
+          life: 0,
+          ttl: rand(16000, 26000)
+        });
+      }
+
+      function spawnCurrent() {
+        state.currents.push({
+          x: chance(0.5) ? 0 : state.w,
+          y: rand(state.h * 0.2, state.h * 0.8),
+          w: rand(130, 260),
+          h: rand(70, 140),
+          vx: chance(0.5) ? rand(10, 25) : -rand(10, 25),
+          strength: rand(10, 28),
+          life: 0,
+          ttl: rand(5000, 9000)
+        });
+      }
+
+      function resetGame(full = true) {
+        state.score = 0;
+        state.combo = 1;
+        state.comboTimer = 0;
+        state.frenzyTimer = 0;
+        state.level = 1;
+        state.lives = 3;
+        state.shake = 0;
+        state.gameOver = false;
+        state.paused = false;
+        state.started = !full;
+        state.fish.length = 0;
+        state.bubbles.length = 0;
+        state.particles.length = 0;
+        state.pearls.length = 0;
+        state.obstacles.length = 0;
+        state.currents.length = 0;
+        state.playerX = state.w * 0.5;
+        state.playerY = state.h * 0.5;
+        state.playerVX = 0;
+        state.playerVY = 0;
+        state.facing = 1;
+        state.spawnTimer = 0;
+        state.pearlTimer = 0;
+        state.obstacleTimer = 0;
+        state.bubbleTimer = 0;
+        state.currentTimer = 0;
+        if (full) setOverlay('start', true);
+        setOverlay('pause', false);
+        setOverlay('gameover', false);
+        spawnFish(18);
+        updateScoreUI();
+        updateStatus('Fresh sea. Go wild.');
+      }
+
+      function setPause(v) {
+        if (!state.started || state.gameOver) return;
+        state.paused = v;
+        setOverlay('pause', v);
+        pauseBtn.textContent = v ? 'Resume' : 'Pause';
+        updateStatus(v ? 'Paused.' : 'Back in the water.');
+      }
+
+      function endGame() {
+        state.gameOver = true;
+        state.started = false;
+        setOverlay('gameover', true);
+        pauseBtn.textContent = 'Pause';
+        gameOverText.textContent = `Final score ${state.score} · Level ${state.level} · High score ${state.highScore}`;
+        updateStatus('The sea got you.');
+        sfxGameOver();
+      }
+
+      function applyLevel() {
+        const newLevel = 1 + Math.floor(state.score / 10);
+        if (newLevel !== state.level) {
+          state.level = newLevel;
+          sfxLevel();
+          updateStatus(`Level ${state.level} reached!`);
+        }
+      }
+
+      function updateHighScore() {
+        if (state.score > state.highScore) {
+          state.highScore = state.score;
+          saveHighScore(state.highScore);
+        }
+      }
+
+      function onPointerMove(x, y) {
+        state.pointerX = clamp(x, 0, state.w);
+        state.pointerY = clamp(y, 0, state.h);
+      }
+
+      function drawBackground(now) {
+        const g = ctx.createLinearGradient(0, 0, 0, state.h);
+        const root = getComputedStyle(document.documentElement);
+        g.addColorStop(0, root.getPropertyValue('--bg1').trim() || '#bfeaff');
+        g.addColorStop(1, root.getPropertyValue('--bg2').trim() || '#86cff9');
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, state.w, state.h);
+
+        ctx.save();
+        ctx.globalAlpha = state.dark ? 0.06 : 0.1;
+        for (let i = 0; i < 26; i++) {
+          const x = (i * 203 + now * 0.01 * (i % 3 + 1)) % (state.w + 200) - 100;
+          const y = (i * 97 + Math.sin(now * 0.0006 + i) * 28) % state.h;
+          ctx.fillStyle = i % 2 ? '#ffffff' : '#b8ebff';
+          ctx.beginPath();
+          ctx.arc(x, y, 1.8 + (i % 4) * 0.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      function drawFish(x, y, size, facing, color, glow = false) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.scale(facing, 1);
+        if (glow) {
+          ctx.shadowColor = 'rgba(255, 220, 90, .55)';
+          ctx.shadowBlur = 22;
+        } else {
+          ctx.shadowColor = 'rgba(0,0,0,.14)';
+          ctx.shadowBlur = 12;
+        }
+
+        const w = size * 1.45;
+        const h = size * 0.92;
+        const body = ctx.createLinearGradient(-w * 0.45, -h * 0.35, w * 0.4, h * 0.35);
+        body.addColorStop(0, 'rgba(255,255,255,.34)');
+        body.addColorStop(0.12, color);
+        body.addColorStop(1, 'rgba(0,0,0,.12)');
+
+        ctx.fillStyle = body;
+        ctx.beginPath();
+        ctx.moveTo(-w * 0.50, 0);
+        ctx.quadraticCurveTo(-w * 0.22, -h * 0.84, w * 0.18, -h * 0.56);
+        ctx.quadraticCurveTo(w * 0.55, -h * 0.42, w * 0.55, 0);
+        ctx.quadraticCurveTo(w * 0.55, h * 0.42, w * 0.18, h * 0.56);
+        ctx.quadraticCurveTo(-w * 0.22, h * 0.84, -w * 0.50, 0);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = 'rgba(255,255,255,.22)';
+        ctx.beginPath();
+        ctx.ellipse(-w * 0.05, -h * 0.10, w * 0.22, h * 0.15, -0.4, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(255,255,255,.9)';
+        ctx.beginPath();
+        ctx.arc(w * 0.30, -h * 0.16, size * 0.11, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#081521';
+        ctx.beginPath();
+        ctx.arc(w * 0.32, -h * 0.13, size * 0.05, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(255,255,255,.24)';
+        ctx.lineWidth = Math.max(1, size * 0.03);
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(-w * 0.15, -h * 0.18);
+        ctx.quadraticCurveTo(w * 0.01, -h * 0.28, w * 0.14, -h * 0.24);
+        ctx.stroke();
+
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(-w * 0.52, 0);
+        ctx.lineTo(-w * 0.82, -h * 0.30);
+        ctx.lineTo(-w * 0.75, 0);
+        ctx.lineTo(-w * 0.82, h * 0.30);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function drawPearl(p) {
+        ctx.save();
+        const glow = ctx.createRadialGradient(p.x, p.y, 2, p.x, p.y, 26);
+        glow.addColorStop(0, 'rgba(255,255,255,.95)');
+        glow.addColorStop(0.35, 'rgba(246,201,69,.9)');
+        glow.addColorStop(1, 'rgba(246,201,69,0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 26, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#f6c945';
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,.85)';
+        ctx.beginPath();
+        ctx.arc(p.x - 3, p.y - 4, p.r * 0.35, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function drawBubble(b) {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255,255,255,.55)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawObstacle(o) {
+        ctx.save();
+        ctx.translate(o.x, o.y);
+        if (o.kind === 'mine') {
+          ctx.shadowColor = 'rgba(0,0,0,.2)';
+          ctx.shadowBlur = 14;
+          ctx.fillStyle = '#233445';
+          ctx.beginPath();
+          ctx.arc(0, 0, o.r, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#6ec5ff';
+          ctx.lineWidth = 2;
+          for (let i = 0; i < 8; i++) {
+            const a = i * Math.PI / 4 + o.phase;
+            ctx.beginPath();
+            ctx.moveTo(Math.cos(a) * (o.r + 2), Math.sin(a) * (o.r + 2));
+            ctx.lineTo(Math.cos(a) * (o.r + 12), Math.sin(a) * (o.r + 12));
+            ctx.stroke();
+          }
+          ctx.fillStyle = '#ff6b6b';
+          ctx.beginPath();
+          ctx.arc(0, 0, o.r * 0.32, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          const sway = Math.sin(o.phase) * 4;
+          ctx.shadowColor = 'rgba(0,0,0,.15)';
+          ctx.shadowBlur = 10;
+          ctx.fillStyle = '#7c3aed';
+          ctx.beginPath();
+          ctx.ellipse(0, 0, o.r * 0.95, o.r * 1.25 + sway * 0.1, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = 'rgba(255,255,255,.35)';
+          ctx.beginPath();
+          ctx.ellipse(-o.r * 0.25, -o.r * 0.35, o.r * 0.23, o.r * 0.34, 0.2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      function drawCurrent(c) {
+        ctx.save();
+        ctx.globalAlpha = 0.08;
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.roundRect(c.x, c.y, c.w, c.h, 999);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function rectLikeHit(ax, ay, ar, bx, by, br) {
+        const dx = ax - bx;
+        const dy = ay - by;
+        const rr = ar + br;
+        return dx * dx + dy * dy <= rr * rr;
+      }
+
+      function maybeLevelUp() {
+        const nextLevel = 1 + Math.floor(state.score / 10);
+        if (nextLevel !== state.level) {
+          state.level = nextLevel;
+          sfxLevel();
+          updateStatus(`Level ${state.level} reached!`);
+        }
+      }
+
+      function hitObstacle() {
+        state.lives -= 1;
+        state.combo = 1;
+        state.comboTimer = 0;
+        state.frenzyTimer = 0;
+        state.shake = 16;
+        sfxHit();
+        burst(state.playerX, state.playerY, 22, true);
+        updateScoreUI();
+        if (state.lives <= 0) endGame();
+        else updateStatus('Ouch! Watch the hazards.');
+      }
+
+      function updateControls() {
+        state.dark = darkToggle.checked;
+        document.body.classList.toggle('dark', state.dark);
+        state.autoSpawn = autoToggle.checked;
+        state.showXY = xyToggle.checked;
+      }
+
+      window.addEventListener('pointermove', e => onPointerMove(e.clientX, e.clientY), { passive: true });
+      window.addEventListener('pointerdown', e => {
+        unlockAudio();
+        onPointerMove(e.clientX, e.clientY);
+        if (!state.started && !state.gameOver) {
+          return;
+        }
+        if (state.started && !state.paused) {
+          burst(e.clientX, e.clientY, 14, true);
+          spawnFish(5);
+          sfxBurst();
+        }
+      }, { passive: true });
+      window.addEventListener('touchmove', e => {
+        if (e.touches && e.touches[0]) onPointerMove(e.touches[0].clientX, e.touches[0].clientY);
+      }, { passive: true });
+      window.addEventListener('resize', resize);
+      window.addEventListener('keydown', e => {
+        unlockAudio();
+        if (e.key === 'p' || e.key === 'P') setPause(!state.paused);
+        if (e.key === 'r' || e.key === 'R') { resetGame(!state.started); sfxStart(); }
+        if (e.key === ' ') {
+          e.preventDefault();
+          if (state.started && !state.paused && !state.gameOver) {
+            burst(state.pointerX, state.pointerY, 12, true);
+            spawnFish(4);
+            sfxBurst();
+          }
+        }
+      });
+
+      darkToggle.addEventListener('change', updateControls);
+      autoToggle.addEventListener('change', updateControls);
+      xyToggle.addEventListener('change', updateControls);
+
+      spawnBtn.addEventListener('click', () => {
+        unlockAudio();
+        if (!state.started || state.gameOver || state.paused) return;
+        spawnFish(10);
+        burst(state.pointerX, state.pointerY, 10, true);
+        sfxBurst();
+      });
+      pauseBtn.addEventListener('click', () => setPause(!state.paused));
+      resumeBtn.addEventListener('click', () => setPause(false));
+      resetBtn.addEventListener('click', () => { unlockAudio(); resetGame(false); sfxStart(); });
+      startBtn.addEventListener('click', () => {
+        unlockAudio();
+        state.started = true;
+        state.paused = false;
+        state.gameOver = false;
+        setOverlay('start', false);
+        setOverlay('pause', false);
+        setOverlay('gameover', false);
+        pauseBtn.textContent = 'Pause';
+        updateStatus('Swim!');
+        sfxStart();
+      });
+      restartBtn.addEventListener('click', () => {
+        unlockAudio();
+        resetGame(false);
+        state.started = true;
+        setOverlay('gameover', false);
+        sfxStart();
+      });
+
+      state.highScore = loadHighScore();
+      resize();
+      updateControls();
+      resetGame(true);
+      updateScoreUI();
+
+      function loop(now) {
+        const dt = Math.min(32, now - state.lastTime);
+        state.lastTime = now;
+
+        drawBackground(now);
+
+        if (state.started && !state.paused && !state.gameOver) {
+          const t = dt / 16.666;
+          state.spawnTimer += dt;
+          state.pearlTimer += dt;
+          state.obstacleTimer += dt;
+          state.bubbleTimer += dt;
+          state.currentTimer += dt;
+
+          const fishSpawnDelay = Math.max(650, 1400 - state.level * 95);
+          const pearlDelay = Math.max(7000, 12000 - state.level * 180);
+          const obstacleDelay = Math.max(1300, 2600 - state.level * 120);
+          const currentDelay = Math.max(8000, 15000 - state.level * 220);
+
+          if (state.autoSpawn && state.spawnTimer > fishSpawnDelay) {
+            state.spawnTimer = 0;
+            spawnFish(2 + Math.floor(state.level / 3));
+          }
+          if (state.pearlTimer > pearlDelay) {
+            state.pearlTimer = 0;
+            spawnPearl();
+          }
+          if (state.obstacleTimer > obstacleDelay) {
+            state.obstacleTimer = 0;
+            spawnObstacle();
+          }
+          if (state.currentTimer > currentDelay) {
+            state.currentTimer = 0;
+            if (chance(0.6)) spawnCurrent();
+          }
+          if (state.bubbleTimer > 220) {
+            state.bubbleTimer = 0;
+            state.bubbles.push({ x: state.playerX - 26, y: state.playerY + 8, r: rand(4, 10), speed: rand(16, 48), life: 0, ttl: rand(900, 1500), drift: rand(-10, 10) });
+          }
+
+          if (state.comboTimer > 0) state.comboTimer -= dt;
+          else state.combo = 1;
+          if (state.frenzyTimer > 0) state.frenzyTimer -= dt;
+
+          const follow = state.frenzyTimer > 0 ? 0.18 : 0.11;
+          const prevX = state.playerX;
+          state.playerX += (state.pointerX - state.playerX) * follow * t;
+          state.playerY += (state.pointerY - state.playerY) * follow * t;
+          state.playerVX = state.playerX - prevX;
+          if (Math.abs(state.playerVX) > 0.1) state.facing = state.playerVX < 0 ? -1 : 1;
+
+          for (const c of state.currents) drawCurrent(c);
+
+          const growth = 1 + state.score * 0.0035;
+          const playerR = Math.max(base.playerW, base.playerH) * growth * 0.42;
+
+          for (let i = state.currents.length - 1; i >= 0; i--) {
+            const c = state.currents[i];
+            c.life += dt;
+            c.x += c.vx * t * 0.6;
+            if (c.life > c.ttl || c.x < -c.w - 20 || c.x > state.w + c.w + 20) {
+              state.currents.splice(i, 1);
+            } else {
+              const inside = state.playerX > c.x && state.playerX < c.x + c.w && state.playerY > c.y && state.playerY < c.y + c.h;
+              if (inside) {
+                state.playerX += Math.sign(c.vx || 1) * c.strength * 0.18 * t;
+                state.playerY += Math.sin(now * 0.004 + i) * 0.2 * t;
+              }
+            }
+          }
+
+          for (let i = state.pearls.length - 1; i >= 0; i--) {
+            const p = state.pearls[i];
+            p.life += dt;
+            p.x += p.vx * t * 0.016;
+            p.y += p.vy * t * 0.016;
+            if (p.life > p.ttl || p.x < -60 || p.x > state.w + 60 || p.y < -60 || p.y > state.h + 60) {
+              state.pearls.splice(i, 1);
+              continue;
+            }
+            if (rectLikeHit(state.playerX, state.playerY, playerR, p.x, p.y, 14)) {
+              state.score += 8;
+              state.combo = Math.min(9, state.combo + 1);
+              state.comboTimer = 1800;
+              state.frenzyTimer = 6000;
+              state.shake = 5;
+              burst(p.x, p.y, 22, true);
+              state.pearls.splice(i, 1);
+              updateHighScore();
+              updateScoreUI();
+              sfxPearl();
+              updateStatus('Pearl bonus! Frenzy mode.');
+              continue;
+            }
+            drawPearl(p);
+          }
+
+          for (let i = state.obstacles.length - 1; i >= 0; i--) {
+            const o = state.obstacles[i];
+            o.life += dt;
+            o.phase += dt * 0.01;
+            o.x += o.vx * t * 0.016;
+            o.y += o.vy * t * 0.016 + (o.kind === 'jelly' ? Math.sin(o.phase * 2) * 0.25 * t : 0);
+            if (o.life > o.ttl || o.x < -150 || o.x > state.w + 150) {
+              state.obstacles.splice(i, 1);
+              continue;
+            }
+            if (rectLikeHit(state.playerX, state.playerY, playerR, o.x, o.y, o.r * 0.95)) {
+              state.obstacles.splice(i, 1);
+              hitObstacle();
+              continue;
+            }
+            drawObstacle(o);
+          }
+
+          for (let i = state.fish.length - 1; i >= 0; i--) {
+            const f = state.fish[i];
+            f.phase += f.wiggle * dt * 0.03;
+            const speedBoost = state.frenzyTimer > 0 ? 1.18 : 1;
+            f.x += f.vx * t * 0.016 * speedBoost;
+            f.y += (f.vy + Math.sin(f.phase) * 26) * t * 0.016;
+            if (f.y < 26) { f.y = 26; f.vy *= -1; }
+            else if (f.y > state.h - 26) { f.y = state.h - 26; f.vy *= -1; }
+            const r = f.size * 0.72;
+            if (f.x < -160 || f.x > state.w + 160) {
+              state.fish.splice(i, 1);
+              continue;
+            }
+            if (rectLikeHit(state.playerX, state.playerY, playerR, f.x, f.y, r)) {
+              const basePoints = f.special ? 4 : 1;
+              state.combo = Math.min(12, (state.comboTimer > 0 ? state.combo + 1 : 1));
+              state.comboTimer = 1500;
+              state.score += basePoints * state.combo;
+              state.shake = Math.min(14, state.shake + 2.2);
+              burst(f.x, f.y, f.special ? 18 : 10, f.special);
+              state.fish.splice(i, 1);
+              updateHighScore();
+              updateScoreUI();
+              sfxEat();
+              if (f.special) {
+                state.frenzyTimer = 4500;
+                updateStatus('Special fish! Big combo energy.');
+              }
+              continue;
+            }
+            drawFish(f.x, f.y, f.size, f.vx < 0 ? -1 : 1, `hsl(${f.hue} 85% 58%)`, f.special);
+          }
+
+          for (let i = state.bubbles.length - 1; i >= 0; i--) {
+            const b = state.bubbles[i];
+            b.life += dt;
+            const p = b.life / b.ttl;
+            if (p >= 1) { state.bubbles.splice(i, 1); continue; }
+            b.y -= (b.speed * t) * 0.55;
+            b.x += Math.sin(now * 0.002 + i) * 0.12 + b.drift * 0.01 * t;
+            b.r *= 1.0005;
+            ctx.globalAlpha = 1 - p;
+            drawBubble(b);
+            ctx.globalAlpha = 1;
+          }
+
+          for (let i = state.particles.length - 1; i >= 0; i--) {
+            const p = state.particles[i];
+            p.life += dt;
+            const lifeT = p.life / p.ttl;
+            if (lifeT >= 1) { state.particles.splice(i, 1); continue; }
+            p.vy += 820 * t * 0.016;
+            p.x += p.vx * t * 0.016;
+            p.y += p.vy * t * 0.016;
+            ctx.globalAlpha = 1 - lifeT;
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r * (1 - lifeT * 0.35), 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+          }
+
+          ctx.save();
+          if (state.shake > 0) {
+            const s = state.shake;
+            ctx.translate(rand(-s, s), rand(-s, s));
+            state.shake *= 0.9;
+            if (state.shake < 0.15) state.shake = 0;
+          }
+          drawFish(state.playerX, state.playerY, growth * 64, state.facing, state.frenzyTimer > 0 ? '#ffd166' : '#ff9f3d', state.frenzyTimer > 0);
+          ctx.restore();
+
+          maybeLevelUp();
+          updateScoreUI();
+          if (state.score > 0) updateHighScore();
+
+          if (state.showXY) coordEl.textContent = `X: ${Math.round(state.pointerX)}, Y: ${Math.round(state.pointerY)} | BGfishies: ${state.fish.length} | Mines: ${state.obstacles.length}`;
+          else coordEl.textContent = '';
+
+          const comboText = state.combo > 1 ? ` · Combo x${state.combo}` : '';
+          const frenzyText = state.frenzyTimer > 0 ? ' · Frenzy!' : '';
+          updateStatus(`Eating streak${comboText}${frenzyText}`);
+        } else {
+          for (const c of state.currents) drawCurrent(c);
+          for (const p of state.pearls) drawPearl(p);
+          for (const o of state.obstacles) drawObstacle(o);
+          for (const f of state.fish) drawFish(f.x, f.y, f.size, f.vx < 0 ? -1 : 1, `hsl(${f.hue} 85% 58%)`, f.special);
+          for (const b of state.bubbles) drawBubble(b);
+          for (const p of state.particles) {
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          drawFish(state.playerX, state.playerY, (1 + state.score * 0.0035) * 64, state.facing, '#ff9f3d', false);
+          if (state.showXY) coordEl.textContent = `X: ${Math.round(state.pointerX)}, Y: ${Math.round(state.pointerY)} | BGfishies: ${state.fish.length} | Mines: ${state.obstacles.length}`;
+          else coordEl.textContent = '';
+        }
+
+        requestAnimationFrame(loop);
+      }
+
+      spawnBtn.click();
+      requestAnimationFrame(loop);
+    })();
+  </script>
+</body>
+<
