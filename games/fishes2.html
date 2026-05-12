@@ -19,9 +19,6 @@
       --text:#07324d;
       --accent:#1d6ea4;
       --shadow: rgba(0,0,0,.14);
-      --good:#17a34a;
-      --warn:#f59e0b;
-      --bad:#ef4444;
     }
     body.dark{
       --bg1:#09131c;
@@ -32,7 +29,6 @@
       --accent:#8ccfff;
       --shadow: rgba(0,0,0,.34);
     }
-
     html, body {
       margin: 0;
       width: 100%;
@@ -44,7 +40,6 @@
       user-select: none;
       touch-action: none;
     }
-
     #game {
       position: fixed;
       inset: 0;
@@ -52,14 +47,12 @@
       height: 100%;
       display: block;
     }
-
     #ui {
       position: fixed;
       inset: 0;
       pointer-events: none;
       z-index: 5;
     }
-
     .panel {
       position: absolute;
       background: var(--panel);
@@ -70,7 +63,6 @@
       -webkit-backdrop-filter: blur(8px);
       pointer-events: auto;
     }
-
     #topLeft {
       top: 12px;
       left: 12px;
@@ -80,7 +72,6 @@
       font-size: 13px;
       min-width: 210px;
     }
-
     #scoreBox {
       top: 12px;
       left: 50%;
@@ -91,7 +82,6 @@
       text-align: center;
       min-width: 250px;
     }
-
     #help {
       top: 12px;
       right: 12px;
@@ -101,7 +91,6 @@
       line-height: 1.35;
       opacity: .92;
     }
-
     #bottomLeft {
       left: 12px;
       bottom: 12px;
@@ -109,7 +98,6 @@
       font-size: 13px;
       min-width: 190px;
     }
-
     #bottomRight {
       right: 12px;
       bottom: 12px;
@@ -119,7 +107,6 @@
       flex-wrap: wrap;
       justify-content: flex-end;
     }
-
     button {
       appearance: none;
       border: 0;
@@ -132,7 +119,6 @@
       cursor: pointer;
     }
     button:active { transform: translateY(1px); }
-
     label {
       display: flex;
       align-items: center;
@@ -143,7 +129,6 @@
       accent-color: var(--accent);
       transform: scale(1.05);
     }
-
     #pauseBanner, #startScreen, #gameOverScreen {
       position: absolute;
       inset: 0;
@@ -155,7 +140,6 @@
       backdrop-filter: blur(3px);
       -webkit-backdrop-filter: blur(3px);
     }
-
     .centerCard {
       width: min(560px, calc(100vw - 24px));
       padding: 24px;
@@ -166,20 +150,17 @@
       color: var(--text);
       text-align: center;
     }
-
     .title {
       font-size: clamp(34px, 7vw, 64px);
       margin: 0 0 8px;
       letter-spacing: .04em;
       font-weight: 900;
     }
-
     .subtitle {
       margin: 0 0 18px;
       font-size: 15px;
       line-height: 1.5;
     }
-
     .row {
       display: flex;
       gap: 12px;
@@ -187,13 +168,11 @@
       flex-wrap: wrap;
       margin-top: 18px;
     }
-
     .tiny {
       font-size: 12px;
       opacity: .82;
       margin-top: 12px;
     }
-
     .pill {
       display: inline-flex;
       align-items: center;
@@ -204,8 +183,6 @@
       margin: 4px 6px 0 0;
       font-size: 12px;
     }
-
-    #pauseBanner .centerCard { font-size: 20px; }
   </style>
 </head>
 <body>
@@ -302,7 +279,7 @@
       const restartBtn = document.getElementById('restartBtn');
       const gameOverText = document.getElementById('gameOverText');
 
-      const STORE_KEY = 'gamegram_fishes_highscore_v3';
+      const STORE_KEY = 'gamegram_fishes_highscore_v4';
       const state = {
         w: 0,
         h: 0,
@@ -312,7 +289,6 @@
         playerX: window.innerWidth * 0.5,
         playerY: window.innerHeight * 0.5,
         playerVX: 0,
-        playerVY: 0,
         facing: 1,
         score: 0,
         highScore: 0,
@@ -321,8 +297,8 @@
         comboTimer: 0,
         frenzyTimer: 0,
         level: 1,
-        paused: false,
         started: false,
+        paused: false,
         gameOver: false,
         autoSpawn: false,
         showXY: false,
@@ -345,10 +321,7 @@
         master: null
       };
 
-      const base = {
-        playerW: 82,
-        playerH: 56
-      };
+      const base = { playerW: 82, playerH: 56 };
 
       function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
       function rand(min, max) { return Math.random() * (max - min) + min; }
@@ -364,10 +337,56 @@
           return 0;
         }
       }
-
       function saveHighScore(v) {
         try { localStorage.setItem(STORE_KEY, String(v)); } catch {}
       }
+      function updateScoreUI() {
+        scoreBox.textContent = `Score: ${state.score} · High Score: ${state.highScore} · Level ${state.level}`;
+        livesEl.textContent = `Lives: ${state.lives}`;
+      }
+      function updateStatus(text) { statusEl.textContent = text; }
+      function setOverlay(which, on) {
+        startScreen.style.display = which === 'start' && on ? 'flex' : 'none';
+        pauseBanner.style.display = which === 'pause' && on ? 'flex' : 'none';
+        gameOverScreen.style.display = which === 'gameover' && on ? 'flex' : 'none';
+      }
+
+      function unlockAudio() {
+        if (state.soundReady) return;
+        try {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (!AudioContext) return;
+          state.audioCtx = new AudioContext();
+          state.master = state.audioCtx.createGain();
+          state.master.gain.value = 0.08;
+          state.master.connect(state.audioCtx.destination);
+          state.soundReady = true;
+        } catch {
+          state.soundReady = false;
+        }
+      }
+
+      function tone(freq, dur = 0.12, type = 'sine', gain = 0.25, slideTo = null) {
+        if (!state.soundReady || !state.audioCtx || !state.master) return;
+        const ac = state.audioCtx;
+        const osc = ac.createOscillator();
+        const g = ac.createGain();
+        osc.type = type;
+        osc.frequency.value = freq;
+        if (slideTo !== null) osc.frequency.exponentialRampToValueAtTime(Math.max(20, slideTo), ac.currentTime + dur);
+        g.gain.value = gain;
+        g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + dur);
+        osc.connect(g).connect(state.master);
+        osc.start();
+        osc.stop(ac.currentTime + dur);
+      }
+      const sfxEat = () => tone(520 + state.combo * 30, 0.09, 'triangle', 0.22, 760);
+      const sfxPearl = () => { tone(740, 0.12, 'sine', 0.18, 1100); tone(980, 0.08, 'triangle', 0.10, 1300); };
+      const sfxHit = () => tone(180, 0.14, 'sawtooth', 0.22, 80);
+      const sfxLevel = () => { tone(440, 0.10, 'square', 0.14, 660); tone(660, 0.12, 'triangle', 0.12, 880); };
+      const sfxStart = () => { tone(330, 0.08, 'sine', 0.10, 550); tone(550, 0.09, 'sine', 0.10, 770); };
+      const sfxGameOver = () => { tone(240, 0.16, 'sawtooth', 0.18, 120); tone(120, 0.24, 'sine', 0.16, 60); };
+      const sfxBurst = () => tone(300, 0.05, 'square', 0.07, 200);
 
       function resize() {
         state.dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
@@ -380,58 +399,10 @@
         ctx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
       }
 
-      function updateScoreUI() {
-        scoreBox.textContent = `Score: ${state.score} · High Score: ${state.highScore} · Level ${state.level}`;
-        livesEl.textContent = `Lives: ${state.lives}`;
-      }
-
-      function updateStatus(text) { statusEl.textContent = text; }
-
-      function setOverlay(screen, on) {
-        startScreen.style.display = screen === 'start' && on ? 'flex' : 'none';
-        pauseBanner.style.display = screen === 'pause' && on ? 'flex' : 'none';
-        gameOverScreen.style.display = screen === 'gameover' && on ? 'flex' : 'none';
-      }
-
-      function unlockAudio() {
-        if (state.soundReady) return;
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        if (!AudioContext) return;
-        state.audioCtx = new AudioContext();
-        state.master = state.audioCtx.createGain();
-        state.master.gain.value = 0.08;
-        state.master.connect(state.audioCtx.destination);
-        state.soundReady = true;
-      }
-
-      function tone(freq, dur = 0.12, type = 'sine', gain = 0.25, slideTo = null) {
-        if (!state.soundReady || !state.audioCtx || !state.master) return;
-        const ctxA = state.audioCtx;
-        const osc = ctxA.createOscillator();
-        const g = ctxA.createGain();
-        osc.type = type;
-        osc.frequency.value = freq;
-        if (slideTo !== null) osc.frequency.exponentialRampToValueAtTime(Math.max(20, slideTo), ctxA.currentTime + dur);
-        g.gain.value = gain;
-        g.gain.exponentialRampToValueAtTime(0.0001, ctxA.currentTime + dur);
-        osc.connect(g).connect(state.master);
-        osc.start();
-        osc.stop(ctxA.currentTime + dur);
-      }
-
-      function sfxEat() { tone(520 + state.combo * 30, 0.09, 'triangle', 0.22, 760); }
-      function sfxPearl() { tone(740, 0.12, 'sine', 0.18, 1100); tone(980, 0.08, 'triangle', 0.10, 1300); }
-      function sfxHit() { tone(180, 0.14, 'sawtooth', 0.22, 80); }
-      function sfxLevel() { tone(440, 0.10, 'square', 0.14, 660); tone(660, 0.12, 'triangle', 0.12, 880); }
-      function sfxStart() { tone(330, 0.08, 'sine', 0.10, 550); tone(550, 0.09, 'sine', 0.10, 770); }
-      function sfxGameOver() { tone(240, 0.16, 'sawtooth', 0.18, 120); tone(120, 0.24, 'sine', 0.16, 60); }
-      function sfxBurst() { tone(300, 0.05, 'square', 0.07, 200); }
-
       function burst(x, y, count = 12, strong = false) {
         for (let i = 0; i < count; i++) {
           state.particles.push({
-            x,
-            y,
+            x, y,
             vx: Math.cos(rand(0, Math.PI * 2)) * rand(strong ? 70 : 35, strong ? 220 : 150),
             vy: Math.sin(rand(0, Math.PI * 2)) * rand(strong ? 70 : 35, strong ? 220 : 150) - rand(10, 70),
             life: 0,
@@ -458,7 +429,7 @@
             hue: rndInt(0, 359),
             wiggle: rand(0.8, 2.6),
             phase: rand(0, Math.PI * 2),
-            special: chance(0.08),
+            special: chance(0.08)
           });
         }
       }
@@ -476,11 +447,10 @@
       function spawnObstacle() {
         const kind = chance(0.5) ? 'mine' : 'jelly';
         const fromLeft = chance(0.5);
-        const y = rand(60, state.h - 60);
         state.obstacles.push({
           kind,
           x: fromLeft ? -80 : state.w + 80,
-          y,
+          y: rand(60, state.h - 60),
           vx: fromLeft ? rand(30, 90) : -rand(30, 90),
           vy: rand(-10, 10),
           r: kind === 'mine' ? rand(18, 30) : rand(24, 34),
@@ -503,7 +473,7 @@
         });
       }
 
-      function resetGame(full = true) {
+      function resetGame(showStart = true) {
         state.score = 0;
         state.combo = 1;
         state.comboTimer = 0;
@@ -511,9 +481,9 @@
         state.level = 1;
         state.lives = 3;
         state.shake = 0;
-        state.gameOver = false;
+        state.started = false;
         state.paused = false;
-        state.started = !full;
+        state.gameOver = false;
         state.fish.length = 0;
         state.bubbles.length = 0;
         state.particles.length = 0;
@@ -523,19 +493,31 @@
         state.playerX = state.w * 0.5;
         state.playerY = state.h * 0.5;
         state.playerVX = 0;
-        state.playerVY = 0;
         state.facing = 1;
         state.spawnTimer = 0;
         state.pearlTimer = 0;
         state.obstacleTimer = 0;
         state.bubbleTimer = 0;
         state.currentTimer = 0;
-        if (full) setOverlay('start', true);
+        setOverlay('start', showStart);
         setOverlay('pause', false);
         setOverlay('gameover', false);
         spawnFish(18);
         updateScoreUI();
         updateStatus('Fresh sea. Go wild.');
+      }
+
+      function beginGame() {
+        unlockAudio();
+        state.started = true;
+        state.paused = false;
+        state.gameOver = false;
+        setOverlay('start', false);
+        setOverlay('pause', false);
+        setOverlay('gameover', false);
+        pauseBtn.textContent = 'Pause';
+        updateStatus('Swim!');
+        sfxStart();
       }
 
       function setPause(v) {
@@ -556,20 +538,18 @@
         sfxGameOver();
       }
 
-      function applyLevel() {
-        const newLevel = 1 + Math.floor(state.score / 10);
-        if (newLevel !== state.level) {
-          state.level = newLevel;
-          sfxLevel();
-          updateStatus(`Level ${state.level} reached!`);
-        }
-      }
-
       function updateHighScore() {
         if (state.score > state.highScore) {
           state.highScore = state.score;
           saveHighScore(state.highScore);
         }
+      }
+
+      function updateControls() {
+        state.dark = darkToggle.checked;
+        document.body.classList.toggle('dark', state.dark);
+        state.autoSpawn = autoToggle.checked;
+        state.showXY = xyToggle.checked;
       }
 
       function onPointerMove(x, y) {
@@ -586,7 +566,7 @@
         ctx.fillRect(0, 0, state.w, state.h);
 
         ctx.save();
-        ctx.globalAlpha = state.dark ? 0.06 : 0.1;
+        ctx.globalAlpha = state.dark ? 0.06 : 0.10;
         for (let i = 0; i < 26; i++) {
           const x = (i * 203 + now * 0.01 * (i % 3 + 1)) % (state.w + 200) - 100;
           const y = (i * 97 + Math.sin(now * 0.0006 + i) * 28) % state.h;
@@ -602,13 +582,8 @@
         ctx.save();
         ctx.translate(x, y);
         ctx.scale(facing, 1);
-        if (glow) {
-          ctx.shadowColor = 'rgba(255, 220, 90, .55)';
-          ctx.shadowBlur = 22;
-        } else {
-          ctx.shadowColor = 'rgba(0,0,0,.14)';
-          ctx.shadowBlur = 12;
-        }
+        ctx.shadowColor = glow ? 'rgba(255, 220, 90, .55)' : 'rgba(0,0,0,.14)';
+        ctx.shadowBlur = glow ? 22 : 12;
 
         const w = size * 1.45;
         const h = size * 0.92;
@@ -737,12 +712,21 @@
         ctx.globalAlpha = 0.08;
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
-        ctx.roundRect(c.x, c.y, c.w, c.h, 999);
+        ctx.moveTo(c.x + 18, c.y);
+        ctx.lineTo(c.x + c.w - 18, c.y);
+        ctx.quadraticCurveTo(c.x + c.w, c.y, c.x + c.w, c.y + 18);
+        ctx.lineTo(c.x + c.w, c.y + c.h - 18);
+        ctx.quadraticCurveTo(c.x + c.w, c.y + c.h, c.x + c.w - 18, c.y + c.h);
+        ctx.lineTo(c.x + 18, c.y + c.h);
+        ctx.quadraticCurveTo(c.x, c.y + c.h, c.x, c.y + c.h - 18);
+        ctx.lineTo(c.x, c.y + 18);
+        ctx.quadraticCurveTo(c.x, c.y, c.x + 18, c.y);
+        ctx.closePath();
         ctx.fill();
         ctx.restore();
       }
 
-      function rectLikeHit(ax, ay, ar, bx, by, br) {
+      function hit(ax, ay, ar, bx, by, br) {
         const dx = ax - bx;
         const dy = ay - by;
         const rr = ar + br;
@@ -771,21 +755,15 @@
         else updateStatus('Ouch! Watch the hazards.');
       }
 
-      function updateControls() {
-        state.dark = darkToggle.checked;
-        document.body.classList.toggle('dark', state.dark);
-        state.autoSpawn = autoToggle.checked;
-        state.showXY = xyToggle.checked;
-      }
-
       window.addEventListener('pointermove', e => onPointerMove(e.clientX, e.clientY), { passive: true });
       window.addEventListener('pointerdown', e => {
         unlockAudio();
         onPointerMove(e.clientX, e.clientY);
         if (!state.started && !state.gameOver) {
+          beginGame();
           return;
         }
-        if (state.started && !state.paused) {
+        if (state.started && !state.paused && !state.gameOver) {
           burst(e.clientX, e.clientY, 14, true);
           spawnFish(5);
           sfxBurst();
@@ -797,6 +775,11 @@
       window.addEventListener('resize', resize);
       window.addEventListener('keydown', e => {
         unlockAudio();
+        if ((e.key === 'Enter' || e.key === ' ' || e.key === 'p' || e.key === 'P') && !state.started && !state.gameOver) {
+          beginGame();
+          if (e.key !== 'p' && e.key !== 'P') e.preventDefault();
+          return;
+        }
         if (e.key === 'p' || e.key === 'P') setPause(!state.paused);
         if (e.key === 'r' || e.key === 'R') { resetGame(!state.started); sfxStart(); }
         if (e.key === ' ') {
@@ -815,33 +798,18 @@
 
       spawnBtn.addEventListener('click', () => {
         unlockAudio();
-        if (!state.started || state.gameOver || state.paused) return;
-        spawnFish(10);
-        burst(state.pointerX, state.pointerY, 10, true);
-        sfxBurst();
+        if (!state.started && !state.gameOver) beginGame();
+        if (state.started && !state.paused && !state.gameOver) {
+          spawnFish(10);
+          burst(state.pointerX, state.pointerY, 10, true);
+          sfxBurst();
+        }
       });
       pauseBtn.addEventListener('click', () => setPause(!state.paused));
       resumeBtn.addEventListener('click', () => setPause(false));
-      resetBtn.addEventListener('click', () => { unlockAudio(); resetGame(false); sfxStart(); });
-      startBtn.addEventListener('click', () => {
-        unlockAudio();
-        state.started = true;
-        state.paused = false;
-        state.gameOver = false;
-        setOverlay('start', false);
-        setOverlay('pause', false);
-        setOverlay('gameover', false);
-        pauseBtn.textContent = 'Pause';
-        updateStatus('Swim!');
-        sfxStart();
-      });
-      restartBtn.addEventListener('click', () => {
-        unlockAudio();
-        resetGame(false);
-        state.started = true;
-        setOverlay('gameover', false);
-        sfxStart();
-      });
+      resetBtn.addEventListener('click', () => { unlockAudio(); resetGame(true); sfxStart(); });
+      startBtn.addEventListener('click', beginGame);
+      restartBtn.addEventListener('click', () => { unlockAudio(); resetGame(false); beginGame(); });
 
       state.highScore = loadHighScore();
       resize();
@@ -852,10 +820,10 @@
       function loop(now) {
         const dt = Math.min(32, now - state.lastTime);
         state.lastTime = now;
-
         drawBackground(now);
 
-        if (state.started && !state.paused && !state.gameOver) {
+        const active = !state.paused && !state.gameOver;
+        if (active) {
           const t = dt / 16.666;
           state.spawnTimer += dt;
           state.pearlTimer += dt;
@@ -872,18 +840,9 @@
             state.spawnTimer = 0;
             spawnFish(2 + Math.floor(state.level / 3));
           }
-          if (state.pearlTimer > pearlDelay) {
-            state.pearlTimer = 0;
-            spawnPearl();
-          }
-          if (state.obstacleTimer > obstacleDelay) {
-            state.obstacleTimer = 0;
-            spawnObstacle();
-          }
-          if (state.currentTimer > currentDelay) {
-            state.currentTimer = 0;
-            if (chance(0.6)) spawnCurrent();
-          }
+          if (state.pearlTimer > pearlDelay) { state.pearlTimer = 0; spawnPearl(); }
+          if (state.obstacleTimer > obstacleDelay) { state.obstacleTimer = 0; spawnObstacle(); }
+          if (state.currentTimer > currentDelay) { state.currentTimer = 0; if (chance(0.6)) spawnCurrent(); }
           if (state.bubbleTimer > 220) {
             state.bubbleTimer = 0;
             state.bubbles.push({ x: state.playerX - 26, y: state.playerY + 8, r: rand(4, 10), speed: rand(16, 48), life: 0, ttl: rand(900, 1500), drift: rand(-10, 10) });
@@ -900,18 +859,12 @@
           state.playerVX = state.playerX - prevX;
           if (Math.abs(state.playerVX) > 0.1) state.facing = state.playerVX < 0 ? -1 : 1;
 
-          for (const c of state.currents) drawCurrent(c);
-
-          const growth = 1 + state.score * 0.0035;
-          const playerR = Math.max(base.playerW, base.playerH) * growth * 0.42;
-
           for (let i = state.currents.length - 1; i >= 0; i--) {
             const c = state.currents[i];
             c.life += dt;
             c.x += c.vx * t * 0.6;
-            if (c.life > c.ttl || c.x < -c.w - 20 || c.x > state.w + c.w + 20) {
-              state.currents.splice(i, 1);
-            } else {
+            if (c.life > c.ttl || c.x < -c.w - 20 || c.x > state.w + c.w + 20) state.currents.splice(i, 1);
+            else {
               const inside = state.playerX > c.x && state.playerX < c.x + c.w && state.playerY > c.y && state.playerY < c.y + c.h;
               if (inside) {
                 state.playerX += Math.sign(c.vx || 1) * c.strength * 0.18 * t;
@@ -919,7 +872,6 @@
               }
             }
           }
-
           for (let i = state.pearls.length - 1; i >= 0; i--) {
             const p = state.pearls[i];
             p.life += dt;
@@ -929,7 +881,7 @@
               state.pearls.splice(i, 1);
               continue;
             }
-            if (rectLikeHit(state.playerX, state.playerY, playerR, p.x, p.y, 14)) {
+            if (hit(state.playerX, state.playerY, Math.max(base.playerW, base.playerH) * (1 + state.score * 0.0025) * 0.42, p.x, p.y, 14)) {
               state.score += 8;
               state.combo = Math.min(9, state.combo + 1);
               state.comboTimer = 1800;
@@ -945,7 +897,6 @@
             }
             drawPearl(p);
           }
-
           for (let i = state.obstacles.length - 1; i >= 0; i--) {
             const o = state.obstacles[i];
             o.life += dt;
@@ -956,14 +907,13 @@
               state.obstacles.splice(i, 1);
               continue;
             }
-            if (rectLikeHit(state.playerX, state.playerY, playerR, o.x, o.y, o.r * 0.95)) {
+            if (hit(state.playerX, state.playerY, Math.max(base.playerW, base.playerH) * (1 + state.score * 0.0025) * 0.42, o.x, o.y, o.r * 0.95)) {
               state.obstacles.splice(i, 1);
               hitObstacle();
               continue;
             }
             drawObstacle(o);
           }
-
           for (let i = state.fish.length - 1; i >= 0; i--) {
             const f = state.fish[i];
             f.phase += f.wiggle * dt * 0.03;
@@ -973,15 +923,12 @@
             if (f.y < 26) { f.y = 26; f.vy *= -1; }
             else if (f.y > state.h - 26) { f.y = state.h - 26; f.vy *= -1; }
             const r = f.size * 0.72;
-            if (f.x < -160 || f.x > state.w + 160) {
-              state.fish.splice(i, 1);
-              continue;
-            }
-            if (rectLikeHit(state.playerX, state.playerY, playerR, f.x, f.y, r)) {
-              const basePoints = f.special ? 4 : 1;
+            if (f.x < -160 || f.x > state.w + 160) { state.fish.splice(i, 1); continue; }
+            if (hit(state.playerX, state.playerY, Math.max(base.playerW, base.playerH) * (1 + state.score * 0.0025) * 0.42, f.x, f.y, r)) {
+              const points = f.special ? 4 : 1;
               state.combo = Math.min(12, (state.comboTimer > 0 ? state.combo + 1 : 1));
               state.comboTimer = 1500;
-              state.score += basePoints * state.combo;
+              state.score += points * state.combo;
               state.shake = Math.min(14, state.shake + 2.2);
               burst(f.x, f.y, f.special ? 18 : 10, f.special);
               state.fish.splice(i, 1);
@@ -996,7 +943,6 @@
             }
             drawFish(f.x, f.y, f.size, f.vx < 0 ? -1 : 1, `hsl(${f.hue} 85% 58%)`, f.special);
           }
-
           for (let i = state.bubbles.length - 1; i >= 0; i--) {
             const b = state.bubbles[i];
             b.life += dt;
@@ -1009,7 +955,6 @@
             drawBubble(b);
             ctx.globalAlpha = 1;
           }
-
           for (let i = state.particles.length - 1; i >= 0; i--) {
             const p = state.particles[i];
             p.life += dt;
@@ -1025,7 +970,6 @@
             ctx.fill();
             ctx.globalAlpha = 1;
           }
-
           ctx.save();
           if (state.shake > 0) {
             const s = state.shake;
@@ -1033,16 +977,13 @@
             state.shake *= 0.9;
             if (state.shake < 0.15) state.shake = 0;
           }
-          drawFish(state.playerX, state.playerY, growth * 64, state.facing, state.frenzyTimer > 0 ? '#ffd166' : '#ff9f3d', state.frenzyTimer > 0);
+          drawFish(state.playerX, state.playerY, (1 + state.score * 0.0025) * 64, state.facing, state.frenzyTimer > 0 ? '#ffd166' : '#ff9f3d', state.frenzyTimer > 0);
           ctx.restore();
-
           maybeLevelUp();
           updateScoreUI();
-          if (state.score > 0) updateHighScore();
-
+          updateHighScore();
           if (state.showXY) coordEl.textContent = `X: ${Math.round(state.pointerX)}, Y: ${Math.round(state.pointerY)} | BGfishies: ${state.fish.length} | Mines: ${state.obstacles.length}`;
           else coordEl.textContent = '';
-
           const comboText = state.combo > 1 ? ` · Combo x${state.combo}` : '';
           const frenzyText = state.frenzyTimer > 0 ? ' · Frenzy!' : '';
           updateStatus(`Eating streak${comboText}${frenzyText}`);
@@ -1058,17 +999,20 @@
             ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
             ctx.fill();
           }
-          drawFish(state.playerX, state.playerY, (1 + state.score * 0.0035) * 64, state.facing, '#ff9f3d', false);
+          drawFish(state.playerX, state.playerY, (1 + state.score * 0.0025) * 64, state.facing, '#ff9f3d', false);
           if (state.showXY) coordEl.textContent = `X: ${Math.round(state.pointerX)}, Y: ${Math.round(state.pointerY)} | BGfishies: ${state.fish.length} | Mines: ${state.obstacles.length}`;
           else coordEl.textContent = '';
         }
-
         requestAnimationFrame(loop);
       }
 
-      spawnBtn.click();
+      state.highScore = loadHighScore();
+      resize();
+      updateControls();
+      resetGame(true);
+      updateScoreUI();
       requestAnimationFrame(loop);
     })();
   </script>
 </body>
-<
+</html>
