@@ -1,445 +1,790 @@
 <!DOCTYPE html>
-<html>
-<link rel="shortcut icon" href="favicon.gif" type="image/gif" />
+<html lang="en">
 <head>
+  <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#a8dbfb" />
   <meta name="description" content="Fishies swimming" />
   <meta name="keywords" content="fish, game, animation" />
   <meta name="author" content="William Chung" />
-  <meta charset="utf-8" />
+  <link rel="shortcut icon" href="favicon.gif" type="image/gif" />
   <title>GameGram FISHIES</title>
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "WebApplication",
-    "name": "Fishes",
-    "url": "https://gamegramplay.github.io/GameGram-website/games/fishes.html",
-    "applicationCategory": "GameApplication",
-    "operatingSystem": "All",
-    "browserRequirements": "Requires JavaScript. Works in modern browsers.",
-    "description": "A fun browser-based game where you guide a fish through underwater obstacles.",
-    "author": {
-      "@type": "Person",
-      "name": "GameGram"
-    },
-    "publisher": {
-      "@type": "Organization",
-      "name": "GameGram"
-    },
-    "dateModified": "2025-06-15",
-    "inLanguage": "en"
-  }
-  </script>
 
-  <style type="text/css" media="screen">
-    /*******************
-     * FISH PROPERTIES *
-     *******************/
-    .Mleft{
-      position: absolute;
-      border-radius:50%;
-      top:45%;
-      left:45%;
-      -webkit-transform: scaleX(-1);
-      transform: scaleX(-1);
-      -webkit-transition: 1s ease-out;
-      transition: 1s ease-out;
-      width: 50px;
+  <style>
+    :root{
+      --bg1:#bfeaff;
+      --bg2:#86cff9;
+      --panel: rgba(255,255,255,.32);
+      --panel-border: rgba(255,255,255,.45);
+      --text:#07324d;
+      --accent:#1d6ea4;
+      --shadow: rgba(0,0,0,.14);
+      --good:#17a34a;
+      --gold:#f6c945;
     }
-    #o_fish{
-      display: none;
-    }
-    #o_fish-path{
-      fill: white;
-    }
-    .Oleft{
-      display: inline;
-      position:absolute;
-      width:25px;
-      height:25px;
-      border-radius:50%;
-      top:45%;
-      left:45%;
-      -webkit-transform: scaleX(-1);
-      transform: scaleX(-1);
-      -webkit-transition: 3s ease-out;
-      transition: 3s ease-out;
-    }
-    .Oright{
-      position:absolute;
-      width:25px;
-      height:25px;
-      border-radius:50%;
-      top:45%;
-      left:45%;
-      -webkit-transition: 3s ease-out;
-      transition: 3s ease-out;
+    body.dark{
+      --bg1:#0b1620;
+      --bg2:#173044;
+      --panel: rgba(10,16,22,.36);
+      --panel-border: rgba(255,255,255,.10);
+      --text:#eaf7ff;
+      --accent:#8ccfff;
+      --shadow: rgba(0,0,0,.36);
     }
 
-    /***********************************************
-     * Everything unrelated to the fish animations *
-     ***********************************************/
-    /* hidden */
-    .hide{
-      display: none;
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: linear-gradient(to bottom, var(--bg1), var(--bg2));
+      color: var(--text);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      user-select: none;
+      touch-action: none;
     }
-    /* coordinate box */
-    #coord{
-      position: absolute;
-      left: 10px;
-      bottom: 10px;
+
+    #game {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
     }
-    /* eat count */
-    #eaten{
+
+    #ui {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .panel {
       position: absolute;
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      border-radius: 16px;
+      box-shadow: 0 10px 28px var(--shadow);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      pointer-events: auto;
+    }
+
+    #topLeft {
+      top: 12px;
+      left: 12px;
+      padding: 10px 12px;
+      display: grid;
+      gap: 8px;
+      font-size: 13px;
+      min-width: 190px;
+    }
+
+    #scoreBox {
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 14px;
+      font-weight: 800;
+      font-size: 16px;
       text-align: center;
-      right: 50%;
-      top: 10px;
-    }
-    /* Button 1 */
-    #FishIt{
-      position: absolute;
-      right: 50%;
-      bottom: 10px;
-      color: #3465a4;
-      border-radius: 5px;
-    }
-    /* toggle for darkmode */
-    #darkToggle{
-      position: absolute;
-      left: 10px;
-      top: 10px;
+      min-width: 220px;
     }
 
-    /* toggle Dark Mode */
-    .darken{
-      -webkit-filter: invert(100%);
-      filter: invert(100%);
+    #help {
+      top: 12px;
+      right: 12px;
+      padding: 10px 12px;
+      font-size: 12px;
+      max-width: 250px;
+      line-height: 1.35;
+      opacity: .92;
     }
 
-    /* Prevent scrolling away */
-    html {
-      overflow-y: hidden;
-      overflow-x: hidden;
+    #bottomLeft {
+      left: 12px;
+      bottom: 12px;
+      padding: 10px 12px;
+      font-size: 13px;
+      min-width: 180px;
     }
-    body{
-      background-color: #A8DBFB;
+
+    #bottomRight {
+      right: 12px;
+      bottom: 12px;
+      display: flex;
+      gap: 10px;
+      pointer-events: auto;
+    }
+
+    button {
+      appearance: none;
+      border: 0;
+      border-radius: 14px;
+      padding: 10px 14px;
+      background: var(--accent);
+      color: white;
+      font-weight: 700;
+      box-shadow: 0 10px 28px var(--shadow);
+      cursor: pointer;
+    }
+    button:active { transform: translateY(1px); }
+
+    label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+    input[type="checkbox"] {
+      accent-color: var(--accent);
+      transform: scale(1.05);
+    }
+
+    #pauseBanner {
+      position: absolute;
+      inset: 50% auto auto 50%;
+      transform: translate(-50%, -50%);
+      padding: 18px 22px;
+      border-radius: 20px;
+      background: rgba(0,0,0,.25);
+      color: white;
+      font-size: 22px;
+      font-weight: 900;
+      letter-spacing: .04em;
+      display: none;
+      text-align: center;
+      box-shadow: 0 16px 50px rgba(0,0,0,.3);
+    }
+
+    .tiny {
+      font-size: 12px;
+      opacity: .82;
     }
   </style>
-  <script type="text/javascript">
-    // Variables
-    var fX = -25;               // X variable for how centered the main fish will be
-    var fY = -25;               // Y variable for how centered the main fish will be
-    var xFLIP = -1;             // Flipping direction of the main fish
-    var growthFactor = 3;       // How fast do you want to grow?
-    var growthLOG = 9;          // Base of the logarithmic function log_growthFactor
-    var o_fish_count = 0;       // Number of background fishies (Also doubles as an
-                                // id assignment variable
-    var o_fish_brightness = 1;  // Brightness of fish ranging from 1 to 5
-    var o_fish_list = [];       // Empty list for bg-fishies
-    var eaten = 0;              // Number of fishies eaten
-    var mSpeed = 0.5;           // Speed of the main fish (lower is faster)
-    var oSpeed = 3;             // Speed of the other fishies (lower is faster)
-
-    // Width + height 
-    var width = window.innerWidth
-      || document.documentElement.clientWidth
-      || document.body.clientWidth;
-
-    var height = window.innerHeight
-      || document.documentElement.clientHeight
-      || document.body.clientHeight;
-
-
-    function clog(anything){console.log(anything)} // I'm lazy = type less
-
-    // Removing from o_fish_list
-    function removeFish(fish){
-      var index = o_fish_list.indexOf(fish);
-      if (index > -1) { o_fish_list.splice(index, 1) }
-      else { clog("Failed to remove " + fish) }
-    }
-
-    // Removing from html
-    function removeElement(id) {
-      var element = document.getElementById(id);
-      //clog(element);
-      element.parentNode.removeChild(element);
-    }
-
-    // Big fish eat small fish helper function
-    function bigFishEating(){
-      var d = document.getElementById('Mfish');
-      var fishMain = d.getBoundingClientRect();
-      var fList = [];
-      // Convert list element to rectangle
-      for (var i = 0; i < o_fish_list.length; i++){
-        fList.push(o_fish_list[i].getBoundingClientRect());
-      }
-      // Remove upon overlap
-      for (var i = 0; i < fList.length; i++){
-        var overlap = !(fishMain.right < fList[i].left ||
-                        fishMain.left > fList[i].right ||
-                        fishMain.bottom < fList[i].top ||
-                        fishMain.top > fList[i].bottom);
-        if (overlap){
-          removeElement(o_fish_list[i].id); // delete the fish when eaten
-          removeFish(o_fish_list[i]); // remove fish from records
-          eaten++;
-          if (eaten <= 1){
-            document.getElementById("eaten").innerHTML = "You've eaten " + 
-                                                          eaten + " fishie";
-          }
-          else{
-            document.getElementById("eaten").innerHTML = "You've eaten " + 
-                                                          eaten + " fishies";
-          }
-        }
-      }
-    }
-
-    // Constantly check if any fishies are overlapped by the big fish every 250 ms.
-    setInterval(function(){bigFishEating();}, 250);
-
-    // Let's Credit the source: http://jsbin.com/gejuz/1/edit?html,output
-    (function() {
-      document.onmousemove = handleMouseMove;
-      var oldCoordX = 0; // used to determine the direction main fish is facing
-      function handleMouseMove(event) {
-        var eventDoc, doc, body, pageX, pageY;
-
-        event = event || window.event; // IE-ism
-
-        // If pageX/Y aren't available and clientX/Y are,
-        // calculate pageX/Y - logic taken from jQuery.
-        // (This is to support old IE)
-        if (event.pageX == null && event.clientX != null) {
-          eventDoc = (event.target && event.target.ownerDocument) || document;
-          doc = eventDoc.documentElement;
-          body = eventDoc.body;
-
-          event.pageX = event.clientX +
-            (doc && doc.scrollLeft || body && body.scrollLeft || 0) -
-            (doc && doc.clientLeft || body && body.clientLeft || 0);
-          event.pageY = event.clientY +
-            (doc && doc.scrollTop  || body && body.scrollTop  || 0) -
-            (doc && doc.clientTop  || body && body.clientTop  || 0 );
-        }
-
-        // Use event.pageX / event.pageY here
-
-        // Everything related to the main fishy is below here:
-        var d = document.getElementById('Mfish');
-        //d.style.position = "absolute";
-        d.style.left = event.pageX + fX + 'px';
-        d.style.top = event.pageY + fY +'px';
-
-        // Show coordinates if the url has "xy"
-        if (location.hash.substr(1) == "xy"){
-          var text = "X: " + event.pageX + ", Y: " + event.pageY +
-          " | BGfishies: " + o_fish_count;
-          document.getElementById("coord").innerHTML = text;
-        }
-        else{
-          document.getElementById("coord").innerHTML = "";
-        }
-
-        if ( oldCoordX > event.pageX ){
-          xFLIP = 1;
-          //d.classList.add("Mright");
-          //d.classList.remove("Mleft");
-        }
-        else{
-          xFLIP = -1;
-          //d.classList.add("Mleft");
-          //d.classList.remove("Mright");
-        }
-        oldCoordX = event.pageX;
-
-        var growth = 1;
-        function loggo(val) {
-          return Math.log(val) / Math.log(growthLOG);
-        }
-        // don't scale until afterwards
-        if ( growthFactor * Math.log(eaten) >=1 ) {
-          growth = growthFactor * loggo(eaten);
-        }
-        d.style.transform = "scaleX(" + xFLIP + ") scale(" + growth + ")";
-        d.style.transition = mSpeed + "s ease-out";
-        //clog(fList);
-
-      }
-    })();
-    //////////////////////////
-    // End of main function //
-    //////////////////////////
-
-    // Background fishies
-    function otherFish(){
-      // random numbers
-      function randW(){
-        min = Math.ceil(50);
-        max = Math.floor(width - 50);
-        // The maximum is inclusive and the minimum is inclusive
-        return Math.floor(Math.random() * (max - min + 1)) + min;
-        }
-      function randH(){
-        min = Math.ceil(50);
-        max = Math.floor(height - 50);
-        // The maximum is inclusive and the minimum is inclusive
-        return Math.floor(Math.random() * (max - min + 1)) + min;
-      }
-
-      // Has darker colors
-      //function getRandomColor() {
-      //  var letters = 'FEDCBA9876543210';
-      //  var color = '#';
-      //  for (var i = 0; i < 6; i++) {
-      //    //Base 16 :D
-      //    color += letters[Math.floor(Math.random() * 16)];
-      //  }
-      //  return color;
-      //}
-      
-      function getRandColor(brightness){
-        // Six levels of brightness from 0 to 5, 0 being the darkest
-        var rgb = [Math.random() * 256, Math.random() * 256, Math.random() * 256];
-        var mix = [brightness*51, brightness*51, brightness*51]; //51 => 255/5
-        var mixedrgb = [rgb[0] + mix[0], rgb[1] + mix[1], rgb[2] +
-        mix[2]].map(function(x){ return Math.round(x/2.0)});
-        return "rgb(" + mixedrgb.join(",") + ")";
-      }
-
-      var itm = document.getElementById("o_fish");
-      var e = itm.cloneNode(true);
-      e.style.position = "absolute";
-      e.style.display = "inline";
-      e.id = "o_fish-" + o_fish_count; // Give the fish a unique id
-      o_fish_list.push(e); // Add fish to list
-      o_fish_count++; // increment the id by 1
-      
-      var child1 = e.children;
-      //clog(child1);
-      for (var i = 0; i < child1.length; i++) {
-          if (child1[i].tagName == "g") {
-            var child2 = child1[i].children;
-            //clog(child2);
-            for (var j = 0; j < child2.length; j++) {
-              if (child2[j].tagName == "path") {
-                var color = getRandColor(o_fish_brightness);
-                //clog(color);
-                child2[j].style.fill = color;
-              }
-            }
-          }
-      }
-
-      var holdRandW; // Was using this to debug
-      var oldCoordX;
-      e.style.transition = oSpeed + "s ease-out";
-      function moveFishy(){
-        holdRandW = randW();
-        e.style.left = holdRandW + "px";
-        e.style.top = randH() +'px';
-        //clog(holdRandW);
-        if ( holdRandW < oldCoordX ){
-          e.classList.add("Oright");
-          e.classList.remove("Oleft");
-          //e.setAttribute('class','Oright');
-          //clog(randH() + " | Oright");
-        }
-        else{
-          e.classList.add("Oleft");
-          e.classList.remove("Oright");
-          //e.setAttribute('class','Oleft');
-          //clog(randH() + " | Oleft");
-        }
-        setTimeout(moveFishy, 2000);
-        oldCoordX = holdRandW;
-      }
-
-      document.body.appendChild(e); // Add fish to the html
-      moveFishy();
-
-      if (o_fish_count == 2500){
-        //alert("Aren't you getting a bit crazy here...?");
-      }
-    }
-    ////////////////////////////
-    // End of background fish //
-    ////////////////////////////
-
-    function moreFish(){
-      //document.getElementById("FishIt").style.display = "none"; //Hide button
-      otherFish();
-    }
-  </script>
 </head>
 <body>
-  <img
-      id="Mfish"
-      class="Mleft"
-      src="data:image/svg+xml;charset=UTF-8, %3Csvg xmlns='http://www.w3.org/2000/svg' id='Mfish' viewBox='0 0 15.870892 11.059746'%3E%3Cg transform='translate(-0.32264107,-285.34704)' id='Mfish-layer1'%3E%3Cpath id='Mfish-path' d='m 12.590442,294.97791 c -0.87312,-0.58043 -1.73126,-1.056 -1.90698,-1.05683 -0.17571,-8.4e-4 -0.8107108,0.36829 -1.4111088,0.82025 -0.755888,0.56902 -1.639909,0.84466 -2.874293,0.89622 -1.553455,0.0649 -1.990642,-0.0844 -3.400232,-1.16065 -2.71028989,-2.06946 -3.25563889,-5.23582 -1.238506,-7.1909 1.068351,-1.03549 1.352333,-1.12754 3.478548,-1.12754 1.887825,0 2.555142,0.16281 3.614844,0.88195 0.71479,0.48507 1.5147378,0.88194 1.7776678,0.88194 0.26293,0 1.31315,-0.56198 2.33382,-1.24884 1.25286,-0.84311 1.97186,-1.13276 2.21308,-0.89154 0.58592,0.58592 0.59236,8.52129 0.008,9.46052 -0.62745,1.00793 -0.68986,1.00156 -2.59452,-0.26458 z m -3.5277768,-2.47894 0.881945,-1.06668 1.9177418,1.23679 c 1.05475,0.68023 1.94896,1.20018 1.98714,1.15544 0.0382,-0.0447 -0.0113,-1.29718 -0.10999,-2.78322 l -0.17939,-2.70188 -1.10219,0.67209 c -1.50463,0.91748 -2.9117138,0.84748 -4.1651478,-0.20721 -0.850821,-0.71592 -1.428215,-0.88195 -3.067175,-0.88195 -2.255711,0 -2.865711,0.38905 -2.865711,1.82772 0,0.7536 0.205541,1.03265 0.886526,1.20356 0.487589,0.12238 1.101526,0.0441 1.364305,-0.17401 0.361246,-0.29981 0.587115,-0.26478 0.92605,0.14361 0.368589,0.44412 0.335835,0.66437 -0.184258,1.23907 -0.347892,0.38442 -0.885739,0.70399 -1.195216,0.71016 -0.456217,0.009 -0.429183,0.11445 0.142871,0.55678 1.142249,0.88323 3.671572,0.38917 4.762499,-0.93027 z m -4.543654,-2.93796 c -0.307422,-0.37042 -0.287644,-0.58323 0.08278,-0.89065 0.370421,-0.30742 0.583224,-0.28764 0.890645,0.0828 0.307422,0.37042 0.287644,0.58322 -0.08278,0.89064 -0.37042,0.30743 -0.583223,0.28765 -0.890644,-0.0828 z' /%3E%3C/g%3E%3C/svg%3E"
-  >
+  <canvas id="game"></canvas>
 
-  <!-- inline svg of background fish for easy JS manipulation -->
-  <svg
-    id="o_fish"
-    viewBox="0 0 15.870892 11.059746">
-    <g
-      transform="translate(-0.32264107,-285.34704)"
-      id="o_fish-layer1">
-    <path
-      id="o_fish-path"
-      d="m 12.590442,294.97791 c -0.87312,-0.58043 -1.73126,-1.056 -1.90698,-1.05683 -0.17571,-8.4e-4 -0.8107108,0.36829 -1.4111088,0.82025 -0.755888,0.56902 -1.639909,0.84466 -2.874293,0.89622 -1.553455,0.0649 -1.990642,-0.0844 -3.400232,-1.16065 -2.71028989,-2.06946 -3.25563889,-5.23582 -1.238506,-7.1909 1.068351,-1.03549 1.352333,-1.12754 3.478548,-1.12754 1.887825,0 2.555142,0.16281 3.614844,0.88195 0.71479,0.48507 1.5147378,0.88194 1.7776678,0.88194 0.26293,0 1.31315,-0.56198 2.33382,-1.24884 1.25286,-0.84311 1.97186,-1.13276 2.21308,-0.89154 0.58592,0.58592 0.59236,8.52129 0.008,9.46052 -0.62745,1.00793 -0.68986,1.00156 -2.59452,-0.26458 z m -3.5277768,-2.47894 0.881945,-1.06668 1.9177418,1.23679 c 1.05475,0.68023 1.94896,1.20018 1.98714,1.15544 0.0382,-0.0447 -0.0113,-1.29718 -0.10999,-2.78322 l -0.17939,-2.70188 -1.10219,0.67209 c -1.50463,0.91748 -2.9117138,0.84748 -4.1651478,-0.20721 -0.850821,-0.71592 -1.428215,-0.88195 -3.067175,-0.88195 -2.255711,0 -2.865711,0.38905 -2.865711,1.82772 0,0.7536 0.205541,1.03265 0.886526,1.20356 0.487589,0.12238 1.101526,0.0441 1.364305,-0.17401 0.361246,-0.29981 0.587115,-0.26478 0.92605,0.14361 0.368589,0.44412 0.335835,0.66437 -0.184258,1.23907 -0.347892,0.38442 -0.885739,0.70399 -1.195216,0.71016 -0.456217,0.009 -0.429183,0.11445 0.142871,0.55678 1.142249,0.88323 3.671572,0.38917 4.762499,-0.93027 z m -4.543654,-2.93796 c -0.307422,-0.37042 -0.287644,-0.58323 0.08278,-0.89065 0.370421,-0.30742 0.583224,-0.28764 0.890645,0.0828 0.307422,0.37042 0.287644,0.58322 -0.08278,0.89064 -0.37042,0.30743 -0.583223,0.28765 -0.890644,-0.0828 z"
-    />
-    </g>
-  </svg>
+  <div id="ui">
+    <div id="topLeft" class="panel">
+      <label><input id="darkToggle" type="checkbox"> Dark Mode</label>
+      <label><input id="autoToggle" type="checkbox"> ConstaSpawn</label>
+      <label><input id="xyToggle" type="checkbox"> Show Coordinates</label>
+      <div class="tiny">P = pause, R = reset, click/tap = burst</div>
+    </div>
 
-<div id="coord"></div>
-<div id="eaten"></div>
-<div id="darkToggle">
-  <input id="toggleBox0" type="checkbox" onChange="darkThis(this)"><label for="toggleBox0">Dark Mode</label><br>
-  <input id="toggleBox1" type="checkbox" onChange="constaSpawn(this)"><label for="toggleBox1">ConstaSpawn</label>
-</div>
-<button id="FishIt" onclick="moreFish();">Spawn More Fish</button>
-<!-- Script for checkboxes -->
-<script type="text/javascript">
-  // Dark mode stuff
-  var colorToggle = document.getElementById("toggleBox");
-  var child1 = document.body.childNodes;
+    <div id="scoreBox" class="panel">Score: 0 · High Score: 0</div>
 
-  // Helper function for searching and setting colors
-  function recurseDark(child){
-    for (var i = 0; i < child.length; i++) {
-      if ( child[i].tagName != null ){
-        child[i].classList.toggle('darken');
-        recurseDark(child[i]);
+    <div id="help" class="panel">
+      Move your pointer or finger to guide the big fish.<br>
+      Eat fish for score and combo boosts.<br>
+      Grab golden pearls for bonus points and frenzy.
+    </div>
+
+    <div id="bottomLeft" class="panel">
+      <div id="coord">X: 0, Y: 0</div>
+      <div id="status">Ready to swim.</div>
+    </div>
+
+    <div id="bottomRight">
+      <button id="spawnBtn">Spawn More Fish</button>
+      <button id="pauseBtn">Pause</button>
+      <button id="resetBtn">Reset</button>
+    </div>
+
+    <div id="pauseBanner">PAUSED</div>
+  </div>
+
+  <script>
+    (() => {
+      const canvas = document.getElementById('game');
+      const ctx = canvas.getContext('2d', { alpha: false });
+      const scoreBox = document.getElementById('scoreBox');
+      const coordEl = document.getElementById('coord');
+      const statusEl = document.getElementById('status');
+      const darkToggle = document.getElementById('darkToggle');
+      const autoToggle = document.getElementById('autoToggle');
+      const xyToggle = document.getElementById('xyToggle');
+      const spawnBtn = document.getElementById('spawnBtn');
+      const pauseBtn = document.getElementById('pauseBtn');
+      const resetBtn = document.getElementById('resetBtn');
+      const pauseBanner = document.getElementById('pauseBanner');
+
+      const state = {
+        w: 0,
+        h: 0,
+        dpr: 1,
+        pointerX: window.innerWidth * 0.5,
+        pointerY: window.innerHeight * 0.5,
+        playerX: window.innerWidth * 0.5,
+        playerY: window.innerHeight * 0.5,
+        playerVX: 0,
+        playerVY: 0,
+        facing: 1,
+        score: 0,
+        highScore: 0,
+        combo: 1,
+        comboTimer: 0,
+        frenzyTimer: 0,
+        paused: false,
+        autoSpawn: false,
+        showXY: false,
+        dark: false,
+        fish: [],
+        bubbles: [],
+        particles: [],
+        pearls: [],
+        lastTime: performance.now(),
+        spawnTimer: 0,
+        pearlTimer: 0,
+        bubbleTimer: 0,
+        shake: 0
+      };
+
+      const STORE_KEY = 'gamegram_fishes_highscore_v2';
+
+      const playerBase = { w: 82, h: 56 };
+
+      function clamp(v, min, max) {
+        return Math.max(min, Math.min(max, v));
       }
-    }
-  }
 
-  function darkThis(_this) {
-    // Set bg before everything else
-    if (_this.checked){ document.body.style.background = "#313F48" }
-    else { document.body.style.background = "#A8DBFB" }
-    // Recursively search and change colors
-    recurseDark(child1);
-  }
+      function rand(min, max) {
+        return Math.random() * (max - min) + min;
+      }
 
-  // Constantly Spawn
-  var constaSawnFish;
-  function constaSpawn(_this) {
-    if (_this.checked) {
-      constaSawnFish = setInterval(moreFish, 1500);
-    }
-    else {
-      clearInterval(constaSawnFish);
-    }
-  }
-</script>
+      function rndInt(min, max) {
+        return Math.floor(rand(min, max + 1));
+      }
+
+      function hslColor() {
+        return `hsl(${rndInt(0, 359)} ${rndInt(70, 95)}% ${rndInt(45, 64)}%)`;
+      }
+
+      function loadHighScore() {
+        try {
+          const val = Number(localStorage.getItem(STORE_KEY));
+          return Number.isFinite(val) ? val : 0;
+        } catch {
+          return 0;
+        }
+      }
+
+      function saveHighScore(v) {
+        try {
+          localStorage.setItem(STORE_KEY, String(v));
+        } catch {}
+      }
+
+      function updateScoreUI() {
+        scoreBox.textContent = `Score: ${state.score} · High Score: ${state.highScore}`;
+      }
+
+      function updateStatus(text) {
+        statusEl.textContent = text;
+      }
+
+      function resize() {
+        state.dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+        state.w = Math.floor(window.innerWidth);
+        state.h = Math.floor(window.innerHeight);
+        canvas.width = Math.floor(state.w * state.dpr);
+        canvas.height = Math.floor(state.h * state.dpr);
+        canvas.style.width = state.w + 'px';
+        canvas.style.height = state.h + 'px';
+        ctx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
+      }
+
+      function makeBubble(x, y, radius = rand(4, 12), speed = rand(18, 70)) {
+        state.bubbles.push({
+          x, y, r: radius, speed,
+          life: 0,
+          ttl: rand(900, 1800),
+          drift: rand(-10, 10)
+        });
+      }
+
+      function makeParticle(x, y, color, big = false) {
+        const angle = rand(0, Math.PI * 2);
+        const force = big ? rand(90, 260) : rand(50, 160);
+        state.particles.push({
+          x, y,
+          vx: Math.cos(angle) * force,
+          vy: Math.sin(angle) * force - rand(20, 80),
+          life: 0,
+          ttl: rand(300, 800),
+          r: big ? rand(2, 5) : rand(1, 3),
+          color
+        });
+      }
+
+      function burst(x, y, count = 10) {
+        for (let i = 0; i < count; i++) makeParticle(x, y, 'rgba(255,255,255,.9)', false);
+        for (let i = 0; i < Math.max(2, Math.floor(count * 0.35)); i++) makeBubble(x, y, rand(3, 10), rand(20, 60));
+      }
+
+      function spawnFish(count = 1) {
+        for (let i = 0; i < count; i++) {
+          const fromLeft = Math.random() < 0.5;
+          state.fish.push({
+            x: fromLeft ? -120 : state.w + 120,
+            y: rand(30, state.h - 30),
+            vx: fromLeft ? rand(50, 170) : -rand(50, 170),
+            vy: rand(-20, 20),
+            size: rand(18, 58),
+            hue: rndInt(0, 359),
+            wiggle: rand(0.8, 2.6),
+            phase: rand(0, Math.PI * 2),
+            dead: false,
+            special: Math.random() < 0.07
+          });
+        }
+      }
+
+      function spawnPearl() {
+        const edge = rndInt(0, 3);
+        const pad = 40;
+        let x, y, vx, vy;
+        if (edge === 0) { x = -20; y = rand(40, state.h - 40); vx = rand(40, 90); vy = rand(-20, 20); }
+        else if (edge === 1) { x = state.w + 20; y = rand(40, state.h - 40); vx = -rand(40, 90); vy = rand(-20, 20); }
+        else if (edge === 2) { x = rand(40, state.w - 40); y = -20; vx = rand(-20, 20); vy = rand(40, 90); }
+        else { x = rand(40, state.w - 40); y = state.h + 20; vx = rand(-20, 20); vy = -rand(40, 90); }
+
+        state.pearls.push({
+          x, y, vx, vy,
+          r: 10,
+          life: 0,
+          ttl: rand(7000, 11000),
+          color: '#f6c945'
+        });
+      }
+
+      function resetGame() {
+        state.score = 0;
+        state.combo = 1;
+        state.comboTimer = 0;
+        state.frenzyTimer = 0;
+        state.shake = 0;
+        state.fish.length = 0;
+        state.bubbles.length = 0;
+        state.particles.length = 0;
+        state.pearls.length = 0;
+        state.playerX = state.w * 0.5;
+        state.playerY = state.h * 0.5;
+        state.playerVX = 0;
+        state.playerVY = 0;
+        spawnFish(16);
+        updateScoreUI();
+        updateStatus('Fresh sea. Go wild.');
+      }
+
+      function setPause(v) {
+        state.paused = v;
+        pauseBanner.style.display = v ? 'block' : 'none';
+        pauseBtn.textContent = v ? 'Resume' : 'Pause';
+        updateStatus(v ? 'Paused.' : 'Back in the water.');
+      }
+
+      function drawFish(x, y, size, facing, color, isPlayer = false, glow = false) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.scale(facing, 1);
+
+        if (glow) {
+          ctx.shadowColor = 'rgba(255, 220, 90, .55)';
+          ctx.shadowBlur = 22;
+        } else if (isPlayer) {
+          ctx.shadowColor = 'rgba(0,0,0,.14)';
+          ctx.shadowBlur = 12;
+        }
+
+        const w = size * 1.45;
+        const h = size * 0.92;
+
+        const bodyGrad = ctx.createLinearGradient(-w * 0.45, -h * 0.35, w * 0.4, h * 0.35);
+        bodyGrad.addColorStop(0, 'rgba(255,255,255,.34)');
+        bodyGrad.addColorStop(0.15, color);
+        bodyGrad.addColorStop(1, 'rgba(0,0,0,.12)');
+
+        ctx.fillStyle = bodyGrad;
+        ctx.beginPath();
+        ctx.moveTo(-w * 0.50, 0);
+        ctx.quadraticCurveTo(-w * 0.22, -h * 0.84, w * 0.18, -h * 0.56);
+        ctx.quadraticCurveTo(w * 0.55, -h * 0.42, w * 0.55, 0);
+        ctx.quadraticCurveTo(w * 0.55, h * 0.42, w * 0.18, h * 0.56);
+        ctx.quadraticCurveTo(-w * 0.22, h * 0.84, -w * 0.50, 0);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = 'rgba(255,255,255,.22)';
+        ctx.beginPath();
+        ctx.ellipse(-w * 0.05, -h * 0.10, w * 0.22, h * 0.15, -0.4, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(255,255,255,.9)';
+        ctx.beginPath();
+        ctx.arc(w * 0.30, -h * 0.16, size * 0.11, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#081521';
+        ctx.beginPath();
+        ctx.arc(w * 0.32, -h * 0.13, size * 0.05, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(255,255,255,.25)';
+        ctx.lineWidth = Math.max(1, size * 0.03);
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(-w * 0.15, -h * 0.18);
+        ctx.quadraticCurveTo(w * 0.01, -h * 0.28, w * 0.14, -h * 0.24);
+        ctx.stroke();
+
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.moveTo(-w * 0.52, 0);
+        ctx.lineTo(-w * 0.82, -h * 0.30);
+        ctx.lineTo(-w * 0.75, 0);
+        ctx.lineTo(-w * 0.82, h * 0.30);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.restore();
+      }
+
+      function drawPearl(p) {
+        ctx.save();
+        const glow = ctx.createRadialGradient(p.x, p.y, 2, p.x, p.y, 26);
+        glow.addColorStop(0, 'rgba(255,255,255,.95)');
+        glow.addColorStop(0.35, 'rgba(246,201,69,.9)');
+        glow.addColorStop(1, 'rgba(246,201,69,0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 26, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#f6c945';
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(255,255,255,.85)';
+        ctx.beginPath();
+        ctx.arc(p.x - 3, p.y - 4, p.r * 0.35, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function drawBubble(b) {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255,255,255,.55)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawBackground(t) {
+        const grd = ctx.createLinearGradient(0, 0, 0, state.h);
+        grd.addColorStop(0, getComputedStyle(document.documentElement).getPropertyValue('--bg1').trim() || '#bfeaff');
+        grd.addColorStop(1, getComputedStyle(document.documentElement).getPropertyValue('--bg2').trim() || '#86cff9');
+        ctx.fillStyle = grd;
+        ctx.fillRect(0, 0, state.w, state.h);
+
+        ctx.save();
+        ctx.globalAlpha = state.dark ? 0.08 : 0.10;
+        for (let i = 0; i < 30; i++) {
+          const x = (i * 157.3 + (t * 0.004)) % (state.w + 180) - 90;
+          const y = (Math.sin(i * 1.7 + t * 0.0006) * 40) + (i * 29 % state.h);
+          ctx.fillStyle = i % 2 ? '#ffffff' : '#9de0ff';
+          ctx.beginPath();
+          ctx.arc(x, y, 1.8 + (i % 4) * 0.55, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      function intersects(ax, ay, ar, bx, by, br) {
+        const dx = ax - bx;
+        const dy = ay - by;
+        const rr = ar + br;
+        return dx * dx + dy * dy <= rr * rr;
+      }
+
+      function updateHighScore() {
+        if (state.score > state.highScore) {
+          state.highScore = state.score;
+          saveHighScore(state.highScore);
+        }
+      }
+
+      function updateControlsFromUI() {
+        state.dark = darkToggle.checked;
+        document.body.classList.toggle('dark', state.dark);
+
+        state.autoSpawn = autoToggle.checked;
+        state.showXY = xyToggle.checked;
+      }
+
+      function pointerMove(x, y) {
+        state.pointerX = clamp(x, 0, state.w);
+        state.pointerY = clamp(y, 0, state.h);
+      }
+
+      window.addEventListener('pointermove', (e) => pointerMove(e.clientX, e.clientY), { passive: true });
+      window.addEventListener('pointerdown', (e) => {
+        pointerMove(e.clientX, e.clientY);
+        burst(e.clientX, e.clientY, 18);
+        spawnFish(6);
+      }, { passive: true });
+
+      window.addEventListener('touchmove', (e) => {
+        if (e.touches && e.touches[0]) pointerMove(e.touches[0].clientX, e.touches[0].clientY);
+      }, { passive: true });
+
+      window.addEventListener('resize', () => {
+        resize();
+      });
+
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'p' || e.key === 'P') setPause(!state.paused);
+        if (e.key === 'r' || e.key === 'R') resetGame();
+        if (e.key === ' ') {
+          e.preventDefault();
+          spawnFish(6);
+        }
+      });
+
+      darkToggle.addEventListener('change', updateControlsFromUI);
+      autoToggle.addEventListener('change', updateControlsFromUI);
+      xyToggle.addEventListener('change', updateControlsFromUI);
+
+      spawnBtn.addEventListener('click', () => {
+        spawnFish(10);
+        burst(state.pointerX, state.pointerY, 10);
+      });
+
+      pauseBtn.addEventListener('click', () => setPause(!state.paused));
+      resetBtn.addEventListener('click', () => resetGame());
+
+      state.highScore = loadHighScore();
+      updateScoreUI();
+      resize();
+      updateControlsFromUI();
+      resetGame();
+
+      function loop(now) {
+        const dt = Math.min(32, now - state.lastTime);
+        state.lastTime = now;
+
+        drawBackground(now);
+
+        if (!state.paused) {
+          const t = dt / 16.666;
+
+          state.spawnTimer += dt;
+          state.pearlTimer += dt;
+          state.bubbleTimer += dt;
+
+          if (state.autoSpawn && state.spawnTimer > 1150) {
+            state.spawnTimer = 0;
+            spawnFish(2);
+          }
+
+          if (state.pearlTimer > rand(8500, 12500)) {
+            state.pearlTimer = 0;
+            spawnPearl();
+          }
+
+          if (state.bubbleTimer > 220) {
+            state.bubbleTimer = 0;
+            makeBubble(state.playerX - 26, state.playerY + 8, rand(4, 10), rand(16, 48));
+          }
+
+          if (state.comboTimer > 0) state.comboTimer -= dt;
+          else state.combo = 1;
+
+          if (state.frenzyTimer > 0) state.frenzyTimer -= dt;
+
+          const follow = state.frenzyTimer > 0 ? 0.18 : 0.11;
+          const prevX = state.playerX;
+          const prevY = state.playerY;
+          state.playerX += (state.pointerX - state.playerX) * follow * t;
+          state.playerY += (state.pointerY - state.playerY) * follow * t;
+          state.playerVX = state.playerX - prevX;
+          state.playerVY = state.playerY - prevY;
+          if (Math.abs(state.playerVX) > 0.1) state.facing = state.playerVX < 0 ? -1 : 1;
+
+          const growth = 1 + state.score * 0.012;
+          const playerW = playerBase.w * growth;
+          const playerH = playerBase.h * growth;
+          const playerR = Math.max(playerW, playerH) * 0.42;
+
+          // Pearls
+          for (let i = state.pearls.length - 1; i >= 0; i--) {
+            const p = state.pearls[i];
+            p.life += dt;
+            p.x += p.vx * t * 0.016;
+            p.y += p.vy * t * 0.016;
+
+            if (p.life > p.ttl || p.x < -60 || p.x > state.w + 60 || p.y < -60 || p.y > state.h + 60) {
+              state.pearls.splice(i, 1);
+              continue;
+            }
+
+            if (intersects(state.playerX, state.playerY, playerR, p.x, p.y, 14)) {
+              state.score += 8;
+              state.combo = Math.min(9, state.combo + 1);
+              state.comboTimer = 1800;
+              state.frenzyTimer = 6000;
+              state.shake = 5;
+              burst(p.x, p.y, 22);
+              state.pearls.splice(i, 1);
+              updateHighScore();
+              updateScoreUI();
+              updateStatus('Pearl bonus! Frenzy mode.');
+              continue;
+            }
+
+            drawPearl(p);
+          }
+
+          // Fish
+          for (let i = state.fish.length - 1; i >= 0; i--) {
+            const f = state.fish[i];
+            f.phase += f.wiggle * dt * 0.03;
+            const speedBoost = state.frenzyTimer > 0 ? 1.18 : 1;
+            f.x += f.vx * t * 0.016 * speedBoost;
+            f.y += (f.vy + Math.sin(f.phase) * 26) * t * 0.016;
+
+            if (f.y < 26) {
+              f.y = 26;
+              f.vy *= -1;
+            } else if (f.y > state.h - 26) {
+              f.y = state.h - 26;
+              f.vy *= -1;
+            }
+
+            const fxR = f.size * 0.72;
+
+            if (f.x < -160 || f.x > state.w + 160) {
+              state.fish.splice(i, 1);
+              continue;
+            }
+
+            if (intersects(state.playerX, state.playerY, playerR, f.x, f.y, fxR)) {
+              const points = f.special ? 4 : 1;
+              state.combo = Math.min(12, (state.comboTimer > 0 ? state.combo + 1 : 1));
+              state.comboTimer = 1500;
+              state.score += points * state.combo;
+              state.shake = Math.min(14, state.shake + 2.2);
+
+              burst(f.x, f.y, f.special ? 18 : 10);
+              for (let k = 0; k < (f.special ? 10 : 4); k++) makeParticle(f.x, f.y, 'rgba(255,255,255,.9)', false);
+
+              if (f.special) {
+                state.frenzyTimer = 4500;
+                updateStatus('Special fish! Big combo energy.');
+              }
+
+              state.fish.splice(i, 1);
+              updateHighScore();
+              updateScoreUI();
+              continue;
+            }
+
+            drawFish(f.x, f.y, f.size, f.vx < 0 ? -1 : 1, `hsl(${f.hue} 85% 58%)`, false, f.special);
+          }
+
+          // Bubbles
+          for (let i = state.bubbles.length - 1; i >= 0; i--) {
+            const b = state.bubbles[i];
+            b.life += dt;
+            const p = b.life / b.ttl;
+            if (p >= 1) {
+              state.bubbles.splice(i, 1);
+              continue;
+            }
+            b.y -= (b.speed * t) * 0.55;
+            b.x += Math.sin(now * 0.002 + i) * 0.12 + b.drift * 0.01 * t;
+            b.r *= 1.0005;
+            ctx.globalAlpha = 1 - p;
+            drawBubble(b);
+            ctx.globalAlpha = 1;
+          }
+
+          // Particles
+          for (let i = state.particles.length - 1; i >= 0; i--) {
+            const p = state.particles[i];
+            p.life += dt;
+            const lifeT = p.life / p.ttl;
+            if (lifeT >= 1) {
+              state.particles.splice(i, 1);
+              continue;
+            }
+            p.vy += 820 * t * 0.016;
+            p.x += p.vx * t * 0.016;
+            p.y += p.vy * t * 0.016;
+            ctx.globalAlpha = 1 - lifeT;
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r * (1 - lifeT * 0.35), 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1;
+          }
+
+          // Player
+          ctx.save();
+          if (state.shake > 0) {
+            const s = state.shake;
+            ctx.translate(rand(-s, s), rand(-s, s));
+            state.shake *= 0.9;
+            if (state.shake < 0.15) state.shake = 0;
+          }
+
+          const mainColor = state.frenzyTimer > 0 ? '#ffd166' : '#ff9f3d';
+          drawFish(state.playerX, state.playerY, growth * 64, state.facing, mainColor, true, state.frenzyTimer > 0);
+          ctx.restore();
+
+          // HUD
+          if (state.showXY) {
+            coordEl.textContent = `X: ${Math.round(state.pointerX)}, Y: ${Math.round(state.pointerY)} | BGfishies: ${state.fish.length}`;
+          } else {
+            coordEl.textContent = '';
+          }
+
+          const comboText = state.combo > 1 ? ` ×${state.combo}` : '';
+          const frenzyText = state.frenzyTimer > 0 ? ' · Frenzy!' : '';
+          updateStatus(`Eating streak${comboText}${frenzyText}`);
+        } else {
+          // Still draw everything paused, but no updates were applied above.
+          if (state.showXY) {
+            coordEl.textContent = `X: ${Math.round(state.pointerX)}, Y: ${Math.round(state.pointerY)} | BGfishies: ${state.fish.length}`;
+          } else {
+            coordEl.textContent = '';
+          }
+
+          for (const p of state.pearls) drawPearl(p);
+          for (const f of state.fish) drawFish(f.x, f.y, f.size, f.vx < 0 ? -1 : 1, `hsl(${f.hue} 85% 58%)`, false, f.special);
+          for (const b of state.bubbles) drawBubble(b);
+          for (const p of state.particles) {
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          drawFish(state.playerX, state.playerY, (1 + state.score * 0.012) * 64, state.facing, '#ff9f3d', true, false);
+        }
+
+        requestAnimationFrame(loop);
+      }
+
+      spawnBtn.click(); // starts with a fun burst of fish
+      requestAnimationFrame(loop);
+    })();
+  </script>
 </body>
 </html>
-
-
-
