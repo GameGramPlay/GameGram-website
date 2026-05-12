@@ -13,31 +13,66 @@
 </head>
 <body data-theme="dark" data-msgstyle="cozy">
 
+  <!-- Play & Chat split-screen overlay -->
+  <div class="pc-overlay hidden" id="playChatOverlay">
+    <div class="pc-header">
+      <span class="pc-icon">🎮</span>
+      <span class="pc-title" id="pcGameTitle">Game</span>
+      <div class="pc-actions">
+        <a id="pcOpenTab" href="#" target="_blank" rel="noopener" class="pc-btn">⤢ New Tab</a>
+        <button class="pc-btn pc-btn-close" id="pcClose">✕ Close</button>
+      </div>
+    </div>
+    <div class="pc-body">
+      <iframe id="pcGameFrame" class="pc-game" src="" allowfullscreen title="Game"></iframe>
+      <div class="pc-chat-panel">
+        <div class="pc-chat-top">
+          <span>💬 Chat</span>
+          <span id="pcRoomLabel" class="pc-room-tag">#gamegram</span>
+        </div>
+        <div class="pc-msgs" id="pcMessages"></div>
+        <div class="pc-input-row">
+          <input id="pcInput" type="text" placeholder="Message…" autocomplete="off" />
+          <button id="pcSend">↑</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Login overlay -->
   <div id="login" class="overlay">
     <div class="box">
       <div class="login-logo">GameGram Chat</div>
-      <p class="login-sub">Public rooms powered by hack.chat</p>
-      <input id="nickInput"  placeholder="Nickname"   autocomplete="off" />
-      <input id="roomInput"  placeholder="Room  (default: gamegram)" autocomplete="off" />
+      <p class="login-sub">Public rooms · powered by hack.chat</p>
+      <input id="nickInput" placeholder="Nickname" autocomplete="off" />
+      <input id="roomInput" placeholder="Room (default: gamegram)" autocomplete="off" />
       <button id="loginBtn" class="big-btn">Join Room</button>
+      <p class="login-hint">Commands: /roll · /flip · /ttt · /room name · /help</p>
     </div>
   </div>
 
   <!-- Sidebar -->
   <aside class="sidebar">
     <div class="sidebar-header">
-      <a href="../" class="back-link" title="Back to games">← Games</a>
+      <a href="../" class="back-link">← Games</a>
       <span id="roomLabel" class="room-name">#gamegram</span>
     </div>
+
+    <div class="sidebar-section-label">Rooms</div>
+    <div id="roomPanel" class="room-panel"></div>
+
     <div class="sidebar-section-label">Online</div>
     <div id="userList"></div>
+
     <div class="self">
       <div class="me">
-        <span id="meName">Guest</span>
+        <div class="me-top">
+          <span id="selfEmoji" class="self-emoji">🎮</span>
+          <span id="meName">Guest</span>
+        </div>
         <span id="statusDot" class="status-dot disconnected">Connecting…</span>
       </div>
-      <button id="settingsBtn" title="Settings" aria-label="Open settings">⚙</button>
+      <button id="settingsBtn" title="Profile & Settings">⚙</button>
     </div>
   </aside>
 
@@ -45,27 +80,39 @@
   <main class="chat">
     <header class="chat-header">
       <span id="chatRoomDisplay">#gamegram</span>
+      <div class="chat-header-btns">
+        <button class="hdr-btn" id="cmdHelpBtn">/? Help</button>
+        <button class="hdr-btn" id="shareRoomBtn">🔗 Share</button>
+      </div>
     </header>
     <div id="messages"></div>
     <footer class="chat-footer">
-      <input id="input" type="text" placeholder="Message…" autocomplete="off" />
+      <button class="footer-icon-btn" id="gameShareBtn" title="Share a game in chat">🎮</button>
+      <input id="input" type="text" placeholder="Message… or /help for commands" autocomplete="off" />
       <button id="send">Send</button>
     </footer>
   </main>
 
-  <!-- Settings modal -->
+  <!-- Profile & Settings modal -->
   <div id="settingsModal" class="modal hidden">
     <div class="modal-content">
       <div class="modal-header">
-        <h2>Settings</h2>
-        <button id="closeSettings" class="close-btn" aria-label="Close">✕</button>
+        <h2>Profile &amp; Settings</h2>
+        <button id="closeSettings" class="close-btn">✕</button>
       </div>
       <div class="settings">
         <label>Nickname
-          <input id="nickInputSettings" autocomplete="off" />
+          <input id="nickInputSettings" autocomplete="off" placeholder="Your display name" />
         </label>
-        <label>Nickname Color
+        <label>Name Color
           <input type="color" id="nickColor" value="#7c3aed" />
+        </label>
+        <label>Avatar Emoji
+          <div class="emoji-pick-grid" id="emojiPickGrid">
+            🎮 🎯 🏆 🚀 ⚔️ 🛡️ 🐉 👾 🎲 🃏 🔥 ⚡ 💎 🌟 🎭 🦊
+            🐺 🐸 🤖 👻 💀 🧙 🥷 🎸 🌈 🌙 ☄️ 🍄 🏴 🎃 🐦 🦁
+          </div>
+          <input type="hidden" id="emojiVal" value="🎮" />
         </label>
         <label>Theme
           <select id="themeSelect">
@@ -82,6 +129,10 @@
         <label>Font Size
           <input type="range" id="fontSize" min="12" max="20" value="14" />
         </label>
+      </div>
+      <div class="settings-footer">
+        <a href="../customize/" target="_blank" class="settings-ext-link">Full Customize ↗</a>
+        <button id="saveSettings" class="big-btn settings-save">Save</button>
       </div>
     </div>
   </div>

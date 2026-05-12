@@ -1185,7 +1185,10 @@
           addSys('Commands: /roll [sides] · /flip · /ttt · /room [name] · /help');
           return true;
         }
-        default: return false;
+        default: {
+          addSys(`Unknown command: ${cmd} — try /help`, 'warn');
+          return true; // prevent forwarding to hack.chat server
+        }
       }
     }
 

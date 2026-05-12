@@ -1299,7 +1299,9 @@ main header .page-intro strong { color: var(--text-primary); }
   background: var(--bg-base);
   display: flex;
   flex-direction: column;
-  animation: card-in 0.22s ease both;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
 }
 .pc-overlay.hidden { display: none; }
 
@@ -1355,14 +1357,17 @@ button.pc-action-btn#pcClose:hover {
 
 .pc-body {
   flex: 1;
+  min-height: 0;
   display: flex;
   overflow: hidden;
 }
 
 .pc-game {
   flex: 1;
+  min-width: 0;
   border: none;
   background: #000;
+  display: block;
 }
 
 .pc-chat-panel {
