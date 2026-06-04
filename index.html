@@ -4,8 +4,15 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <!-- BEGIN AADS AD UNIT 2440279 -->
 
-  <!-- PRE-CONNECTS / DNS-PREFETCH – fastest first -->
+  <div id="frame" style="width: 100%;margin: auto;position: relative; z-index: 99998;">
+    <iframe data-aa='2440279' src='//acceptable.a-ads.com/2440279/?size=Adaptive'
+      style='border:0; padding:0; width:70%; height:auto; overflow:hidden;display: block;margin: auto'></iframe>
+  </div>
+  
+  <!-- END AADS AD UNIT 2440279 -->
+    <!-- PRE-CONNECTS / DNS-PREFETCH – fastest first -->
   <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="dns-prefetch" href="//st.chatango.com">
@@ -31,11 +38,7 @@
 
   <!-- ICONS – maskable -->
   <link rel="icon" type="image/png" href="images/gamegram.png">
-  <link rel="shortcut icon" href="images/gamegram.png">
   <link rel="manifest" href="/manifest.json">
-
-  <!-- Add keywords for SEO -->
-  <meta name="keywords" content="GameGram, online games, HTML5 games, free games, unblocked games, play online, web games, PWA, multiplayer chat games">
 
   <!-- OPEN-GRAPH / TWITTER -->
   <meta property="og:title" content="Gamegram – Play Web Games Instantly">
@@ -67,30 +70,62 @@
   <link rel="preload" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@400;500;600&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
   <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@400;500;600&display=swap"></noscript>
 
+  <!-- ORIGINAL HEAD LINES START HERE (UNCHANGED) -->
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <!-- ===== NEW SEO TITLE & DESCRIPTION ===== -->
   <title>GameGram – 200+ Free Online Web Games | Unblocked & Instant</title>
-  <meta name="description" content="Play 200+ free online web games on GameGram—unblocked, no install, no ads. Enjoy 2048, Slope, Minecraft Classic, FNAF, Retro Bowl and more instantly in your browser.">
+  <meta name="description" content="Play 200+ free online web games on GameGram—unblocked, no install, no ads. Enjoy 2048, Slope, Minecraft Classic, FNAF, Retro Bowl and more instantly in your browser!">
 
   <meta name="robots" content="index, follow">
   <meta name="author" content="Gamegram Team">
   <meta name="theme-color" content="#6600cc">
   <meta name="bitmedia-site-verification" content="908ef0a98239d954fc5835e68d271c72" />
-
+  <link rel="icon" type="image/png" href="images/gamegram.png" />
   <link rel="canonical" href="https://gamegramplay.github.io/GameGram-website/" />
+  <link rel="manifest" href="/manifest.json" />
   <link rel="stylesheet" href="style.css?v=5" />
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
-
-</head>
-<body>
-  <!-- Popup Modal (moved out of head to ensure valid HTML; script still uses DOMContentLoaded) -->
-  <div id="popup" class="popup-overlay" style="display:none;">
+    <!-- Popup Modal -->
+  <div id="popup" class="popup-overlay">
     <div class="popup-window">
       <span class="close-button" id="closePopup">&times;</span>
       <h2>Welcome to Gamegram!</h2>
       <p>Advertise on our website, with long time players! aeahb003805mg@ahbs.ae (Founders NJ and MIK)</p>
     </div>
   </div>
-
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const popup = document.getElementById("popup");
+      const closeBtn = document.getElementById("closePopup");
+  
+      // Show popup after 1 second
+      setTimeout(() => {
+        popup.style.display = "flex";
+      }, 1000);
+  
+      // Close popup when "×" is clicked
+      closeBtn.addEventListener("click", () => {
+        popup.style.display = "none";
+      });
+  
+      // Close popup when clicking outside the window
+      popup.addEventListener("click", (e) => {
+        if (e.target === popup) {
+          popup.style.display = "none";
+        }
+      });
+  
+      // Close popup on Escape key
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          popup.style.display = "none";
+        }
+      });
+    });
+  </script>
+</head>
+<body>
   <nav>
     <a href="index.html" class="active">Home</a>
     <a href="chat/">Chat</a>
@@ -253,7 +288,7 @@
   </section>
 
   <footer>
-    <p>Games from <a href="https://github.com/Metroxe/one-html-page-challenge" target="_blank" rel="noopener">One HTML Page Challenge</a>, <a href="https://definitelynotblocked.vercel.app/games/" target="_blank" rel="noopener">various sources</a></p>
+    <p>Games from <a href="https://github.com/Metroxe/one-html-page-challenge" target="_blank" rel="noopener">One HTML Page Challenge</a>, <a href="https://definitelynotblocked.vercel.app/games/index.html" target="_blank" rel="noopener">Seraph</a>, etc</p>
     <p>// all games playable on this website are complete copyright & property of their respective owners \\</p>
   </footer>
 
@@ -268,10 +303,603 @@
     const GAME_META = [
       ['basketball',      { cat:'Sports',      icon:'🏀', color:'#f97316' }],
       ['soccer',          { cat:'Sports',      icon:'⚽', color:'#22c55e' }],
-      /* ... rest of file unchanged ... */
+      ['ping-pong',       { cat:'Sports',      icon:'🏓', color:'#22c55e' }],
+      ['volley',          { cat:'Sports',      icon:'🏐', color:'#22c55e' }],
+      ['retro-bowl',      { cat:'Sports',      icon:'🏈', color:'#f97316' }],
+      ['retrobowl',       { cat:'Sports',      icon:'🏈', color:'#f97316' }],
+      ['a-small-world',   { cat:'Sports',      icon:'⚽', color:'#22c55e' }],
+      ['soccer-random',   { cat:'Sports',      icon:'⚽', color:'#22c55e' }],
+      ['boxing-random',   { cat:'Fighting',    icon:'🥊', color:'#ef4444' }],
+      ['basket-random',   { cat:'Sports',      icon:'🏀', color:'#f97316' }],
+      ['basket-and-ball', { cat:'Sports',      icon:'🏀', color:'#f97316' }],
+      ['mariokart',       { cat:'Racing',      icon:'🏎️', color:'#ef4444' }],
+      ['mario-kart',      { cat:'Racing',      icon:'🏎️', color:'#ef4444' }],
+      ['motorx3m',        { cat:'Racing',      icon:'🏍️', color:'#ef4444' }],
+      ['moto-x3m',        { cat:'Racing',      icon:'🏍️', color:'#ef4444' }],
+      ['slope',           { cat:'Racing',      icon:'⚡',  color:'#06b6d4' }],
+      ['drift',           { cat:'Racing',      icon:'🏎️', color:'#ef4444' }],
+      ['madalin',         { cat:'Racing',      icon:'🏎️', color:'#ef4444' }],
+      ['cross-road',      { cat:'Racing',      icon:'🚗', color:'#ef4444' }],
+      ['2048',            { cat:'Puzzle',      icon:'🔢', color:'#a855f7' }],
+      ['9007199',         { cat:'Puzzle',      icon:'🔢', color:'#a855f7' }],
+      ['checkers',        { cat:'Board',       icon:'♟️', color:'#8b5cf6' }],
+      ['blackjack',       { cat:'Board',       icon:'🃏', color:'#8b5cf6' }],
+      ['poker',           { cat:'Board',       icon:'🃏', color:'#8b5cf6' }],
+      ['solitaire',       { cat:'Board',       icon:'🃏', color:'#8b5cf6' }],
+      ['tic-tac-toe',     { cat:'Board',       icon:'❌', color:'#8b5cf6' }],
+      ['minesweeper',     { cat:'Puzzle',      icon:'💣', color:'#6b7280' }],
+      ['riddle',          { cat:'Puzzle',      icon:'🧩', color:'#a855f7' }],
+      ['tower-blocks',    { cat:'Puzzle',      icon:'🏗️', color:'#f59e0b' }],
+      ['block-the-pig',   { cat:'Puzzle',      icon:'🐷', color:'#f59e0b' }],
+      ['ball-sort',       { cat:'Puzzle',      icon:'🔵', color:'#a855f7' }],
+      ['hextris',         { cat:'Puzzle',      icon:'🔷', color:'#8b5cf6' }],
+      ['sand-tetris',     { cat:'Puzzle',      icon:'🟨', color:'#f59e0b' }],
+      ['little-alchemy',  { cat:'Puzzle',      icon:'⚗️', color:'#a855f7' }],
+      ['mind-maze',       { cat:'Puzzle',      icon:'🧠', color:'#a855f7' }],
+      ['data-miner',      { cat:'Puzzle',      icon:'💾', color:'#8b5cf6' }],
+      ['snake',           { cat:'Classic',     icon:'🐍', color:'#16a34a' }],
+      ['flappy',          { cat:'Classic',     icon:'🐦', color:'#eab308' }],
+      ['breakout',        { cat:'Classic',     icon:'🧱', color:'#f97316' }],
+      ['pacman',          { cat:'Classic',     icon:'👾', color:'#eab308' }],
+      ['edgesurf',        { cat:'Classic',     icon:'🏄', color:'#06b6d4' }],
+      ['edge-surf',       { cat:'Classic',     icon:'🏄', color:'#06b6d4' }],
+      ['chrome-dino',     { cat:'Classic',     icon:'🦕', color:'#6b7280' }],
+      ['google-snake',    { cat:'Classic',     icon:'🐍', color:'#22c55e' }],
+      ['doodle-jump',     { cat:'Classic',     icon:'🟢', color:'#22c55e' }],
+      ['avoid',           { cat:'Action',      icon:'🚴', color:'#06b6d4' }],
+      ['knight',          { cat:'Action',      icon:'⚔️', color:'#ef4444' }],
+      ['arena',           { cat:'Action',      icon:'⚔️', color:'#ef4444' }],
+      ['fnafshooter',     { cat:'Action',      icon:'🔫', color:'#ef4444' }],
+      ['fnaf',            { cat:'Horror',      icon:'🐻', color:'#7c3aed' }],
+      ['funnyshooter',    { cat:'Action',      icon:'🔫', color:'#ef4444' }],
+      ['funny-shooter',   { cat:'Action',      icon:'🔫', color:'#ef4444' }],
+      ['csgo',            { cat:'Action',      icon:'🎯', color:'#6b7280' }],
+      ['deadrails',       { cat:'Action',      icon:'🚂', color:'#6b7280' }],
+      ['deathrun',        { cat:'Action',      icon:'💀', color:'#ef4444' }],
+      ['death-run',       { cat:'Action',      icon:'💀', color:'#ef4444' }],
+      ['clusterrush',     { cat:'Action',      icon:'🚛', color:'#f97316' }],
+      ['bankrobbery',     { cat:'Action',      icon:'💰', color:'#f59e0b' }],
+      ['badtimesim',      { cat:'Action',      icon:'💀', color:'#ef4444' }],
+      ['supersmash',      { cat:'Fighting',    icon:'👊', color:'#ef4444' }],
+      ['smash-karts',     { cat:'Racing',      icon:'🏎️', color:'#ef4444' }],
+      ['fruit',           { cat:'Action',      icon:'🍉', color:'#22c55e' }],
+      ['geodash',         { cat:'Action',      icon:'⬛', color:'#06b6d4' }],
+      ['geodashsubzero',  { cat:'Action',      icon:'❄️', color:'#06b6d4' }],
+      ['geometry-dash',   { cat:'Action',      icon:'⬛', color:'#06b6d4' }],
+      ['roof',            { cat:'Action',      icon:'🔫', color:'#ef4444' }],
+      ['rooftop',         { cat:'Action',      icon:'🔫', color:'#ef4444' }],
+      ['1v1',             { cat:'Action',      icon:'⚔️', color:'#ef4444' }],
+      ['ages-of-conflict',{ cat:'Action',      icon:'⚔️', color:'#ef4444' }],
+      ['among-us',        { cat:'Action',      icon:'🚀', color:'#ef4444' }],
+      ['galactic-rift',   { cat:'Action',      icon:'🚀', color:'#3b82f6' }],
+      ['space',           { cat:'Action',      icon:'🚀', color:'#3b82f6' }],
+      ['nano-wars',       { cat:'Action',      icon:'⚔️', color:'#ef4444' }],
+      ['under-siege',     { cat:'Action',      icon:'🏰', color:'#6b7280' }],
+      ['zombie',          { cat:'Action',      icon:'🧟', color:'#22c55e' }],
+      ['marioboom',       { cat:'Action',      icon:'💣', color:'#ef4444' }],
+      ['mario',           { cat:'Platformer',  icon:'🍄', color:'#ef4444' }],
+      ['smb',             { cat:'Platformer',  icon:'🍄', color:'#ef4444' }],
+      ['smc',             { cat:'Platformer',  icon:'🍄', color:'#ef4444' }],
+      ['celeste',         { cat:'Platformer',  icon:'🍓', color:'#ec4899' }],
+      ['vex',             { cat:'Platformer',  icon:'🏃', color:'#06b6d4' }],
+      ['ovo',             { cat:'Platformer',  icon:'🥚', color:'#f59e0b' }],
+      ['onlyup',          { cat:'Platformer',  icon:'⬆️', color:'#a855f7' }],
+      ['fancyp',          { cat:'Platformer',  icon:'🏃', color:'#22c55e' }],
+      ['bald',            { cat:'Platformer',  icon:'🤖', color:'#6b7280' }],
+      ['baldis',          { cat:'Platformer',  icon:'🎒', color:'#f59e0b' }],
+      ['snail-bob',       { cat:'Platformer',  icon:'🐌', color:'#22c55e' }],
+      ['fireboy',         { cat:'Platformer',  icon:'🔥', color:'#ef4444' }],
+      ['celeste',         { cat:'Platformer',  icon:'🍓', color:'#ec4899' }],
+      ['pixel-escape',    { cat:'Platformer',  icon:'🏃', color:'#06b6d4' }],
+      ['sneaky-steve',    { cat:'Platformer',  icon:'🤫', color:'#22c55e' }],
+      ['crashdown',       { cat:'Platformer',  icon:'💥', color:'#f97316' }],
+      ['poke',            { cat:'RPG',         icon:'⚡', color:'#eab308' }],
+      ['pokemon',         { cat:'RPG',         icon:'⚡', color:'#eab308' }],
+      ['metro',           { cat:'RPG',         icon:'👽', color:'#8b5cf6' }],
+      ['mc',              { cat:'Sandbox',     icon:'⛏️', color:'#84cc16' }],
+      ['minecraft',       { cat:'Sandbox',     icon:'⛏️', color:'#84cc16' }],
+      ['eaglercraft',     { cat:'Sandbox',     icon:'⛏️', color:'#84cc16' }],
+      ['project-sand',    { cat:'Sandbox',     icon:'🏜️', color:'#f59e0b' }],
+      ['idle',            { cat:'Idle',        icon:'⛏️', color:'#f59e0b' }],
+      ['cookie',          { cat:'Idle',        icon:'🍪', color:'#f59e0b' }],
+      ['csgoclicker',     { cat:'Idle',        icon:'🎯', color:'#f59e0b' }],
+      ['astro-farm',      { cat:'Idle',        icon:'🌾', color:'#22c55e' }],
+      ['pressim',         { cat:'Simulation',  icon:'🏛️', color:'#8b5cf6' }],
+      ['bitlife',         { cat:'Simulation',  icon:'🎲', color:'#06b6d4' }],
+      ['miicreator',      { cat:'Simulation',  icon:'👤', color:'#ec4899' }],
+      ['mii-creator',     { cat:'Simulation',  icon:'👤', color:'#ec4899' }],
+      ['tower-defense',   { cat:'Strategy',    icon:'🏰', color:'#8b5cf6' }],
+      ['shapeshifter',    { cat:'Strategy',    icon:'🔀', color:'#8b5cf6' }],
+      ['base-13',         { cat:'Strategy',    icon:'🧮', color:'#8b5cf6' }],
+      ['slime',           { cat:'Casual',      icon:'🟢', color:'#22c55e' }],
+      ['gachalife',       { cat:'Casual',      icon:'🎭', color:'#ec4899' }],
+      ['linerider',       { cat:'Casual',      icon:'📏', color:'#06b6d4' }],
+      ['coolbeans',       { cat:'Casual',      icon:'🫘', color:'#22c55e' }],
+      ['peakgame',        { cat:'Casual',      icon:'🐄', color:'#22c55e' }],
+      ['crazy-cattle',    { cat:'Casual',      icon:'🐄', color:'#22c55e' }],
+      ['fishes',          { cat:'Casual',      icon:'🐠', color:'#06b6d4' }],
+      ['annoyingfish',    { cat:'Casual',      icon:'🐟', color:'#06b6d4' }],
+      ['core-ball',       { cat:'Casual',      icon:'⚪', color:'#6b7280' }],
+      ['circlo',          { cat:'Casual',      icon:'🔵', color:'#06b6d4' }],
+      ['save-the-doge',   { cat:'Casual',      icon:'🐕', color:'#f59e0b' }],
+      ['paper-io',        { cat:'Casual',      icon:'📄', color:'#06b6d4' }],
+      ['tomb-of-the-mask',{ cat:'Casual',      icon:'💀', color:'#8b5cf6' }],
+      ['crossyroad',      { cat:'Casual',      icon:'🐔', color:'#eab308' }],
+      ['crossy',          { cat:'Casual',      icon:'🐔', color:'#eab308' }],
+      ['rocketpult',      { cat:'Casual',      icon:'🚀', color:'#f97316' }],
+      ['cut-the-rope',    { cat:'Casual',      icon:'✂️', color:'#22c55e' }],
+      ['waterworks',      { cat:'Casual',      icon:'💧', color:'#06b6d4' }],
+      ['we-become',       { cat:'Casual',      icon:'🎥', color:'#8b5cf6' }],
+      ['google-feud',     { cat:'Casual',      icon:'🔍', color:'#06b6d4' }],
+      ['stack',           { cat:'Casual',      icon:'🧱', color:'#f97316' }],
+      ['papery-planes',   { cat:'Casual',      icon:'✈️', color:'#06b6d4' }],
+      ['back-to-the',     { cat:'Casual',      icon:'🛋️', color:'#8b5cf6' }],
+      ['hallow',          { cat:'Adventure',   icon:'🎃', color:'#f97316' }],
+      ['haunted',         { cat:'Horror',      icon:'👻', color:'#7c3aed' }],
+      ['granny',          { cat:'Horror',      icon:'👵', color:'#7c3aed' }],
+      ['behind',          { cat:'Horror',      icon:'😱', color:'#7c3aed' }],
+      ['subway',          { cat:'Runner',      icon:'🏃', color:'#f97316' }],
+      ['moneytalkss',     { cat:'Runner',      icon:'💰', color:'#22c55e' }],
+      ['unknownsources',  { cat:'Action',      icon:'❓', color:'#7c3aed' }],
+      ['world',           { cat:'Sports',      icon:'⚽', color:'#22c55e' }],
+      ['warp-drive',      { cat:'Racing',      icon:'🚀', color:'#06b6d4' }],
+      ['last-frontier',   { cat:'Action',      icon:'🚀', color:'#3b82f6' }],
+      ['neon-drift',      { cat:'Racing',      icon:'🏎️', color:'#06b6d4' }],
+      ['tiny-tanks',      { cat:'Action',      icon:'🪖', color:'#84cc16' }],
+      ['rocket-slinger',  { cat:'Action',      icon:'🚀', color:'#f97316' }],
     ];
 
-    // The rest of the JS remains unchanged; truncated here for brevity in this commit content blob
+    function getGameMeta(game) {
+      const hay = (game.fullUrl + ' ' + game.name).toLowerCase();
+      for (const [kw, meta] of GAME_META) {
+        if (hay.includes(kw.toLowerCase())) return meta;
+      }
+      return { cat: 'Game', icon: '🎮', color: '#7c3aed' };
+    }
+
+    const showSpinner = () => {
+      document.getElementById('loadingSpinner').style.display = 'block';
+    };
+  
+    const hideSpinner = () => {
+      const s = document.getElementById('loadingSpinner');
+      if (s) s.style.display = 'none';
+    };
+
+    /* ── Category filter ── */
+    function getFilteredGames() {
+      const query = (document.getElementById('searchInput')?.value || '').toLowerCase().trim();
+      return allGames.filter(g => {
+        const matchCat = currentCat === 'all' || getGameMeta(g).cat === currentCat;
+        const matchQ   = !query || g.name.toLowerCase().includes(query);
+        return matchCat && matchQ;
+      });
+    }
+
+    function buildCatFilters() {
+      const bar = document.getElementById('catFilters');
+      if (!bar) return;
+      const catIcons = {
+        'all':'🎮','Sports':'⚽','Racing':'🏎️','Action':'⚔️','Platformer':'🏃',
+        'Puzzle':'🧩','Board':'♟️','Classic':'👾','RPG':'⚡','Sandbox':'⛏️',
+        'Idle':'🍪','Simulation':'🎲','Strategy':'🏰','Casual':'🎉',
+        'Adventure':'🗺️','Horror':'👻','Runner':'🏃','Fighting':'🥊','Game':'🎮'
+      };
+      const cats = new Set(['all']);
+      allGames.forEach(g => cats.add(getGameMeta(g).cat));
+      const order = ['all','Action','Platformer','Racing','Sports','Puzzle','Board','Classic','RPG','Sandbox','Idle','Simulation','Strategy','Casual','Runner','Fighting','Adventure','Horror','Game'];
+      const sorted = [...cats].sort((a,b) => {
+        const ia = order.indexOf(a), ib = order.indexOf(b);
+        return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+      });
+      bar.innerHTML = sorted.map((c, i) =>
+        `<button class="cat-pill${c === currentCat ? ' active' : ''}" data-cat="${c}" style="animation-delay:${i * 0.03}s">
+          ${catIcons[c] || '🎮'} ${c === 'all' ? 'All' : c}
+        </button>`
+      ).join('');
+      bar.querySelectorAll('.cat-pill').forEach(btn => {
+        btn.addEventListener('click', () => {
+          currentCat = btn.dataset.cat;
+          bar.querySelectorAll('.cat-pill').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentPage = 1;
+          renderGames(getFilteredGames(), 1);
+        });
+      });
+    }
+
+    /* ── Rich card renderer ── */
+    const renderGames = (games, page = 1) => {
+      const grid       = document.getElementById("gameGrid");
+      const pagination = document.getElementById("paginationControls");
+      const pageInfo   = document.getElementById("pageInfo");
+      const prevBtn    = document.getElementById("prevPage");
+      const nextBtn    = document.getElementById("nextPage");
+
+      grid.innerHTML = "";
+
+      if (games.length === 0) {
+        grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--text-muted);padding:40px 0">No games found.</p>';
+        pagination.style.display = "none";
+        return;
+      }
+
+      const totalPages = Math.ceil(games.length / gamesPerPage);
+      currentPage = Math.min(Math.max(page, 1), totalPages);
+
+      const start     = (currentPage - 1) * gamesPerPage;
+      const pageGames = games.slice(start, start + gamesPerPage);
+
+      pageGames.forEach((game, idx) => {
+        const meta  = getGameMeta(game);
+        const delay = Math.min(idx * 0.025, 0.4);
+        const label = game.name.replace(/\//g, ' ').replace(/  +/g, ' ').trim();
+
+        const card = document.createElement('a');
+        card.href      = game.fullUrl;
+        card.target    = '_blank';
+        card.rel       = 'noopener noreferrer';
+        card.className = 'game-cube';
+        card.style.cssText = `--cat-color:${meta.color};animation-delay:${delay}s`;
+        card.setAttribute('aria-label', `Play ${label} on GameGram`);
+        card.dataset.cat = meta.cat;
+
+        card.innerHTML = `
+          <div class="gc-thumb">
+            <span class="gc-icon">${meta.icon}</span>
+            <div class="gc-overlay">
+              <span class="gc-play">▶ Play</span>
+              <button class="gc-here-btn" title="Play here alongside chat" aria-label="Play ${label} here">⊞</button>
+              <button class="gc-share-btn" title="Share in chat" aria-label="Share ${label} in chat">💬</button>
+            </div>
+          </div>
+          <div class="gc-body">
+            <span class="gc-name">${label}</span>
+            <span class="gc-tag">${meta.icon} ${meta.cat}</span>
+          </div>`;
+
+        card.querySelector('.gc-here-btn').addEventListener('click', e => {
+          e.preventDefault();
+          e.stopPropagation();
+          window.openPlayChat(game.fullUrl, label);
+        });
+
+        card.querySelector('.gc-share-btn').addEventListener('click', e => {
+          e.preventDefault();
+          e.stopPropagation();
+          shareInChat(label, game.fullUrl);
+        });
+
+        grid.appendChild(card);
+      });
+
+      pagination.style.display = "flex";
+      pageInfo.textContent     = `Page ${currentPage} of ${totalPages}`;
+      prevBtn.disabled         = currentPage === 1;
+      nextBtn.disabled         = currentPage === totalPages;
+    };
+  
+    const loadLocalGames = () => {
+      return fetch(`games/index.json?t=${Date.now()}`)
+        .then(res => res.json())
+        .then(data =>
+          data.map(file => ({
+            name: file.replace('.html', '').replace(/[-_]/g, ' '),
+            fullUrl: `games/${file}`,
+            source: 'local'
+          }))
+        );
+    };
+
+    const loadJs13kGames = () => {
+      const baseUrl = "https://js13kgames.com/games/";
+    
+      const js13kList = [
+        "back-to-the-couch/index.html",
+        "base-13/index.html",
+        "astro-farm-tycoon/index.html",
+        "crashdown/index.html",
+        "data-miner/index.html",
+        "galactic-rift/index.html",
+        "haunted-halls/index.html",
+        "nano-wars/index.html",
+        "pixel-escape/index.html",
+        "rocket-slinger/index.html",
+        "shapeshifter/index.html",
+        "space-junker/index.html",
+        "tiny-tanks/index.html",
+        "under-siege/index.html",
+        "warp-drive/index.html",
+        "zombie-express/index.html",
+        "sneaky-steve/index.html",
+        "the-last-frontier/index.html",
+        "neon-drift/index.html",
+        "mind-maze/index.html"
+      ];
+    
+      return Promise.resolve(
+        js13kList.map(file => ({
+          name: file.replace('/index.html', '').replace(/[-_]/g, ' '),
+          fullUrl: `${baseUrl}${file}`,
+          source: 'js13k'
+        }))
+      );
+    };
+
+
+    const loadCouchfriendsGames = () => {
+      const baseUrl = "https://couchfriends.com/src/games/";
+    
+      const couchGamesList = [
+        "space-shooter/index.html",
+        "breakout/index.html",
+        "bombergirl/index.html",
+        "space-gpt/index.html",
+        "drakonas/index.html",
+        "mad-science-tower-defense/index.html",
+        "threejs-tower-defense/index.html",
+        "asteroids/index.html",
+        "soccer/index.html"
+      ];
+    
+      return Promise.resolve(
+        couchGamesList.map(file => ({
+          name: file.replace('/index.html', '').replace(/[-_]/g, ' '),
+          fullUrl: `${baseUrl}${file}`,
+          source: 'couchfriends'
+        }))
+      );
+    };
+
+  
+    const loadSeraphGames = () => {
+      const gamesSiteBase = "https://games-site.github.io/projects/";
+    
+      const seraphGamesList = [
+        "1v1.lol/index.html",
+        "2048/index.html",
+        "9007199254740992/index.html",
+        "ages-of-conflict/index.html",
+        "among-us/index.html",
+        "a-small-world-cup/index.html",
+        "baldis-basics/index.html",
+        "ball-sort-puzzle/index.html",
+        "basket-and-ball/index.html",
+        "bitlife/index.html",
+        "blackjack/index.html",
+        "block-the-pig/index.html",
+        "cell-machine/index.html",
+        "chrome-dino/index.html",
+        "circlo/index.html",
+        "cookie-clicker/index.html",
+        "core-ball/index.html",
+        "crazy-cattle-3d/index.html",
+        "cut-the-rope/index.html",
+        "death-run-3d/index.html",
+        "doodle-jump/index.html",
+        "drift-boss/index.html",
+        "drift-hunters/index.html",
+        "eaglercraft/index.html",
+        "edge-surf/index.html",
+        "flappy-bird/index.html",
+        "fruit-ninja/index.html",
+        "geometry-dash/index.html",
+        "google-feud/index.html",
+        "google-snake/index.html",
+        "hextris/index.html",
+        "idle-breakout/index.html",
+        "little-alchemy-2/index.html",
+        "madalin-stunt-cars-2/index.html",
+        "madalin-stunt-cars-3/index.html",
+        "mario/index.html",
+        "minecraft-classic/index.html",
+        "minesweeper/index.html",
+        "pacman/index.html",
+        "paper-io-2/index.html",
+        "papery-planes/index.html",
+        "poker/index.html",
+        "project-sand/index.html",
+        "retro-bowl/index.html",
+        "retro-bowl-college/index.html",
+        "rocketpult/index.html",
+        "rooftop-snipers/index.html",
+        "sand-tetris/index.html",
+        "save-the-doge/index.html",
+        "slope/index.html",
+        "smash-karts/index.html",
+        "solitaire/index.html",
+        "solitaire-ms/index.html",
+        "stack/index.html",
+        "subway-surfers/index.html",
+        "tomb-of-the-mask/index.html",
+        "waterworks/index.html",
+        "we-become-what-we-behold/index.html",
+        "fireboy-and-watergirl-1-forest/index.html",
+        "fireboy-and-watergirl-2-light/index.html",
+        "fireboy-and-watergirl-3-ice/index.html",
+        "fireboy-and-watergirl-4-crystal/index.html",
+        "fireboy-and-watergirl-5-elements/index.html",
+        "fireboy-and-watergirl-6-fairy-tales/index.html",
+        "fnaf-1/index.html",
+        "fnaf-2/index.html",
+        "fnaf-3/index.html",
+        "fnaf-4/index.html",
+        "sister-location/index.html",
+        "fnaf-ucn/index.html",
+        "moto-x3m/index.html",
+        "moto-x3m-2/index.html",
+        "moto-x3m-winter/index.html",
+        "moto-x3m-pool-party/index.html",
+        "moto-x3m-spooky-land/index.html",
+        "ovo/index.html",
+        "ovo-2/index.html",
+        "ovo-dimensions/index.html",
+        "basket-random/index.html",
+        "boxing-random/index.html",
+        "soccer-random/index.html",
+        "volley-random/index.html",
+        "snail-bob/index.html",
+        "snail-bob-2/index.html",
+        "snail-bob-3/index.html",
+        "snail-bob-4/index.html",
+        "snail-bob-5/index.html",
+        "snail-bob-6/index.html",
+        "snail-bob-7/index.html",
+        "snail-bob-8/index.html",
+        "vex-3/index.html",
+        "vex-4/index.html",
+        "vex-5/index.html",
+        "vex-6/index.html"
+      ];
+    
+      return Promise.resolve(
+        seraphGamesList.map(file => ({
+          name: file.replace('/index.html', '').replace(/[-_]/g, ' '),
+          fullUrl: `${gamesSiteBase}${file}`,
+          source: 'seraph'
+        }))
+      );
+    };
+
+  
+    const loadGames = async () => {
+      showSpinner();
+    
+      try {
+        const [localGames, seraphGames, couchGames, Js13kGames] = await Promise.all([
+          loadLocalGames(),
+          loadSeraphGames(),
+          loadCouchfriendsGames(), // Added Couchfriends games
+          loadJs13kGames()
+        ]);
+    
+        // Combine all sources
+        allGames = [...localGames, ...seraphGames, ...couchGames, ...Js13kGames];
+    
+        if (!Array.isArray(allGames) || allGames.length === 0) {
+          throw new Error("No games were returned from sources.");
+        }
+    
+        // Build category filters, then render first page
+        buildCatFilters();
+        renderGames(getFilteredGames(), 1);
+      } catch (err) {
+        console.error("⚠️ Error loading games:");
+        console.error("Message:", err.message || err);
+        console.error("Stack Trace:", err.stack || "No stack trace");
+    
+        const grid = document.getElementById("gameGrid");
+        grid.innerHTML = `
+          <p style="color: red;"><strong>⚠️ Failed to load games.</strong></p>
+          <p>Error: ${err.message || err}</p>
+          <p>Check the browser console (F12) for more information.</p>
+          <ul style="font-size: 0.9em;">
+            <li>Is <code>games/index.json</code> available?</li>
+            <li>Are CORS settings or hosting issues preventing fetch?</li>
+            <li>Are the external game lists defined properly?</li>
+          </ul>
+        `;
+      } finally {
+        hideSpinner();
+      }
+    };
+  
+    /* ── Share game in chat ── */
+    function shareInChat(name, url) {
+      const chatEl = document.getElementById('csChat');
+      const inp    = document.getElementById('csInput');
+      if (!chatEl || chatEl.classList.contains('hidden')) {
+        alert('Join the Live Chat below first, then share the game!');
+        document.getElementById('chatSection')?.scrollIntoView({ behavior: 'smooth' });
+        return;
+      }
+      if (inp) {
+        inp.value = `🎮 Play "${name}": ${location.origin}/${url}`;
+        inp.focus();
+      }
+    }
+
+    /* ── Chat game picker ── */
+    function buildGamePicker(query) {
+      const list = document.getElementById('cgpList');
+      if (!list) return;
+      const q = (query || '').toLowerCase().trim();
+      const matches = allGames.filter(g => !q || g.name.toLowerCase().includes(q)).slice(0, 30);
+      list.innerHTML = matches.map(g => {
+        const meta  = getGameMeta(g);
+        const label = g.name.replace(/\//g,' ').trim();
+        return `<button class="cgp-item" data-name="${label}" data-url="${g.fullUrl}" style="--cat-color:${meta.color}">
+          <span class="cgp-icon">${meta.icon}</span>
+          <span class="cgp-label">${label}</span>
+          <span class="cgp-cat">${meta.cat}</span>
+        </button>`;
+      }).join('');
+      list.querySelectorAll('.cgp-item').forEach(btn => {
+        btn.addEventListener('click', () => {
+          shareInChat(btn.dataset.name, btn.dataset.url);
+          document.getElementById('csGamePicker')?.classList.add('hidden');
+        });
+      });
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      loadGames();
+  
+      const searchInput = document.getElementById("searchInput");
+      const prevBtn     = document.getElementById("prevPage");
+      const nextBtn     = document.getElementById("nextPage");
+  
+      searchInput.addEventListener("input", () => {
+        currentPage = 1;
+        renderGames(getFilteredGames(), currentPage);
+      });
+  
+      prevBtn.addEventListener("click", () => {
+        if (currentPage > 1) renderGames(getFilteredGames(), --currentPage);
+      });
+  
+      nextBtn.addEventListener("click", () => {
+        renderGames(getFilteredGames(), ++currentPage);
+      });
+
+      document.addEventListener("keydown", (e) => {
+        if (e.key === '/' && document.activeElement !== searchInput) {
+          e.preventDefault();
+          searchInput.focus();
+        } else if (e.key === 'Escape') {
+          searchInput.value = "";
+          searchInput.blur();
+          currentCat = 'all';
+          document.querySelectorAll('.cat-pill').forEach((p,i) => p.classList.toggle('active', i === 0));
+          currentPage = 1;
+          renderGames(getFilteredGames(), currentPage);
+          document.getElementById('csGamePicker')?.classList.add('hidden');
+        }
+      });
+
+      /* Game picker toggle */
+      const csGameBtn    = document.getElementById('csGameBtn');
+      const csGamePicker = document.getElementById('csGamePicker');
+      const cgpSearch    = document.getElementById('cgpSearch');
+
+      csGameBtn?.addEventListener('click', () => {
+        const hidden = csGamePicker.classList.toggle('hidden');
+        if (!hidden) {
+          buildGamePicker('');
+          cgpSearch?.focus();
+        }
+      });
+
+      cgpSearch?.addEventListener('input', () => buildGamePicker(cgpSearch.value));
+
+      document.addEventListener('click', e => {
+        if (csGamePicker && !csGamePicker.classList.contains('hidden')) {
+          if (!csGamePicker.contains(e.target) && e.target !== csGameBtn) {
+            csGamePicker.classList.add('hidden');
+          }
+        }
+      });
+    });
   </script>
 
   <!-- Service Worker -->
@@ -306,17 +934,438 @@
   };
 
   document.addEventListener('DOMContentLoaded', () => {
-    loadGames?.();
     const overlay = document.getElementById('playChatOverlay');
     document.getElementById('pcClose')?.addEventListener('click', () => {
       overlay?.classList.add('hidden');
       document.body.style.overflow = '';
       document.getElementById('pcGameFrame').src = '';
     });
+    overlay?.addEventListener('click', e => {
+      if (e.target === overlay) {
+        overlay.classList.add('hidden');
+        document.body.style.overflow = '';
+        document.getElementById('pcGameFrame').src = '';
+      }
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && overlay && !overlay.classList.contains('hidden')) {
+        overlay.classList.add('hidden');
+        document.body.style.overflow = '';
+        document.getElementById('pcGameFrame').src = '';
+      }
+    });
+    // pcSend wired after chat script initialises via window._csSend
+    document.getElementById('pcSend')?.addEventListener('click', () => window._csSend?.('pc'));
+    document.getElementById('pcInput')?.addEventListener('keypress', e => {
+      if (e.key === 'Enter') window._csSend?.('pc');
+    });
   });
   </script>
 
-  <!-- Embedded Chat Script (unchanged) -->
-  <script src="chat/embed.js"></script>
+  <!-- Embedded Chat Script -->
+  <script>
+  (function () {
+    const WS_URL       = 'wss://hack.chat/chat-ws';
+    const DEFAULT_ROOM = 'gamegram';
+    const RECONNECT_MS = 4000;
+
+    let ws    = null;
+    let csNick = '';
+    let csRoom = DEFAULT_ROOM;
+    let userColor = '#7c3aed';
+    let userEmoji = '🎮';
+    let tttState  = null;
+    let reconnectTimer = null;
+    let joined = false;
+
+    const $ = id => document.getElementById(id);
+
+    // ── Helpers ──────────────────────────────────────────────
+    function fmtTime(ts) {
+      return new Date(ts || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    function san(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+    function scrollBottom(el) {
+      const m = el || $('csMessages'); if (m) m.scrollTop = m.scrollHeight;
+    }
+
+    // ── Profile / Room history (localStorage) ─────────────────
+    function loadProfile() {
+      const p = JSON.parse(localStorage.getItem('gg-profile') || '{}');
+      if (p.nick) csNick = p.nick;
+      if (p.color) userColor = p.color;
+      if (p.emoji) userEmoji = p.emoji;
+      const nickEl = $('csNick');
+      if (nickEl && p.nick) nickEl.value = p.nick;
+    }
+    function saveProfile() {
+      localStorage.setItem('gg-profile', JSON.stringify({ nick: csNick, color: userColor, emoji: userEmoji }));
+    }
+    function getRoomHistory() {
+      return JSON.parse(localStorage.getItem('gg-rooms') || '["gamegram"]');
+    }
+    function saveRoomToHistory(room) {
+      let rooms = getRoomHistory();
+      rooms = [room, ...rooms.filter(r => r !== room)].slice(0, 8);
+      localStorage.setItem('gg-rooms', JSON.stringify(rooms));
+    }
+
+    // ── Rich text renderer (game link → interactive card) ──────
+    function renderText(rawText) {
+      const gameRe = /https?:\/\/[^\s<>]+\/games\/[\w%.+-]+\.html/g;
+      const parts = [];
+      let last = 0;
+      let m;
+      while ((m = gameRe.exec(rawText)) !== null) {
+        if (m.index > last) parts.push({ type: 'text', val: rawText.slice(last, m.index) });
+        parts.push({ type: 'game', url: m[0] });
+        last = m.index + m[0].length;
+      }
+      if (last < rawText.length) parts.push({ type: 'text', val: rawText.slice(last) });
+
+      return parts.map(p => {
+        if (p.type === 'text') return `<span>${san(p.val)}</span>`;
+        const raw = p.url;
+        const filename = raw.split('/').pop().replace('.html','').replace(/[-_]/g,' ');
+        const sUrl = san(raw);
+        const sName = san(filename);
+        return `<span class="cs-game-card" style="--card-color:#7c3aed">
+          <span class="cs-gc-icon">🎮</span>
+          <span class="cs-gc-name">${sName}</span>
+          <button class="cs-gc-play" onclick="window.open('${sUrl}','_blank')">▶ Play</button>
+          <button class="cs-gc-split" onclick="window.openPlayChat('${sUrl}','${sName}')">⊞ Here</button>
+        </span>`;
+      }).join('');
+    }
+
+    // ── Message renderers ──────────────────────────────────────
+    function addMsg(nick, text, ts, color, targetId) {
+      const m = $(targetId || 'csMessages'); if (!m) return;
+      const d = document.createElement('div');
+      d.className = 'cs-msg';
+      d.innerHTML = `<span class="cs-time">${fmtTime(ts)}</span>`
+                  + `<span class="cs-nick" style="color:${san(color||'#9090b0')}">${san(nick)}</span>`
+                  + `<span class="cs-text">${renderText(text)}</span>`;
+      m.appendChild(d); scrollBottom(m);
+      // Mirror to Play & Chat panel if open
+      if (!targetId) addMsg(nick, text, ts, color, 'pcMessages');
+    }
+
+    function addSys(text, cls, targetId) {
+      const m = $(targetId || 'csMessages'); if (!m) return;
+      const d = document.createElement('div');
+      d.className = 'cs-sys' + (cls ? ' ' + cls : '');
+      d.textContent = text;
+      m.appendChild(d); scrollBottom(m);
+      if (!targetId) addSys(text, cls, 'pcMessages');
+    }
+
+    function renderUsers(users) {
+      const ul = $('csUserList'); if (!ul) return;
+      ul.innerHTML = '';
+      (users || []).sort((a,b)=>(a.nick||a).localeCompare(b.nick||b)).forEach(u => {
+        const d = document.createElement('div');
+        d.className = 'cs-user';
+        d.style.color = san(u.color || '#9090b0');
+        d.textContent = u.nick || u;
+        ul.appendChild(d);
+      });
+    }
+
+    // ── Room panel ─────────────────────────────────────────────
+    function buildRoomPanel() {
+      const panel = $('csRoomPanel'); if (!panel) return;
+      const rooms = getRoomHistory();
+      panel.innerHTML = rooms.map(r =>
+        `<button class="cs-room-btn${r === csRoom ? ' active' : ''}" data-room="${san(r)}">${san(r)}</button>`
+      ).join('') + `<button class="cs-room-new" id="csNewRoomBtn">+ New Room</button>`;
+      panel.querySelectorAll('.cs-room-btn').forEach(btn =>
+        btn.addEventListener('click', () => switchRoom(btn.dataset.room))
+      );
+      $('csNewRoomBtn')?.addEventListener('click', () => {
+        const name = prompt('Room name (letters, numbers, hyphens):');
+        if (name && /^[\w-]+$/.test(name)) switchRoom(name.toLowerCase());
+      });
+    }
+
+    function switchRoom(room) {
+      if (!room || room === csRoom) return;
+      csRoom = room;
+      window._csRoom = room;
+      saveRoomToHistory(room);
+      const rl = $('cs-roomLabel'); if (rl) rl.textContent = room;
+      const pcrl = $('pcRoomLabel'); if (pcrl) pcrl.textContent = '#' + room;
+      if ($('csMessages')) $('csMessages').innerHTML = '';
+      if ($('csUserList')) $('csUserList').innerHTML = '';
+      buildRoomPanel();
+      connect();
+    }
+
+    // ── Connection ─────────────────────────────────────────────
+    function connect() {
+      clearTimeout(reconnectTimer);
+      if (ws) { try { ws.close(); } catch(_){} }
+      ws = new WebSocket(WS_URL);
+      ws.onopen = () => {
+        ws.send(JSON.stringify({ cmd: 'join', nick: csNick, channel: csRoom }));
+      };
+      ws.onmessage = e => {
+        let data; try { data = JSON.parse(e.data); } catch { return; }
+        switch (data.cmd) {
+          case 'onlineSet':
+            addSys(`Joined #${csRoom} · ${(data.users||[]).length} online`);
+            renderUsers(data.users || []);
+            break;
+          case 'chat':
+            addMsg(data.nick, data.text, data.time ? data.time * 1000 : null, data.color);
+            break;
+          case 'emote':
+            addSys(`* ${data.nick} ${data.text}`, 'emote');
+            break;
+          case 'onlineAdd': {
+            addSys(`→ ${data.nick} joined`);
+            const ul = $('csUserList');
+            if (ul) {
+              const d = document.createElement('div');
+              d.className = 'cs-user';
+              d.style.color = san(data.color || '#9090b0');
+              d.textContent = data.nick;
+              ul.appendChild(d);
+            }
+            break;
+          }
+          case 'onlineRemove': {
+            addSys(`← ${data.nick} left`);
+            const ul = $('csUserList');
+            if (ul) [...ul.querySelectorAll('.cs-user')].forEach(el => { if (el.textContent === data.nick) el.remove(); });
+            break;
+          }
+          case 'warn': addSys(`⚠ ${data.text}`, 'warn'); break;
+          case 'info': addSys(`ℹ ${data.text}`); break;
+        }
+      };
+      ws.onerror = () => {};
+      ws.onclose = () => {
+        if (joined) { addSys('Disconnected — reconnecting…'); reconnectTimer = setTimeout(connect, RECONNECT_MS); }
+      };
+    }
+
+    // ── Chat commands ──────────────────────────────────────────
+    function handleCommand(text) {
+      const parts = text.trim().split(/\s+/);
+      const cmd = parts[0].toLowerCase();
+      if (!ws || ws.readyState !== WebSocket.OPEN) return false;
+      switch (cmd) {
+        case '/roll': {
+          const sides = parseInt(parts[1]) || 6;
+          const result = Math.floor(Math.random() * sides) + 1;
+          ws.send(JSON.stringify({ cmd:'chat', text:`🎲 rolled a d${sides} and got ${result}!` }));
+          return true;
+        }
+        case '/flip': {
+          const r = Math.random() < 0.5 ? 'Heads 🪙' : 'Tails 🌕';
+          ws.send(JSON.stringify({ cmd:'chat', text:`🪙 flipped a coin: ${r}` }));
+          return true;
+        }
+        case '/ttt': {
+          startTTT();
+          return true;
+        }
+        case '/room': {
+          if (parts[1]) switchRoom(parts[1].toLowerCase());
+          else addSys('Usage: /room <name>');
+          return true;
+        }
+        case '/help': {
+          addSys('Commands: /roll [sides] · /flip · /ttt · /room [name] · /help');
+          return true;
+        }
+        default: {
+          addSys(`Unknown command: ${cmd} — try /help`, 'warn');
+          return true; // prevent forwarding to hack.chat server
+        }
+      }
+    }
+
+    // ── Send ───────────────────────────────────────────────────
+    function sendMessage(source) {
+      const inp = $(source === 'pc' ? 'pcInput' : 'csInput');
+      const text = inp?.value.trim();
+      if (!text) return;
+      if (text.startsWith('/') && handleCommand(text)) { inp.value = ''; return; }
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        addSys('Not connected. Please join chat first.');
+        return;
+      }
+      ws.send(JSON.stringify({ cmd: 'chat', text }));
+      inp.value = '';
+    }
+    window._csSend = sendMessage;
+
+    // ── Tic-Tac-Toe mini-game ──────────────────────────────────
+    const TTT_SYM = ['⬜','❌','⭕'];
+    function startTTT() {
+      tttState = { board: Array(9).fill(0), turn: 1, winner: 0 };
+      renderTTT();
+      addSys('Tic-Tac-Toe started! ❌ goes first. Click a square to play.');
+    }
+    function renderTTT() {
+      if (!tttState) return;
+      const m = $('csMessages'); if (!m) return;
+      let el = m.querySelector('.cs-ttt');
+      if (!el) { el = document.createElement('div'); el.className = 'cs-ttt'; m.appendChild(el); }
+      const { board, turn, winner } = tttState;
+      const statusTxt = winner
+        ? (winner === 3 ? "It's a draw!" : `${TTT_SYM[winner]} wins!`)
+        : `${TTT_SYM[turn]}'s turn`;
+      el.innerHTML = `
+        <div class="ttt-header">Tic-Tac-Toe <span class="ttt-status">${statusTxt}</span></div>
+        <div class="ttt-board">
+          ${board.map((c,i) =>
+            `<button class="ttt-cell${c ? ' taken' : ''}" data-i="${i}" ${c||winner?'disabled':''}>${TTT_SYM[c]}</button>`
+          ).join('')}
+        </div>
+        ${winner ? `<button class="ttt-reset">↺ Play Again</button>` : ''}
+      `;
+      el.querySelectorAll('.ttt-cell').forEach(b => b.addEventListener('click', () => tttMove(+b.dataset.i)));
+      el.querySelector('.ttt-reset')?.addEventListener('click', () => { tttState = { board:Array(9).fill(0), turn:1, winner:0 }; renderTTT(); });
+      scrollBottom(m);
+    }
+    function tttMove(i) {
+      if (!tttState || tttState.board[i] || tttState.winner) return;
+      tttState.board[i] = tttState.turn;
+      const w = checkTTT(tttState.board);
+      if (w) {
+        tttState.winner = w;
+        if (ws && ws.readyState === WebSocket.OPEN)
+          ws.send(JSON.stringify({ cmd:'chat', text: w===3 ? `🎮 Tic-Tac-Toe: Draw!` : `🎮 Tic-Tac-Toe: ${TTT_SYM[w]} wins!` }));
+      } else {
+        tttState.turn = tttState.turn === 1 ? 2 : 1;
+      }
+      renderTTT();
+    }
+    function checkTTT(b) {
+      for (const [a,c,d] of [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]])
+        if (b[a] && b[a]===b[c] && b[a]===b[d]) return b[a];
+      return b.every(Boolean) ? 3 : 0;
+    }
+
+    // ── Profile modal ──────────────────────────────────────────
+    function openProfileModal() {
+      const modal = $('csProfileModal'); if (!modal) return;
+      const ni = $('profNick'); if (ni) ni.value = csNick;
+      const ci = $('profColor'); if (ci) ci.value = userColor;
+      const ev = $('profEmojiVal'); if (ev) ev.textContent = userEmoji;
+      updateProfilePreview();
+      modal.classList.remove('hidden');
+    }
+    function updateProfilePreview() {
+      const ci = $('profColor'); if (!ci) return;
+      const prev = $('profColorPreview'); if (prev) { prev.textContent = ($('profNick')?.value||csNick||'Preview'); prev.style.color = ci.value; }
+    }
+    function saveProfileFromModal() {
+      const ni = $('profNick')?.value.trim(); if (ni) csNick = ni;
+      const ci = $('profColor')?.value; if (ci) userColor = ci;
+      const ev = $('profEmojiVal')?.textContent; if (ev) userEmoji = ev;
+      saveProfile();
+      $('csProfileModal')?.classList.add('hidden');
+      addSys(`Profile saved! (${userEmoji} ${csNick}) — rejoin to update your name.`);
+    }
+
+    // ── Join & setup ───────────────────────────────────────────
+    function doJoin() {
+      csNick = ($('csNick')?.value.trim()) || 'Guest' + Math.floor(Math.random() * 9000 + 1000);
+      csRoom = ($('csRoom')?.value.trim()) || DEFAULT_ROOM;
+      saveProfile();
+      saveRoomToHistory(csRoom);
+      window._csRoom = csRoom;
+      $('csLogin')?.classList.add('hidden');
+      $('csChat')?.classList.remove('hidden');
+      const rl = $('cs-roomLabel'); if (rl) rl.textContent = csRoom;
+      const pcrl = $('pcRoomLabel'); if (pcrl) pcrl.textContent = '#' + csRoom;
+      joined = true;
+      buildRoomPanel();
+      connect();
+    }
+
+    function initToggle() {
+      const btn = $('chatToggleBtn'), body = $('chatBody'), icon = $('chatToggleIcon');
+      if (!btn || !body) return;
+      btn.addEventListener('click', () => {
+        const collapsed = body.classList.toggle('collapsed');
+        if (icon) icon.textContent = collapsed ? '▼ Expand' : '▲ Collapse';
+        btn.setAttribute('aria-expanded', String(!collapsed));
+      });
+    }
+
+    // ── Init ──────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+      loadProfile();
+      initToggle();
+
+      // Join
+      $('csJoinBtn')?.addEventListener('click', doJoin);
+      [$('csNick'), $('csRoom')].forEach(el => el?.addEventListener('keypress', e => { if (e.key==='Enter') doJoin(); }));
+
+      // Send
+      $('csSend')?.addEventListener('click', () => sendMessage('cs'));
+      $('csInput')?.addEventListener('keypress', e => { if (e.key==='Enter') sendMessage('cs'); });
+
+      // Profile
+      $('csProfileBtn')?.addEventListener('click', openProfileModal);
+      $('profSave')?.addEventListener('click', saveProfileFromModal);
+      $('profCancel')?.addEventListener('click', () => $('csProfileModal')?.classList.add('hidden'));
+      $('profColor')?.addEventListener('input', updateProfilePreview);
+      $('profNick')?.addEventListener('input', updateProfilePreview);
+
+      // Emoji grid in profile modal
+      const pg = $('profEmojiGrid');
+      if (pg) {
+        const emojis = pg.textContent.trim().split(/\s+/);
+        pg.innerHTML = emojis.map(e =>
+          `<button class="prof-emoji-opt${e===userEmoji?' selected':''}" type="button">${e}</button>`
+        ).join('');
+        pg.querySelectorAll('.prof-emoji-opt').forEach(btn => {
+          btn.addEventListener('click', () => {
+            pg.querySelectorAll('.prof-emoji-opt').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            const ev = $('profEmojiVal'); if (ev) ev.textContent = btn.textContent;
+            updateProfilePreview();
+          });
+        });
+      }
+
+      // Share room link
+      $('csShareRoom')?.addEventListener('click', () => {
+        if (!joined) { addSys('Join a room first to share its link.'); return; }
+        const url = `${location.origin}${location.pathname}?room=${csRoom}`;
+        navigator.clipboard?.writeText(url)
+          .then(() => addSys(`Room link copied: ${url}`))
+          .catch(() => addSys(`Room link: ${url}`));
+      });
+
+      // Commands help
+      $('csCmdHelp')?.addEventListener('click', () => {
+        addSys('Commands: /roll [sides] · /flip · /ttt · /room [name] · /help');
+        $('chatBody')?.classList.remove('collapsed');
+      });
+
+      // Handle ?room= param from events page
+      const params = new URLSearchParams(location.search);
+      const roomParam = params.get('room');
+      if (roomParam && /^[\w-]+$/.test(roomParam)) {
+        const roomEl = $('csRoom');
+        if (roomEl) roomEl.value = roomParam;
+      }
+    });
+  })();
+  </script>
+
+  <noscript>
+    <p style="text-align:center; color:red;">JavaScript is required to use Gamegram. Please enable JavaScript in your browser settings.</p>
+  </noscript>
+
 </body>
 </html>
