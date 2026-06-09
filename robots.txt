@@ -9,4 +9,4 @@ Disallow: /assets/
 Disallow: /css/
 Disallow: /js/
 
-Sitemap: https://gamegramplay.github.io/GameGram-website/sitemap_index.xml
+Sitemap: https://gamegramplay.github.io/GameGram-website/sitemap.xml

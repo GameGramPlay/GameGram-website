@@ -49,6 +49,7 @@ body[data-theme="light"] {
   inset: 0;
   background: rgba(0,0,0,0.75);
   backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -391,6 +392,7 @@ body[data-msgstyle="compact"] .message .text  { font-size: 12px; }
   inset: 0;
   background: rgba(0,0,0,0.6);
   backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   display: flex;
   justify-content: center;
   align-items: center;

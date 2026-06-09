@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GameGram Stats & Analytics</title>
+  <meta name="description" content="GameGram live stats: visitors, games played, active sessions, and more.">
+  <meta name="robots" content="index, follow">
+  <link rel="icon" type="image/png" href="../images/gamegram.png">
+  <link rel="canonical" href="https://gamegramplay.github.io/GameGram-website/stats/">
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../style.css?v=7">
+  <script src="https://analytics.ahrefs.com/analytics.js" data-key="uZCGMU7mU9nA5Ae5Z6/Hew" async></script>
+</head>
+<body>
+  <nav>
+    <a href="../" class="nav-logo-link" title="GameGram Home">
+      <img src="../images/gamegram.png" alt="GameGram logo" class="nav-logo" width="28" height="28">
+      <span class="nav-brand">GameGram</span>
+    </a>
+    <a href="../">Home</a>
+    <a href="../chat/">Chat</a>
+    <a href="../features/">Features</a>
+    <a href="../about/">About</a>
+    <a href="../events/">Events</a>
+    <a href="../customize/">Customize</a>
+    <a href="./" class="active">Stats</a>
+    <a href="../lobby/">TicTacToe</a>
+  </nav>
+
+  <h1 class="title-bubble">GameGram Live Stats</h1>
+
+  <main>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon">🎮</div>
+        <div class="stat-value" id="gamesTotal">73</div>
+        <div class="stat-label">Free Games</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">👥</div>
+        <div class="stat-value" id="visitorCount">--</div>
+        <div class="stat-label">Total Visitors</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">📊</div>
+        <div class="stat-value" id="sessionCount">--</div>
+        <div class="stat-label">Sessions This Visit</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">💬</div>
+        <div class="stat-value" id="chatRooms">--</div>
+        <div class="stat-label">Active Chat Rooms</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">⚡</div>
+        <div class="stat-value" id="uptime">99.9%</div>
+        <div class="stat-label">Uptime</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">🌐</div>
+        <div class="stat-value" id="firstVisit">--</div>
+        <div class="stat-label">First Visit</div>
+      </div>
+    </div>
+
+    <div class="stats-panel">
+      <h2>Your Session</h2>
+      <div class="stat-row">
+        <span>Pages visited this session</span>
+        <span id="pagesVisited">--</span>
+      </div>
+      <div class="stat-row">
+        <span>Games launched</span>
+        <span id="gamesLaunched">--</span>
+      </div>
+      <div class="stat-row">
+        <span>Chat messages sent</span>
+        <span id="msgsSent">--</span>
+      </div>
+      <div class="stat-row">
+        <span>Time on site</span>
+        <span id="timeOnSite">--</span>
+      </div>
+      <div class="stat-row">
+        <span>Browser</span>
+        <span id="browserInfo">--</span>
+      </div>
+      <div class="stat-row">
+        <span>Screen</span>
+        <span id="screenInfo">--</span>
+      </div>
+    </div>
+
+    <div class="stats-panel">
+      <h2>Popular Games</h2>
+      <div class="stats-list" id="popularGames"></div>
+    </div>
+  </main>
+
+  <footer>
+    <p>Analytics powered by <a href="https://ahrefs.com" target="_blank" rel="noopener">Ahrefs</a> and GameGram's own visitor counter.</p>
+    <p>// <a href="../">Back to GameGram</a> //</p>
+  </footer>
+
+  <script>
+    (function() {
+      // Visitor count from server API
+      fetch('/api/visitors/count').then(r => r.json()).then(d => {
+        const el = document.getElementById('visitorCount');
+        if (el) el.textContent = (d.count || 0).toLocaleString();
+      }).catch(() => {
+        document.getElementById('visitorCount').textContent = 'N/A';
+      });
+
+      // Session tracking
+      const now = Date.now();
+      let s = JSON.parse(sessionStorage.getItem('gg-stats') || '{}');
+      if (!s.start) s = { start: now, pages: 0, games: 0, msgs: 0 };
+      s.pages = (s.pages || 0) + 1;
+      sessionStorage.setItem('gg-stats', JSON.stringify(s));
+
+      // Local long-term tracking
+      let lt = JSON.parse(localStorage.getItem('gg-stats-lt') || '{}');
+      if (!lt.firstVisit) lt.firstVisit = new Date().toLocaleDateString();
+      if (!lt.totalGames) lt.totalGames = 0;
+      if (!lt.totalMsgs) lt.totalMsgs = 0;
+      localStorage.setItem('gg-stats-lt', JSON.stringify(lt));
+
+      // Display
+      const fmtTime = ms => {
+        const s = Math.floor(ms / 1000);
+        const m = Math.floor(s / 60);
+        const h = Math.floor(m / 60);
+        if (h > 0) return h + 'h ' + (m % 60) + 'm';
+        if (m > 0) return m + 'm ' + (s % 60) + 's';
+        return s + 's';
+      };
+      const updateTime = () => {
+        const elapsed = Date.now() - s.start;
+        document.getElementById('timeOnSite').textContent = fmtTime(elapsed);
+      };
+      setInterval(updateTime, 1000); updateTime();
+
+      document.getElementById('sessionCount').textContent = s.pages;
+      document.getElementById('pagesVisited').textContent = s.pages;
+      document.getElementById('gamesLaunched').textContent = lt.totalGames;
+      document.getElementById('msgsSent').textContent = lt.totalMsgs;
+      document.getElementById('firstVisit').textContent = lt.firstVisit;
+      document.getElementById('chatRooms').textContent = (JSON.parse(localStorage.getItem('gg-rooms') || '[]')).length;
+
+      // Browser / screen
+      const ua = navigator.userAgent;
+      let browser = 'Unknown';
+      if (ua.includes('Firefox')) browser = 'Firefox';
+      else if (ua.includes('Chrome')) browser = 'Chrome';
+      else if (ua.includes('Safari')) browser = 'Safari';
+      else if (ua.includes('Edg')) browser = 'Edge';
+      document.getElementById('browserInfo').textContent = browser;
+      document.getElementById('screenInfo').textContent = `${window.innerWidth}×${window.innerHeight}`;
+
+      // Popular games (from localStorage clicks)
+      const clicks = JSON.parse(localStorage.getItem('gg-clicks') || '{}');
+      const sorted = Object.entries(clicks).sort((a, b) => b[1] - a[1]).slice(0, 10);
+      const pg = document.getElementById('popularGames');
+      if (pg) {
+        if (!sorted.length) {
+          pg.innerHTML = '<p style="color:#5a5a7a;font-size:13px">Play some games to see your personal stats here!</p>';
+        } else {
+          pg.innerHTML = sorted.map(([name, n]) =>
+            `<div class="stat-row"><span>${name}</span><span>${n} plays</span></div>`
+          ).join('');
+        }
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -330,8 +330,19 @@ function openPlayChat(url, name) {
   const r = $('pcRoomLabel'); if (r) r.textContent = '#' + room;
   overlay.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
+  // Track the game play
+  try {
+    const clicks = JSON.parse(localStorage.getItem('gg-clicks') || '{}');
+    const key = name || 'Game';
+    clicks[key] = (clicks[key] || 0) + 1;
+    localStorage.setItem('gg-clicks', JSON.stringify(clicks));
+    const lt = JSON.parse(localStorage.getItem('gg-stats-lt') || '{}');
+    lt.totalGames = (lt.totalGames || 0) + 1;
+    localStorage.setItem('gg-stats-lt', JSON.stringify(lt));
+  } catch (_) {}
   setTimeout(() => $('pcInput')?.focus(), 150);
 }
+window.openPlayChat = openPlayChat;
 
 function closePlayChat() {
   $('playChatOverlay')?.classList.add('hidden');
@@ -449,11 +460,31 @@ document.addEventListener('DOMContentLoaded', () => {
       .catch(() => addSystem(`Room link: ${url}`));
   });
 
-  // Game share button — open a URL prompt (simple, works offline)
-  $('gameShareBtn')?.addEventListener('click', () => {
-    const url = prompt('Paste a GameGram game URL to share in chat:');
-    if (url && url.trim()) {
-      const inp = $('input'); if (inp) { inp.value = url.trim(); inp.focus(); }
+  // Game share button — load game picker from index.json
+  let _gamePicker = null;
+  $('gameShareBtn')?.addEventListener('click', async () => {
+    const inp = $('input'); if (!inp) return;
+    if (!_gamePicker) {
+      try {
+        const res = await fetch('../games/index.json');
+        const files = await res.json();
+        _gamePicker = files.map(f => {
+          const name = f.replace('.html','').replace(/[-_]/g,' ');
+          return { name, url: `${location.origin}/games/${f}` };
+        });
+      } catch (_) {
+        addSystem('Could not load game list.'); return;
+      }
+    }
+    const name = prompt('Search a game to share (e.g. slope, 2048):');
+    if (!name) return;
+    const q = name.toLowerCase().trim();
+    const match = _gamePicker.find(g => g.name.toLowerCase().includes(q));
+    if (match) {
+      inp.value = `🎮 Play "${match.name}": ${match.url}`;
+      inp.focus();
+    } else {
+      addSystem('No matching game found. Try another name.');
     }
   });
 

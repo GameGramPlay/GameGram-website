@@ -10,15 +10,7 @@
   <meta name="theme-color" content="#6600cc">
   <meta name="bitmedia-site-verification" content="908ef0a98239d954fc5835e68d271c72" />
   <script src="https://analytics.ahrefs.com/analytics.js" data-key="uZCGMU7mU9nA5Ae5Z6/Hew" async></script>
-  <!-- BEGIN AADS AD UNIT 2440279 -->
-
-  <div id="frame" style="width: 100%;margin: auto;position: relative; z-index: 99998;">
-    <iframe data-aa='2440279' src='//acceptable.a-ads.com/2440279/?size=Adaptive'
-      style='border:0; padding:0; width:70%; height:auto; overflow:hidden;display: block;margin: auto'></iframe>
-  </div>
-  
-  <!-- END AADS AD UNIT 2440279 -->
-    <!-- PRE-CONNECTS / DNS-PREFETCH – fastest first -->
+  <!-- PRE-CONNECTS / DNS-PREFETCH – fastest first -->
   <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="dns-prefetch" href="//profile-counter.glitch.me">
@@ -46,7 +38,12 @@
   <link rel="shortcut icon" href="images/gamegram.png">
   <link rel="manifest" href="/manifest.json">
 
-  <meta name="keywords" content="GameGram, GameGramPlay, online games, HTML5 games, free games, unblocked games, play online, web games, PWA, multiplayer chat games">
+  <meta name="keywords" content="GameGram, GameGramPlay, online games, HTML5 games, free games, unblocked games, play online, web games, PWA, multiplayer chat games, browser games, no download games, unblocked school games, 2048, slope, minecraft, flappy bird, retro bowl, geometry dash, snake, pacman, tic tac toe, basketball star, moto x3m, cookie clicker, bitlife, among us, free online gaming, play games in browser, games with chat">
+  <meta name="application-name" content="GameGram">
+  <meta name="category" content="Games">
+  <meta name="rating" content="general">
+  <meta name="language" content="English">
+  <meta name="revisit-after" content="7 days">
 
   <!-- OPEN-GRAPH / TWITTER -->
   <meta property="og:title" content="Gamegram – Play Web Games Instantly">
@@ -82,56 +79,63 @@
   <!-- ===== NEW SEO TITLE & DESCRIPTION ===== -->
   <title>GameGram – 200+ Free Online Web Games | Unblocked & Instant</title>
   <link rel="canonical" href="https://gamegramplay.github.io/GameGram-website/"/>
-  <link rel="stylesheet" href="style.css?v=5" />
+  <link rel="stylesheet" href="style.css?v=7" />
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
-    <!-- Popup Modal -->
-  <div id="popup" class="popup-overlay">
+    <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    "name": "GameGram Free Online Games",
+    "description": "Play 73+ free unblocked HTML5 games instantly in your browser. No downloads, no installs.",
+    "url": "https://gamegramplay.github.io/GameGram-website/",
+    "numberOfItems": 73,
+    "itemListElement": [
+      {"@type":"ListItem","position":1,"name":"2048","url":"https://gamegramplay.github.io/GameGram-website/games/2048.html"},
+      {"@type":"ListItem","position":2,"name":"Slope","url":"https://gamegramplay.github.io/GameGram-website/games/slope.html"},
+      {"@type":"ListItem","position":3,"name":"Retro Bowl","url":"https://gamegramplay.github.io/GameGram-website/games/retrobowl.html"},
+      {"@type":"ListItem","position":4,"name":"Minecraft Classic","url":"https://gamegramplay.github.io/GameGram-website/games/mc.html"},
+      {"@type":"ListItem","position":5,"name":"Geometry Dash","url":"https://gamegramplay.github.io/GameGram-website/games/geodash.html"}
+    ]
+  }
+  </script>
+</head>
+<body>
+  <!-- Popup Modal (moved from <head> — was invalid HTML) -->
+  <div id="popup" class="popup-overlay" style="display:none">
     <div class="popup-window">
       <span class="close-button" id="closePopup">&times;</span>
-      <h2>Welcome to Gamegram!</h2>
-      <p>Advertise on our website, with long time players! aeahb003805mg@ahbs.ae (Founders NJ and MIK)</p>
+      <h2>Welcome to GameGram!</h2>
+      <p>Play 73+ free unblocked games, chat with other players in real time. <strong>No sign-up needed.</strong></p>
+      <p style="font-size:11px;color:#5a5a7a;margin-top:8px">Advertising inquiries: <a href="mailto:aeahb003805mg@ahbs.ae" style="color:#06b6d4">aeahb003805mg@ahbs.ae</a></p>
     </div>
   </div>
   <script>
     document.addEventListener("DOMContentLoaded", () => {
       const popup = document.getElementById("popup");
       const closeBtn = document.getElementById("closePopup");
-  
-      // Show popup after 1 second
-      setTimeout(() => {
-        popup.style.display = "flex";
-      }, 1000);
-  
-      // Close popup when "×" is clicked
-      closeBtn.addEventListener("click", () => {
-        popup.style.display = "none";
-      });
-  
-      // Close popup when clicking outside the window
-      popup.addEventListener("click", (e) => {
-        if (e.target === popup) {
-          popup.style.display = "none";
-        }
-      });
-  
-      // Close popup on Escape key
-      document.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") {
-          popup.style.display = "none";
-        }
-      });
+      if (!sessionStorage.getItem('gg-popup-seen')) {
+        setTimeout(() => { popup.style.display = "flex"; }, 1800);
+      }
+      const closeIt = () => { popup.style.display = "none"; sessionStorage.setItem('gg-popup-seen','1'); };
+      closeBtn?.addEventListener("click", closeIt);
+      popup?.addEventListener("click", e => { if (e.target === popup) closeIt(); });
+      document.addEventListener("keydown", e => { if (e.key === "Escape") closeIt(); });
     });
   </script>
-</head>
-<body>
+
   <nav>
+    <a href="index.html" class="nav-logo-link" title="GameGram Home">
+      <img src="images/gamegram.png" alt="GameGram logo" class="nav-logo" width="28" height="28" />
+      <span class="nav-brand">GameGram</span>
+    </a>
     <a href="index.html" class="active">Home</a>
     <a href="chat/">Chat</a>
     <a href="features/">Features</a>
     <a href="about/">About</a>
     <a href="events/">Events</a>
     <a href="customize/">Customize</a>
-    <a href="lobby/">Online TicTacToe</a>
+    <a href="stats/">Stats</a>
+    <a href="lobby/">TicTacToe</a>
   </nav>
 
   <!-- ===== MAIN SITE HEADING (only one <h1>) ===== -->
@@ -155,7 +159,7 @@
 
   <main>
     <!-- ===== SECTION HEADINGS (only <h2>) ===== -->
-    <h2>Popular GameGram Titles – New & Unblocked Games</h2>
+    <h2>Popular GameGram Titles – <span id="gameCountBadge">73</span> Free Unblocked Games</h2>
 
     <!-- Search Bar -->
     <div class="search-container">
@@ -286,6 +290,17 @@
   </section>
 
   <footer>
+    <div class="footer-links">
+      <a href="index.html">Home</a>
+      <a href="chat/">Chat</a>
+      <a href="features/">Features</a>
+      <a href="about/">About</a>
+      <a href="events/">Events</a>
+      <a href="customize/">Customize</a>
+      <a href="stats/">Stats</a>
+      <a href="lobby/">TicTacToe</a>
+      <a href="ads/">Advertising</a>
+    </div>
     <p>Games from <a href="https://github.com/Metroxe/one-html-page-challenge" target="_blank" rel="noopener">One HTML Page Challenge</a>, <a href="https://definitelynotblocked.vercel.app/games/index.html" target="_blank" rel="noopener">Seraph</a>, etc</p>
     <p>// all games playable on this website are complete copyright & property of their respective owners \\</p>
   </footer>
@@ -927,6 +942,16 @@
     if (rl && window._csRoom) rl.textContent = '#' + window._csRoom;
     overlay.classList.remove('hidden');
     document.body.style.overflow = 'hidden';
+    // Track game play
+    try {
+      const clicks = JSON.parse(localStorage.getItem('gg-clicks') || '{}');
+      const key = name || 'Game';
+      clicks[key] = (clicks[key] || 0) + 1;
+      localStorage.setItem('gg-clicks', JSON.stringify(clicks));
+      const lt = JSON.parse(localStorage.getItem('gg-stats-lt') || '{}');
+      lt.totalGames = (lt.totalGames || 0) + 1;
+      localStorage.setItem('gg-stats-lt', JSON.stringify(lt));
+    } catch (_) {}
     const pcInp = document.getElementById('pcInput');
     if (pcInp) setTimeout(() => pcInp.focus(), 200);
   };
