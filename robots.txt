@@ -1,4 +1,10 @@
 User-agent: *
 Allow: /
+Allow: /events/
+Allow: /games/
+Allow: /categories/
+Disallow: /assets/
+Disallow: /css/
+Disallow: /js/
 
 Sitemap: https://gamegramplay.github.io/GameGram-website/sitemap.xml
