@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=7" />
+  <link rel="stylesheet" href="styles.css?v=8" />
   <link rel="icon" type="image/png" href="../images/gamegram.png">
   <meta http-equiv="Cache-Control" content="no-store" />
 </head>
@@ -47,7 +47,7 @@
       <input id="nickInput" placeholder="Nickname" autocomplete="off" />
       <input id="roomInput" placeholder="Room (default: gamegram)" autocomplete="off" />
       <button id="loginBtn" class="big-btn">Join Room</button>
-      <p class="login-hint">Commands: /roll · /flip · /ttt · /room name · /help</p>
+      <p class="login-hint">Commands: /roll · /flip · /ttt · /room name · /help · /clear</p>
     </div>
   </div>
 
@@ -85,12 +85,47 @@
         <button class="hdr-btn" id="shareRoomBtn">🔗 Share</button>
       </div>
     </header>
+
     <div id="messages"></div>
+
+    <!-- Typing indicator -->
+    <div class="typing-indicator" id="typingIndicator" style="display:none">
+      <span class="typing-dot"></span>
+      <span class="typing-dot"></span>
+      <span class="typing-dot"></span>
+      <span id="typingText">someone is typing...</span>
+    </div>
+
+    <!-- Scroll-to-bottom + unread badge -->
+    <button class="scroll-down" id="scrollDown" style="display:none">
+      <span id="scrollDownCount">0</span> new
+    </button>
+
+    <!-- Reply bar -->
+    <div class="reply-bar" id="replyBar" style="display:none">
+      <span class="reply-bar-label">Replying to</span>
+      <span class="reply-bar-name" id="replyBarName">--</span>
+      <span class="reply-bar-text" id="replyBarText">--</span>
+      <button class="reply-bar-close" id="replyBarClose">✕</button>
+    </div>
+
     <footer class="chat-footer">
+      <button class="footer-icon-btn" id="emojiBtn" title="Emoji picker">😀</button>
       <button class="footer-icon-btn" id="gameShareBtn" title="Share a game in chat">🎮</button>
-      <input id="input" type="text" placeholder="Message… or /help for commands" autocomplete="off" />
+      <input id="input" type="text" placeholder="Message #gamegram" autocomplete="off" />
       <button id="send">Send</button>
     </footer>
+
+    <!-- Emoji picker overlay -->
+    <div class="emoji-picker" id="emojiPicker" style="display:none">
+      <div class="emoji-picker-header">
+        <span class="emoji-picker-title">Emoji</span>
+        <button class="emoji-picker-close" id="emojiPickerClose">✕</button>
+      </div>
+      <div class="emoji-picker-grid" id="emojiPickerGrid">
+        <!-- Filled by JS -->
+      </div>
+    </div>
   </main>
 
   <!-- Profile & Settings modal -->

@@ -1,9 +1,12 @@
-// ── Config ───────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════
+//   GameGram Chat — Discord-like features
+// ══════════════════════════════════════════════════════
+
 const WS_URL       = 'wss://hack.chat/chat-ws';
 const DEFAULT_ROOM = 'gamegram';
 const RECONNECT_MS = 4000;
+const MAX_HISTORY  = 100;
 
-// ── State ────────────────────────────────────────────────────
 let ws            = null;
 let nick          = '';
 let room          = DEFAULT_ROOM;
@@ -11,11 +14,65 @@ let nickColor     = '#7c3aed';
 let emoji         = '🎮';
 let reconnectTimer = null;
 let tttState      = null;
+let messageId     = 0;
+let replyTo       = null;
+let unreadCount   = 0;
+let isAtBottom    = true;
+let lastMsgTime   = 0;
+let lastSender    = '';
+let usersOnline   = [];
+let _gamePicker   = null;
 
-// ── DOM ──────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
 
-// ── Profile / Room history ────────────────────────────────────
+// ══ Chat history ═════════════════════════════════════════════════════════════
+
+function chatHistoryKey() { return 'gg-chat-' + room; }
+
+function loadChatHistory() {
+  const container = $('messages');
+  if (!container) return;
+  let hist;
+  try { hist = JSON.parse(localStorage.getItem(chatHistoryKey()) || '[]'); } catch { hist = []; }
+  if (!hist.length) return;
+  container.innerHTML = '';
+  lastSender = '';
+  lastMsgTime = 0;
+  hist.forEach(h => {
+    if (h.type === 'system') {
+      _renderSystemRaw(h.text, h.subType, h.ts);
+    } else {
+      _renderMessageRaw(h.id, h.from, h.text, h.ts, h.color, h.replyTo);
+    }
+  });
+  scrollBottom();
+}
+
+function saveChatHistory() {
+  const container = $('messages');
+  if (!container) return;
+  const items = [];
+  container.querySelectorAll('.msg-wrap').forEach(el => {
+    const type = el.dataset.type;
+    if (type === 'system') {
+      items.push({ type: 'system', text: el.dataset.text, subType: el.dataset.subtype || '', ts: +el.dataset.ts });
+    } else {
+      items.push({ type: 'msg', id: +el.dataset.id, from: el.dataset.from, text: el.dataset.text, color: el.dataset.color, ts: +el.dataset.ts, replyTo: el.dataset.replyto || null });
+    }
+  });
+  const trimmed = items.slice(-MAX_HISTORY);
+  localStorage.setItem(chatHistoryKey(), JSON.stringify(trimmed));
+}
+
+function clearChatHistory() {
+  localStorage.removeItem(chatHistoryKey());
+  const container = $('messages');
+  if (container) container.innerHTML = '';
+  lastSender = ''; lastMsgTime = 0;
+}
+
+// ══ Profile / Room history ═════════════════════════════════════════════════════════════════
+
 function loadProfile() {
   const p = JSON.parse(localStorage.getItem('gg-profile') || '{}');
   if (p.nick)  { nick = p.nick;   const ni = $('nickInput'); if (ni) ni.value = p.nick; }
@@ -39,9 +96,16 @@ function saveRoomToHistory(r) {
   localStorage.setItem('gg-rooms', JSON.stringify(rooms));
 }
 
-// ── Utilities ─────────────────────────────────────────────────
+// ══ Utilities ════════════════════════════════════════════════════════════════════════════════
+
 function fmtTime(ts) {
   return new Date(ts || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+function fmtDate(ts) {
+  return new Date(ts || Date.now()).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+}
+function fmtFullTime(ts) {
+  return new Date(ts || Date.now()).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
 function san(str) {
@@ -53,6 +117,15 @@ function san(str) {
 function scrollBottom(el) {
   const m = el || $('messages');
   if (m) m.scrollTop = m.scrollHeight;
+  isAtBottom = true;
+  unreadCount = 0;
+  updateTitle();
+  $('scrollDown').style.display = 'none';
+}
+
+function updateTitle() {
+  const base = 'GameGram Chat';
+  document.title = unreadCount ? `(${unreadCount}) ${base}` : base;
 }
 
 function updateSelf() {
@@ -60,7 +133,144 @@ function updateSelf() {
   const em = $('selfEmoji'); if (em) em.textContent = emoji;
 }
 
-// ── Rich text renderer ────────────────────────────────────────
+function playPing() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.type = 'sine'; o.frequency.value = 880;
+    g.gain.value = 0.03;
+    o.start(); o.stop(ctx.currentTime + 0.08);
+  } catch (_) {}
+}
+
+// ══ Emoji map ═══════════════════════════════════════════════════════════════════════════════════
+
+const EMOJIS = [
+  '😀','😂','😅','🥰','😉','😘','😎','🤔','😐','😒',
+  '😔','😢','😭','😡','😤','🤬','😱','🤯','😳','🤐',
+  '🎮','🎯','🏆','🚀','⚔️','🛡️','🐉','👾','🎲','🃏',
+  '🔥','⚡','💎','🌟','🎭','🦊','🐺','🐸','🤖','👻',
+  '💀','🧙','🥷','🎸','🌈','🌙','☄️','🍄','🏴','🎃',
+  '🐦','🦁','👑','🏁','💯','💜','💚','💛','💙','💝',
+  '👍','👎','👏','👌','👊','👋','👏','👍','👌','💩',
+  '🎵','🎶','🎧','📺','📱','💻','📚','📖','✅','❌',
+  '❗','❓','⭐','🎉','🎊','🎁','💋','💞','💕','💖'
+];
+
+// ══ Markdown & Link detection ═════════════════════════════════════════════════════════════════
+
+const URL_RE = /https?:\/\/[^\s<>"]+/g;
+const MENTION_RE = /@([a-zA-Z0-9_-]+)/g;
+
+function renderMarkdown(text) {
+  let html = san(text);
+
+  // Code blocks
+  html = html.replace(/```([\s\S]*?)```/g, (_, code) => `<pre class="code-block"><code>${code}</code></pre>`);
+  // Inline code
+  html = html.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>');
+  // Bold
+  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  // Italic
+  html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+  // Strikethrough
+  html = html.replace(/~~([^~]+)~~/g, '<s>$1</s>');
+  // Underline
+  html = html.replace(/__([^_]+)__/g, '<u>$1</u>');
+
+  // Mentions
+  html = html.replace(MENTION_RE, (m, name) => {
+    const isMe = name.toLowerCase() === (nick || '').toLowerCase();
+    return `<span class="mention${isMe ? ' mention-me' : ''}">@${san(name)}</span>`;
+  });
+
+  // URLs
+  html = html.replace(URL_RE, url => {
+    const sUrl = san(url);
+    return `<a href="${sUrl}" target="_blank" rel="noopener" class="msg-link">${sUrl}</a>`;
+  });
+
+  return html;
+}
+
+// ══ Link preview (cached) ═══════════════════════════════════════════════════════════════════════════
+
+const _linkCache = {};
+const _linkPending = new Set();
+
+function getCachedPreview(url) {
+  const cached = localStorage.getItem('gg-link-previews');
+  if (cached) {
+    try {
+      const all = JSON.parse(cached);
+      if (all[url]) return all[url];
+    } catch {}
+  }
+  return null;
+}
+
+function setCachedPreview(url, data) {
+  let all = {};
+  try { all = JSON.parse(localStorage.getItem('gg-link-previews') || '{}'); } catch {}
+  all[url] = { ...data, cachedAt: Date.now() };
+  const keys = Object.keys(all).slice(-50);
+  const trimmed = {};
+  keys.forEach(k => trimmed[k] = all[k]);
+  localStorage.setItem('gg-link-previews', JSON.stringify(trimmed));
+}
+
+async function fetchPreview(url) {
+  if (_linkPending.has(url)) return;
+  const cached = getCachedPreview(url);
+  if (cached) return cached;
+  _linkPending.add(url);
+  try {
+    const res = await fetch(`https://r.jina.ai/http://${url.replace(/^https?:\/\//, '')}`, { method: 'GET', mode: 'cors' });
+    if (res.ok) {
+      const text = await res.text();
+      const lines = text.split('\n').filter(l => l.trim());
+      const title = lines[0]?.replace(/^Title:\s*/, '') || url;
+      const desc = lines[1]?.replace(/^Description:\s*/, '') || '';
+      const data = { title, desc, url };
+      setCachedPreview(url, data);
+      return data;
+    }
+  } catch {}
+  _linkPending.delete(url);
+  return null;
+}
+
+function renderLinkPreview(url) {
+  const cached = getCachedPreview(url);
+  if (!cached) {
+    fetchPreview(url).then(data => {
+      if (data) {
+        const el = document.querySelector(`[data-preview-url="${san(url)}"]`);
+        if (el) el.innerHTML = buildPreviewHTML(data);
+      }
+    });
+    return `<div class="link-preview" data-preview-url="${san(url)}"><div class="link-preview-loading">Loading preview...</div></div>`;
+  }
+  return `<div class="link-preview" data-preview-url="${san(url)}">${buildPreviewHTML(cached)}</div>`;
+}
+
+function buildPreviewHTML(data) {
+  const domain = new URL(data.url).hostname.replace(/^www\./, '');
+  return `<a href="${san(data.url)}" target="_blank" rel="noopener" class="link-preview-inner">
+    <div class="link-preview-domain">${san(domain)}</div>
+    <div class="link-preview-title">${san(data.title || data.url)}</div>
+    ${data.desc ? `<div class="link-preview-desc">${san(data.desc).slice(0, 120)}${data.desc.length > 120 ? '...' : ''}</div>` : ''}
+  </a>`;
+}
+
+function hasLinks(text) {
+  return URL_RE.test(text);
+}
+
+// ══ Rich text renderer (includes game cards + link previews) ════════════════════════════════
+
 function renderText(rawText) {
   const gameRe = /https?:\/\/[^\s<>"]+\/games\/[\w%.+-]+\.html/g;
   const parts = [];
@@ -72,44 +282,216 @@ function renderText(rawText) {
   }
   if (last < rawText.length) parts.push({ type: 'text', val: rawText.slice(last) });
 
-  return parts.map(p => {
-    if (p.type === 'text') return `<span>${san(p.val)}</span>`;
-    const sUrl  = san(p.url);
-    const sName = san(p.url.split('/').pop().replace('.html', '').replace(/[-_]/g, ' '));
-    return `<span class="cs-game-card">
-      <span class="cs-gc-icon">🎮</span>
-      <span class="cs-gc-name">${sName}</span>
-      <button class="cs-gc-play" onclick="window.open('${sUrl}','_blank')">▶ Play</button>
-      <button class="cs-gc-split" onclick="openPlayChat('${sUrl}','${sName}')">⊞ Here</button>
-    </span>`;
-  }).join('');
+  let html = '';
+  const urls = [];
+  parts.forEach(p => {
+    if (p.type === 'text') {
+      html += renderMarkdown(p.val);
+      const found = p.val.match(URL_RE);
+      if (found) urls.push(...found);
+    } else {
+      const sUrl  = san(p.url);
+      const sName = san(p.url.split('/').pop().replace('.html', '').replace(/[-_]/g, ' '));
+      html += `<span class="cs-game-card">
+        <span class="cs-gc-icon">🎮</span>
+        <span class="cs-gc-name">${sName}</span>
+        <button class="cs-gc-play" onclick="window.open('${sUrl}','_blank')">▶ Play</button>
+        <button class="cs-gc-split" onclick="openPlayChat('${sUrl}','${sName}')">⊞ Here</button>
+      </span>`;
+    }
+  });
+
+  // Append link previews
+  urls.forEach(url => {
+    html += renderLinkPreview(url);
+  });
+
+  return html;
 }
 
-// ── Message renderers ─────────────────────────────────────────
-function addMessage(fromNick, text, ts, color, targetId) {
-  const m = $(targetId || 'messages'); if (!m) return;
-  const wrap = document.createElement('div');
-  wrap.className = 'message';
-  wrap.innerHTML =
-    `<span class="time">${fmtTime(ts)}</span>` +
-    `<span class="nick" style="color:${san(color||'#9090b0')}">${san(fromNick)}</span>` +
-    `<span class="text">${renderText(text)}</span>`;
-  m.appendChild(wrap);
-  scrollBottom(m);
-  if (!targetId) addMessage(fromNick, text, ts, color, 'pcMessages');
+// ══ Message rendering ═════════════════════════════════════════════════════════════════════════════════════
+
+function _addDateSeparator(ts) {
+  const container = $('messages');
+  if (!container) return;
+  const d = fmtDate(ts);
+  const el = document.createElement('div');
+  el.className = 'date-separator';
+  el.innerHTML = `<span class="date-sep-line"></span><span class="date-sep-text">${d}</span><span class="date-sep-line"></span>`;
+  container.appendChild(el);
 }
 
-function addSystem(text, type, targetId) {
-  const m = $(targetId || 'messages'); if (!m) return;
+function _renderMessageRaw(id, fromNick, text, ts, color, replyToId) {
+  const container = $('messages');
+  if (!container) return;
+  const now = ts || Date.now();
+  const isGrouped = fromNick === lastSender && (now - lastMsgTime) < 5 * 60 * 1000;
+
+  if (!isGrouped && lastMsgTime && fmtDate(now) !== fmtDate(lastMsgTime)) {
+    _addDateSeparator(now);
+  }
+
   const wrap = document.createElement('div');
-  wrap.className = `system-message ${type || ''}`;
+  wrap.className = 'msg-wrap' + (isGrouped ? ' grouped' : '');
+  wrap.dataset.id = id;
+  wrap.dataset.from = fromNick;
+  wrap.dataset.text = text;
+  wrap.dataset.color = color || '#9090b0';
+  wrap.dataset.ts = now;
+  wrap.dataset.type = 'msg';
+  wrap.dataset.replyto = replyToId || '';
+
+  const isMe = fromNick.toLowerCase() === (nick || '').toLowerCase();
+
+  let replyHTML = '';
+  if (replyToId) {
+    const replyEl = container.querySelector(`[data-id="${replyToId}"]`);
+    if (replyEl) {
+      const rFrom = replyEl.dataset.from;
+      const rText = replyEl.dataset.text;
+      replyHTML = `<div class="msg-reply" onclick="scrollToMsg(${replyToId})">
+        <div class="msg-reply-bar"></div>
+        <div class="msg-reply-info">
+          <span class="msg-reply-name" style="color:${replyEl.dataset.color}">${san(rFrom)}</span>
+          <span class="msg-reply-text">${san(rText).slice(0, 60)}${rText.length > 60 ? '...' : ''}</span>
+        </div>
+      </div>`;
+    }
+  }
+
+  const reactionsHTML = `<div class="msg-reactions" id="reactions-${id}"></div>`;
+  const hoverActions = `<div class="msg-actions">
+    <button class="msg-action-btn" onclick="setReply(${id})" title="Reply">↩️</button>
+    <button class="msg-action-btn" onclick="showReactionMenu(${id}, this)" title="React">😀</button>
+  </div>`;
+
   wrap.innerHTML =
-    `<span class="time">${fmtTime()}</span>` +
-    `<span class="text">${san(text)}</span>`;
-  m.appendChild(wrap);
-  scrollBottom(m);
-  if (!targetId) addSystem(text, type, 'pcMessages');
+    (isGrouped ? '' : `<div class="msg-avatar" style="background:${san(color || '#9090b0')}">${san(fromNick[0]?.toUpperCase() || '?')}</div>`) +
+    `<div class="msg-body">
+      ${replyHTML}
+      ${isGrouped ? '' : `<div class="msg-meta">
+        <span class="msg-name" style="color:${san(color || '#9090b0')}">${san(fromNick)}</span>
+        <span class="msg-time" title="${fmtFullTime(now)}">${fmtTime(now)}</span>
+        ${isMe ? '<span class="msg-badge me">ME</span>' : ''}
+      </div>`}
+      <div class="msg-text">${renderText(text)}</div>
+      ${reactionsHTML}
+    </div>` +
+    hoverActions;
+
+  container.appendChild(wrap);
+  lastSender = fromNick;
+  lastMsgTime = now;
+
+  if (!isAtBottom) {
+    unreadCount++;
+    updateTitle();
+    $('scrollDown').style.display = 'flex';
+    $('scrollDownCount').textContent = unreadCount;
+  } else {
+    scrollBottom();
+  }
 }
+
+function addMessage(fromNick, text, ts, color) {
+  messageId++;
+  const id = messageId;
+  const replyToId = replyTo;
+  replyTo = null;
+  hideReplyBar();
+  _renderMessageRaw(id, fromNick, text, ts || Date.now(), color, replyToId);
+  if (!ts) saveChatHistory();
+  if (!document.hasFocus() && fromNick !== nick) playPing();
+  if (!document.hasFocus()) {
+    unreadCount++;
+    updateTitle();
+  }
+}
+
+function _renderSystemRaw(text, type, ts) {
+  const container = $('messages');
+  if (!container) return;
+  const wrap = document.createElement('div');
+  wrap.className = 'msg-wrap system-msg';
+  wrap.dataset.text = text;
+  wrap.dataset.subtype = type || '';
+  wrap.dataset.ts = ts || Date.now();
+  wrap.dataset.type = 'system';
+  wrap.innerHTML = `<span class="time">${fmtTime(ts)}</span><span class="text">${san(text)}</span>`;
+  container.appendChild(wrap);
+  if (isAtBottom) scrollBottom();
+}
+
+function addSystem(text, type) {
+  _renderSystemRaw(text, type);
+  saveChatHistory();
+}
+
+function scrollToMsg(id) {
+  const el = document.querySelector(`[data-id="${id}"]`);
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.add('msg-highlight');
+    setTimeout(() => el.classList.remove('msg-highlight'), 1500);
+  }
+}
+
+function setReply(id) {
+  const el = document.querySelector(`[data-id="${id}"]`);
+  if (!el) return;
+  replyTo = id;
+  $('replyBar').style.display = 'flex';
+  $('replyBarName').textContent = el.dataset.from;
+  $('replyBarName').style.color = el.dataset.color;
+  $('replyBarText').textContent = el.dataset.text.slice(0, 40);
+  $('input').focus();
+}
+
+function hideReplyBar() {
+  $('replyBar').style.display = 'none';
+  replyTo = null;
+}
+
+// ══ Reactions ═══════════════════════════════════════════════════════════════════════════════════════════
+
+function getReactions(msgId) {
+  const all = JSON.parse(localStorage.getItem('gg-reactions') || '{}');
+  return all[msgId] || {};
+}
+
+function setReaction(msgId, emojiChar) {
+  const all = JSON.parse(localStorage.getItem('gg-reactions') || '{}');
+  if (!all[msgId]) all[msgId] = {};
+  const current = all[msgId][emojiChar] || 0;
+  all[msgId][emojiChar] = current + 1;
+  localStorage.setItem('gg-reactions', JSON.stringify(all));
+  renderReactions(msgId);
+}
+
+function renderReactions(msgId) {
+  const el = document.getElementById(`reactions-${msgId}`);
+  if (!el) return;
+  const rx = getReactions(msgId);
+  const entries = Object.entries(rx).filter(([,n]) => n > 0);
+  if (!entries.length) { el.innerHTML = ''; return; }
+  el.innerHTML = entries.map(([e, n]) =>
+    `<span class="reaction-chip" onclick="setReaction(${msgId}, '${e}')">${e} <span class="reaction-count">${n}</span></span>`
+  ).join('');
+}
+
+function showReactionMenu(msgId, btn) {
+  const quick = ['👍','👎','😂','😱','❤️','🔥','👏','🎮'];
+  const menu = document.createElement('div');
+  menu.className = 'reaction-menu';
+  menu.innerHTML = quick.map(e => `<button class="reaction-menu-item" onclick="setReaction(${msgId}, '${e}'); this.parentElement.remove()">${e}</button>`).join('');
+  const rect = btn.getBoundingClientRect();
+  menu.style.cssText = `position:fixed;z-index:9000;top:${rect.top - 44}px;left:${rect.left}px;`;
+  document.body.appendChild(menu);
+  const close = e => { if (!menu.contains(e.target)) { menu.remove(); document.removeEventListener('click', close); } };
+  setTimeout(() => document.addEventListener('click', close), 10);
+}
+
+// ══ Status / User list ══════════════════════════════════════════════════════════════════════════════════════
 
 function setStatus(text, ok) {
   const el = $('statusDot'); if (!el) return;
@@ -120,17 +502,37 @@ function setStatus(text, ok) {
 function renderUsers(users) {
   const ul = $('userList'); if (!ul) return;
   ul.innerHTML = '';
+  usersOnline = users;
   users.slice()
     .sort((a, b) => (a.nick || a).localeCompare(b.nick || b))
     .forEach(u => {
       const d = document.createElement('div');
       d.className = 'user-entry';
-      d.innerHTML = `<span class="user-dot"></span><span style="color:${san(u.color||'#9090b0')}">${san(u.nick||u)}</span>`;
+      const nickName = u.nick || u;
+      const isMe = nickName.toLowerCase() === (nick || '').toLowerCase();
+      d.innerHTML = `<span class="user-dot" style="background:${san(u.color || '#22c55e')}"></span>
+        <span class="user-name" style="color:${san(u.color || '#9090b0')}">${san(nickName)}</span>
+        ${isMe ? '<span class="user-badge">YOU</span>' : ''}`;
+      d.addEventListener('click', () => {
+        const inp = $('input');
+        if (inp) { inp.value += ` @${nickName} `; inp.focus(); }
+      });
       ul.appendChild(d);
     });
 }
 
-// ── Room panel ────────────────────────────────────────────────
+// ══ Typing indicator ═════════════════════════════════════════════════════════════════════════════════════
+
+let typingTimer = null;
+function showTyping() {
+  const el = $('typingIndicator');
+  if (el) el.style.display = 'flex';
+  clearTimeout(typingTimer);
+  typingTimer = setTimeout(() => { if (el) el.style.display = 'none'; }, 3000);
+}
+
+// ══ Room panel ══════════════════════════════════════════════════════════════════════════════════════════
+
 function buildRoomPanel() {
   const panel = $('roomPanel'); if (!panel) return;
   const rooms = getRoomHistory();
@@ -156,11 +558,14 @@ function switchRoom(newRoom) {
   const pl = $('pcRoomLabel');     if (pl) pl.textContent = '#' + room;
   const ml = $('messages');        if (ml) ml.innerHTML = '';
   const ul = $('userList');        if (ul) ul.innerHTML = '';
+  lastSender = ''; lastMsgTime = 0;
   buildRoomPanel();
+  loadChatHistory();
   connect();
 }
 
-// ── WebSocket ─────────────────────────────────────────────────
+// ══ WebSocket ═════════════════════════════════════════════════════════════════════════════════════════════════
+
 function connect() {
   clearTimeout(reconnectTimer);
   if (ws) { try { ws.close(); } catch (_) {} }
@@ -191,7 +596,7 @@ function connect() {
         if (ul) {
           const d = document.createElement('div');
           d.className = 'user-entry';
-          d.innerHTML = `<span class="user-dot"></span><span style="color:${san(data.color||'#9090b0')}">${san(data.nick)}</span>`;
+          d.innerHTML = `<span class="user-dot" style="background:${san(data.color || '#22c55e')}"></span><span style="color:${san(data.color || '#9090b0')}">${san(data.nick)}</span>`;
           ul.appendChild(d);
         }
         break;
@@ -199,7 +604,7 @@ function connect() {
       case 'onlineRemove': {
         addSystem(`← ${data.nick} left`);
         $('userList')?.querySelectorAll('.user-entry').forEach(el => {
-          if (el.textContent.trim() === (data.nick || '')) el.remove();
+          if (el.textContent.trim().startsWith(data.nick || '')) el.remove();
         });
         break;
       }
@@ -216,7 +621,8 @@ function connect() {
   };
 }
 
-// ── Chat commands ─────────────────────────────────────────────
+// ══ Chat commands ═══════════════════════════════════════════════════════════════════════════════════════════════
+
 function handleCommand(text) {
   const parts = text.trim().split(/\s+/);
   const cmd   = parts[0].toLowerCase();
@@ -243,15 +649,20 @@ function handleCommand(text) {
       if (parts[1]) switchRoom(parts[1].toLowerCase());
       else addSystem('Usage: /room <name>');
       return;
+    case '/clear':
+      clearChatHistory();
+      addSystem('Chat history cleared for this room.');
+      return;
     case '/help':
-      addSystem('Commands: /roll [sides] · /flip · /ttt · /room [name] · /help');
+      addSystem('Commands: /roll [sides] · /flip · /ttt · /room [name] · /clear · /help');
       return;
     default:
       addSystem(`Unknown command: ${cmd} — try /help`, 'warn');
   }
 }
 
-// ── Send ──────────────────────────────────────────────────────
+// ══ Send ═════════════════════════════════════════════════════════════════════════════════════════════════
+
 function sendMessage(source) {
   const inp  = $(source === 'pc' ? 'pcInput' : 'input');
   const text = inp?.value.trim();
@@ -262,7 +673,8 @@ function sendMessage(source) {
   ws.send(JSON.stringify({ cmd: 'chat', text }));
 }
 
-// ── Tic-Tac-Toe ───────────────────────────────────────────────
+// ══ Tic-Tac-Toe ══════════════════════════════════════════════════════════════════════════════════════
+
 const TTT_SYM = ['⬜', '❌', '⭕'];
 
 function startTTT() {
@@ -319,7 +731,8 @@ function checkTTT(b) {
   return b.every(Boolean) ? 3 : 0;
 }
 
-// ── Play & Chat overlay ───────────────────────────────────────
+// ══ Play & Chat overlay ═════════════════════════════════════════════════════════════════════════════════════
+
 function openPlayChat(url, name) {
   const overlay = $('playChatOverlay');
   const frame   = $('pcGameFrame');
@@ -330,7 +743,6 @@ function openPlayChat(url, name) {
   const r = $('pcRoomLabel'); if (r) r.textContent = '#' + room;
   overlay.classList.remove('hidden');
   document.body.style.overflow = 'hidden';
-  // Track the game play
   try {
     const clicks = JSON.parse(localStorage.getItem('gg-clicks') || '{}');
     const key = name || 'Game';
@@ -350,7 +762,47 @@ function closePlayChat() {
   const f = $('pcGameFrame'); if (f) f.src = '';
 }
 
-// ── Login ─────────────────────────────────────────────────────
+// ══ Emoji picker ═══════════════════════════════════════════════════════════════════════════════════════════
+
+function buildEmojiPicker() {
+  const grid = $('emojiPickerGrid');
+  if (!grid) return;
+  grid.innerHTML = EMOJIS.map(e => `<button class="emoji-picker-item" type="button">${e}</button>`).join('');
+  grid.querySelectorAll('.emoji-picker-item').forEach(btn => {
+    btn.addEventListener('click', () => insertEmoji(btn.textContent));
+  });
+}
+
+function insertEmoji(emojiChar) {
+  const inp = $('input');
+  if (!inp) return;
+  const start = inp.selectionStart;
+  const end = inp.selectionEnd;
+  const val = inp.value;
+  inp.value = val.slice(0, start) + emojiChar + val.slice(end);
+  inp.selectionStart = inp.selectionEnd = start + emojiChar.length;
+  inp.focus();
+}
+
+function toggleEmojiPicker() {
+  const picker = $('emojiPicker');
+  if (!picker) return;
+  const isHidden = picker.style.display === 'none';
+  picker.style.display = isHidden ? 'block' : 'none';
+  if (isHidden) {
+    // Close when clicking outside
+    const close = e => {
+      if (!picker.contains(e.target) && e.target.id !== 'emojiBtn') {
+        picker.style.display = 'none';
+        document.removeEventListener('click', close);
+      }
+    };
+    setTimeout(() => document.addEventListener('click', close), 10);
+  }
+}
+
+// ══ Login ══════════════════════════════════════════════════════════════════════════════════════════════════
+
 function doLogin() {
   nick = $('nickInput')?.value.trim() || 'Guest' + Math.floor(Math.random() * 9000 + 1000);
   room = $('roomInput')?.value.trim() || DEFAULT_ROOM;
@@ -361,10 +813,12 @@ function doLogin() {
   const hd = $('chatRoomDisplay'); if (hd) hd.textContent = '#' + room;
   updateSelf();
   buildRoomPanel();
+  loadChatHistory();
   connect();
 }
 
-// ── Settings ──────────────────────────────────────────────────
+// ══ Settings ═════════════════════════════════════════════════════════════════════════════════════════════
+
 function openSettings() {
   const modal = $('settingsModal'); if (!modal) return;
   const ni = $('nickInputSettings'); if (ni) ni.value = nick;
@@ -388,12 +842,14 @@ function saveSettings() {
   $('settingsModal')?.classList.add('hidden');
 }
 
-// ── Boot ──────────────────────────────────────────────────────
+// ══ Boot ═════════════════════════════════════════════════════════════════════════════════════════════════════════
+
 document.addEventListener('DOMContentLoaded', () => {
   loadProfile();
   buildRoomPanel();
+  buildEmojiPicker();
 
-  // Restore saved UI prefs
+  // Restore UI prefs
   try {
     const saved = JSON.parse(localStorage.getItem('ggChatPrefs') || '{}');
     if (saved.theme)     { document.body.dataset.theme = saved.theme; const ts = $('themeSelect'); if (ts) ts.value = saved.theme; }
@@ -411,6 +867,29 @@ document.addEventListener('DOMContentLoaded', () => {
     }));
   }
 
+  // Scroll detection
+  const msgContainer = $('messages');
+  if (msgContainer) {
+    msgContainer.addEventListener('scroll', () => {
+      const thresh = 60;
+      const nearBottom = msgContainer.scrollHeight - msgContainer.scrollTop - msgContainer.clientHeight < thresh;
+      isAtBottom = nearBottom;
+      if (nearBottom) {
+        unreadCount = 0;
+        updateTitle();
+        $('scrollDown').style.display = 'none';
+      }
+    });
+  }
+
+  // Visibility
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      unreadCount = 0;
+      updateTitle();
+    }
+  });
+
   // Login
   $('loginBtn')?.addEventListener('click', doLogin);
   [$('nickInput'), $('roomInput')].forEach(el =>
@@ -420,6 +899,16 @@ document.addEventListener('DOMContentLoaded', () => {
   // Send
   $('send')?.addEventListener('click', () => sendMessage('main'));
   $('input')?.addEventListener('keypress', e => { if (e.key === 'Enter') sendMessage('main'); });
+
+  // Emoji
+  $('emojiBtn')?.addEventListener('click', e => { e.stopPropagation(); toggleEmojiPicker(); });
+  $('emojiPickerClose')?.addEventListener('click', () => { $('emojiPicker').style.display = 'none'; });
+
+  // Reply
+  $('replyBarClose')?.addEventListener('click', hideReplyBar);
+
+  // Scroll down
+  $('scrollDown')?.addEventListener('click', () => scrollBottom());
 
   // Settings
   $('settingsBtn')?.addEventListener('click', openSettings);
@@ -431,7 +920,7 @@ document.addEventListener('DOMContentLoaded', () => {
   $('fontSize')?.addEventListener('input', e => { document.body.style.fontSize = e.target.value + 'px'; });
   $('fontSize')?.addEventListener('change', savePrefs);
 
-  // Emoji picker
+  // Emoji picker grid in settings
   const emojiGrid = $('emojiPickGrid');
   if (emojiGrid) {
     const emojis = emojiGrid.textContent.trim().split(/\s+/);
@@ -451,7 +940,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Header buttons
   $('cmdHelpBtn')?.addEventListener('click', () =>
-    addSystem('Commands: /roll [sides] · /flip · /ttt · /room [name] · /help')
+    addSystem('Commands: /roll [sides] · /flip · /ttt · /room [name] · /clear · /help')
   );
   $('shareRoomBtn')?.addEventListener('click', () => {
     const url = `${location.origin}${location.pathname}?room=${room}`;
@@ -460,8 +949,7 @@ document.addEventListener('DOMContentLoaded', () => {
       .catch(() => addSystem(`Room link: ${url}`));
   });
 
-  // Game share button — load game picker from index.json
-  let _gamePicker = null;
+  // Game share
   $('gameShareBtn')?.addEventListener('click', async () => {
     const inp = $('input'); if (!inp) return;
     if (!_gamePicker) {
@@ -499,7 +987,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'Escape' && !$('playChatOverlay')?.classList.contains('hidden')) closePlayChat();
   });
 
-  // Handle ?room= deep-link
+  // Deep-link
   const params = new URLSearchParams(location.search);
   const rp = params.get('room');
   if (rp && /^[\w-]+$/.test(rp)) {
