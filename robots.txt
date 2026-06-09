@@ -3,6 +3,8 @@ Allow: /
 Allow: /events/
 Allow: /games/
 Allow: /categories/
+Allow: /chat/
+Allow: /customize/
 Disallow: /assets/
 Disallow: /css/
 Disallow: /js/
