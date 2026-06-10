@@ -9,16 +9,16 @@
   --bg-card:        #121220;
   --bg-card-hover:  #1a1a30;
   --accent-purple:  #8b5cf6;
-  --accent-cyan:    #f59e0b;
-  --accent-pink:    #f472b6;
+  --accent-cyan:    #3b82f6;
+  --accent-pink:    #60a5fa;
   --accent-green:   #22c55e;
   --text-primary:   #f5f5ff;
   --text-secondary: #a0a0c0;
   --text-muted:     #68688a;
   --border:         rgba(139, 92, 246, 0.18);
-  --border-hover:   rgba(245, 158, 11, 0.4);
+  --border-hover:   rgba(59, 130, 246, 0.4);
   --glow-purple:    rgba(139, 92, 246, 0.35);
-  --glow-cyan:      rgba(245, 158, 11, 0.35);
+  --glow-cyan:      rgba(59, 130, 246, 0.35);
   --radius-sm:      10px;
   --radius-md:      16px;
   --radius-lg:      24px;
@@ -56,8 +56,8 @@ body::before {
   inset: 0;
   background:
     radial-gradient(ellipse 80% 50% at 20% 10%, rgba(139,92,246,0.14) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 40% at 80% 90%, rgba(245,158,11,0.10) 0%, transparent 60%),
-    radial-gradient(ellipse 50% 30% at 50% 50%, rgba(244,114,182,0.06) 0%, transparent 70%);
+    radial-gradient(ellipse 60% 40% at 80% 90%, rgba(59,130,246,0.10) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 30% at 50% 50%, rgba(96,165,250,0.06) 0%, transparent 70%);
   pointer-events: none;
   animation: bg-shift 20s ease-in-out infinite alternate;
   z-index: 0;
@@ -512,7 +512,7 @@ main h2::after {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--cat-color, #8b5cf6) 0%, color-mix(in srgb, var(--cat-color, #8b5cf6) 60%, #f59e0b) 100%);
+  background: linear-gradient(135deg, var(--cat-color, #8b5cf6) 0%, color-mix(in srgb, var(--cat-color, #8b5cf6) 60%, #3b82f6) 100%);
 }
 
 .gc-thumb::before {
@@ -1084,7 +1084,7 @@ footer a:hover { color: var(--accent-cyan); }
 .cs-login input::placeholder { color: var(--text-muted); }
 .cs-login input:focus {
   border-color: var(--accent-cyan);
-  box-shadow: 0 0 0 3px rgba(245,158,11,0.10);
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.10);
 }
 
 .cs-login button {
@@ -1223,7 +1223,7 @@ footer a:hover { color: var(--accent-cyan); }
   padding: 2px 6px;
   animation: card-in 0.15s ease both;
 }
-.cs-sys.warn  { color: #f59e0b; }
+.cs-sys.warn  { color: #3b82f6; }
 .cs-sys.emote { color: var(--accent-cyan); font-style: italic; }
 
 /* Input row */
@@ -1250,7 +1250,7 @@ footer a:hover { color: var(--accent-cyan); }
 #csInput::placeholder { color: var(--text-muted); }
 #csInput:focus {
   border-color: var(--accent-cyan);
-  box-shadow: 0 0 0 3px rgba(245,158,11,0.10);
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.10);
 }
 
 #csSend {
@@ -1724,8 +1724,8 @@ button.pc-action-btn#pcClose:hover {
   color: var(--text-secondary);
 }
 .cs-room-btn.active {
-  background: rgba(245,158,11,0.12);
-  border-color: rgba(245,158,11,0.25);
+  background: rgba(59,130,246,0.12);
+  border-color: rgba(59,130,246,0.25);
   color: var(--accent-cyan);
 }
 .cs-room-btn.active::before { content: '# '; }
@@ -1758,7 +1758,7 @@ button.pc-action-btn#pcClose:hover {
   align-items: center;
   gap: 7px;
   padding: 5px 10px 5px 8px;
-  background: linear-gradient(135deg, rgba(139,92,246,0.12), rgba(245,158,11,0.08));
+  background: linear-gradient(135deg, rgba(139,92,246,0.12), rgba(59,130,246,0.08));
   border: 1px solid rgba(139,92,246,0.25);
   border-radius: 8px;
   font-size: 12px;
@@ -1769,7 +1769,7 @@ button.pc-action-btn#pcClose:hover {
   transition: border-color var(--transition), box-shadow var(--transition);
 }
 .cs-game-card:hover {
-  border-color: rgba(245,158,11,0.4);
+  border-color: rgba(59,130,246,0.4);
   box-shadow: 0 2px 12px rgba(0,0,0,0.3);
 }
 .cs-gc-icon { font-size: 18px; flex-shrink: 0; }
@@ -1802,11 +1802,11 @@ button.pc-action-btn#pcClose:hover {
 }
 .cs-gc-play:hover { background: #6d28d9; transform: translateY(-1px); }
 .cs-gc-split {
-  background: rgba(245,158,11,0.15);
+  background: rgba(59,130,246,0.15);
   color: var(--accent-cyan);
-  border: 1px solid rgba(245,158,11,0.25);
+  border: 1px solid rgba(59,130,246,0.25);
 }
-.cs-gc-split:hover { background: rgba(245,158,11,0.25); transform: translateY(-1px); }
+.cs-gc-split:hover { background: rgba(59,130,246,0.25); transform: translateY(-1px); }
 
 /* ══════════════════════════════════════════════════════
    PROFILE MODAL (inside chat section)
@@ -1918,7 +1918,7 @@ button.pc-action-btn#pcClose:hover {
   transition: border-color 0.15s, background 0.15s, transform 0.12s;
 }
 .prof-emoji-opt:hover { transform: scale(1.15); border-color: var(--border-hover); }
-.prof-emoji-opt.selected { border-color: var(--accent-cyan); background: rgba(245,158,11,0.12); }
+.prof-emoji-opt.selected { border-color: var(--accent-cyan); background: rgba(59,130,246,0.12); }
 
 .cpm-actions {
   display: flex;
@@ -2031,8 +2031,8 @@ button.pc-action-btn#pcClose:hover {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: rgba(245,158,11,0.25);
-  border: 1px solid rgba(245,158,11,0.4);
+  background: rgba(59,130,246,0.25);
+  border: 1px solid rgba(59,130,246,0.4);
   color: #fff;
   font-size: 16px;
   cursor: pointer;
@@ -2040,7 +2040,7 @@ button.pc-action-btn#pcClose:hover {
   flex-shrink: 0;
 }
 .gc-here-btn:hover {
-  background: rgba(245,158,11,0.55);
+  background: rgba(59,130,246,0.55);
   transform: scale(1.12);
 }
 
