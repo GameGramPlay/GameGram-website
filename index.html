@@ -79,7 +79,7 @@
   <!-- ===== NEW SEO TITLE & DESCRIPTION ===== -->
   <title>GameGram – 200+ Free Online Web Games | Unblocked & Instant</title>
   <link rel="canonical" href="https://gamegramplay.github.io/GameGram-website/"/>
-  <link rel="stylesheet" href="style.css?v=7" />
+  <link rel="stylesheet" href="style.css?v=8" />
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
     <script type="application/ld+json">
   {
@@ -138,14 +138,42 @@
     <a href="lobby/">TicTacToe</a>
   </nav>
 
-  <!-- ===== MAIN SITE HEADING (only one <h1>) ===== -->
-  <h1 class="title-bubble">INTRODUCING GAMEGRAM – FREE ONLINE WEB GAMES</h1>
-
-  <section class="waveform">
-    <div class="bar"></div><div class="bar"></div><div class="bar"></div>
-    <div class="bar"></div><div class="bar"></div><div class="bar"></div>
-    <div class="bar"></div><div class="bar"></div><div class="bar"></div>
-    <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+  <!-- ===== HERO SECTION ===== -->
+  <section class="hero">
+    <div class="hero-particles" id="heroParticles"></div>
+    <h1 class="title-bubble">GameGram — Free Online Web Games</h1>
+    <p class="hero-subtitle">Play 73+ unblocked HTML5 games instantly. No installs, no signup, no ads.</p>
+    <section class="waveform">
+      <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+      <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+      <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+      <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+    </section>
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <span class="hero-stat-num" id="statGames">73</span>
+        <span class="hero-stat-label">Games</span>
+      </div>
+      <div class="hero-stat-divider"></div>
+      <div class="hero-stat">
+        <span class="hero-stat-num" id="statCats">18</span>
+        <span class="hero-stat-label">Categories</span>
+      </div>
+      <div class="hero-stat-divider"></div>
+      <div class="hero-stat">
+        <span class="hero-stat-num">0</span>
+        <span class="hero-stat-label">Online</span>
+      </div>
+      <div class="hero-stat-divider"></div>
+      <div class="hero-stat">
+        <span class="hero-stat-num">100%</span>
+        <span class="hero-stat-label">Free</span>
+      </div>
+    </div>
+    <div class="scroll-indicator" id="scrollIndicator" onclick="document.querySelector('main').scrollIntoView({behavior:'smooth'})">
+      <span>Scroll</span>
+      <span class="arrow"></span>
+    </div>
   </section>
 
   <div id="visitor-counter" aria-label="Visitor Counter">
@@ -301,8 +329,13 @@
       <a href="lobby/">TicTacToe</a>
       <a href="ads/">Advertising</a>
     </div>
-    <p>Games from <a href="https://github.com/Metroxe/one-html-page-challenge" target="_blank" rel="noopener">One HTML Page Challenge</a>, <a href="https://definitelynotblocked.vercel.app/games/index.html" target="_blank" rel="noopener">Seraph</a>, etc</p>
-    <p>// all games playable on this website are complete copyright & property of their respective owners \\</p>
+    <p class="footer-credits">Games from <a href="https://github.com/Metroxe/one-html-page-challenge" target="_blank" rel="noopener">One HTML Page Challenge</a>, <a href="https://definitelynotblocked.vercel.app/games/index.html" target="_blank" rel="noopener">Seraph</a>, etc</p>
+    <p class="footer-legal">// all games playable on this website are complete copyright & property of their respective owners \\</p>
+    <div class="footer-bottom">
+      <span class="footer-brand">GameGram</span>
+      <span class="footer-year">2026</span>
+    </div>
+    <button class="back-to-top" id="backToTop" title="Back to top">↑</button>
   </footer>
 
   <!-- Game Fetch + Search + Keyboard -->
@@ -1004,8 +1037,17 @@
     const $ = id => document.getElementById(id);
 
     // ── Helpers ──────────────────────────────────────────────
+    function normalizeTimestamp(ts) {
+      if (!ts) return null;
+      const num = Number(ts);
+      if (!isFinite(num) || num < 0) return null;
+      // hack.chat sends seconds (< 1e11), but some servers may send milliseconds
+      if (num < 1e11) return num * 1000;
+      return num;
+    }
     function fmtTime(ts) {
-      return new Date(ts || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const norm = normalizeTimestamp(ts) || Date.now();
+      return new Date(norm).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
     function san(s) {
       return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -1066,14 +1108,20 @@
     // ── Message renderers ──────────────────────────────────────
     function addMsg(nick, text, ts, color, targetId) {
       const m = $(targetId || 'csMessages'); if (!m) return;
+      // Parse inline reply tag from other GameGram clients
+      let cleanText = text;
+      const replyMatch = text.match(/^\[reply:(\d+)\](.*)$/s);
+      if (replyMatch) {
+        cleanText = replyMatch[2];
+      }
       const d = document.createElement('div');
       d.className = 'cs-msg';
       d.innerHTML = `<span class="cs-time">${fmtTime(ts)}</span>`
                   + `<span class="cs-nick" style="color:${san(color||'#9090b0')}">${san(nick)}</span>`
-                  + `<span class="cs-text">${renderText(text)}</span>`;
+                  + `<span class="cs-text">${renderText(cleanText)}</span>`;
       m.appendChild(d); scrollBottom(m);
       // Mirror to Play & Chat panel if open
-      if (!targetId) addMsg(nick, text, ts, color, 'pcMessages');
+      if (!targetId) addMsg(nick, cleanText, ts, color, 'pcMessages');
     }
 
     function addSys(text, cls, targetId) {
@@ -1142,7 +1190,10 @@
             renderUsers(data.users || []);
             break;
           case 'chat':
-            addMsg(data.nick, data.text, data.time ? data.time * 1000 : null, data.color);
+            const isSelf = (data.nick || '').toLowerCase() === (csNick || '').toLowerCase();
+            const hash = `${data.nick}:${data.text}:${Math.floor(normalizeTimestamp(data.time) / 1000)}`;
+            if (isSelf && _csRecentHashes.includes(hash)) break;
+            addMsg(data.nick, data.text, normalizeTimestamp(data.time), data.color);
             break;
           case 'emote':
             addSys(`* ${data.nick} ${data.text}`, 'emote');
@@ -1213,16 +1264,29 @@
     }
 
     // ── Send ───────────────────────────────────────────────────
+    const _csRecentHashes = [];
     function sendMessage(source) {
       const inp = $(source === 'pc' ? 'pcInput' : 'csInput');
       const text = inp?.value.trim();
       if (!text) return;
+      if (text.startsWith('/me ')) {
+        const emoteText = text.slice(4);
+        if (!ws || ws.readyState !== WebSocket.OPEN) { addSys('Not connected. Please join chat first.'); return; }
+        ws.send(JSON.stringify({ cmd: 'emote', text: emoteText }));
+        addSys(`* ${csNick || 'You'} ${emoteText}`, 'emote');
+        inp.value = '';
+        return;
+      }
       if (text.startsWith('/') && handleCommand(text)) { inp.value = ''; return; }
       if (!ws || ws.readyState !== WebSocket.OPEN) {
         addSys('Not connected. Please join chat first.');
         return;
       }
       ws.send(JSON.stringify({ cmd: 'chat', text }));
+      const now = Date.now();
+      const hash = `${csNick}:${text}:${Math.floor(now / 1000)}`;
+      _csRecentHashes.push(hash);
+      if (_csRecentHashes.length > 10) _csRecentHashes.shift();
       inp.value = '';
     }
     window._csSend = sendMessage;
@@ -1384,6 +1448,44 @@
       }
     });
   })();
+  </script>
+
+  <!-- Hero particles script -->
+  <script>
+    (function() {
+      const container = document.getElementById('heroParticles');
+      if (!container) return;
+      const count = 20;
+      for (let i = 0; i < count; i++) {
+        const p = document.createElement('div');
+        p.className = 'hero-particle';
+        p.style.left = Math.random() * 100 + '%';
+        p.style.top = Math.random() * 100 + '%';
+        p.style.animationDelay = (Math.random() * 12) + 's';
+        p.style.animationDuration = (8 + Math.random() * 8) + 's';
+        const colors = [
+          'rgba(124,58,237,0.35)', 'rgba(6,182,212,0.35)', 'rgba(236,72,153,0.2)',
+          'rgba(124,58,237,0.25)', 'rgba(6,182,212,0.25)', 'rgba(236,72,153,0.15)'
+        ];
+        p.style.background = colors[Math.floor(Math.random() * colors.length)];
+        const size = 2 + Math.random() * 3;
+        p.style.width = size + 'px';
+        p.style.height = size + 'px';
+        container.appendChild(p);
+      }
+    })();
+  </script>
+
+  <!-- Back-to-top button script -->
+  <script>
+    (function() {
+      const btn = document.getElementById('backToTop');
+      if (!btn) return;
+      btn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+      window.addEventListener('scroll', () => {
+        btn.classList.toggle('visible', window.scrollY > 400);
+      });
+    })();
   </script>
 
   <noscript>

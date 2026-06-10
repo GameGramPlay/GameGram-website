@@ -22,6 +22,7 @@ let lastMsgTime   = 0;
 let lastSender    = '';
 let usersOnline   = [];
 let _gamePicker   = null;
+const _recentHashes = [];  // dedup recent sent messages
 
 const $ = id => document.getElementById(id);
 
@@ -98,6 +99,14 @@ function saveRoomToHistory(r) {
 
 // ══ Utilities ════════════════════════════════════════════════════════════════════════════════
 
+function normalizeTimestamp(ts) {
+  if (!ts) return null;
+  const num = Number(ts);
+  if (!isFinite(num) || num < 0) return null;
+  // hack.chat sends seconds (< 1e11), but some servers may send milliseconds
+  if (num < 1e11) return num * 1000;
+  return num;
+}
 function fmtTime(ts) {
   return new Date(ts || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
@@ -396,10 +405,17 @@ function _renderMessageRaw(id, fromNick, text, ts, color, replyToId) {
 function addMessage(fromNick, text, ts, color) {
   messageId++;
   const id = messageId;
-  const replyToId = replyTo;
+  // Parse inline reply tag from other GameGram clients
+  let replyToId = replyTo;
+  let cleanText = text;
+  const replyMatch = text.match(/^\[reply:(\d+)\](.*)$/s);
+  if (replyMatch) {
+    replyToId = parseInt(replyMatch[1], 10);
+    cleanText = replyMatch[2];
+  }
   replyTo = null;
   hideReplyBar();
-  _renderMessageRaw(id, fromNick, text, ts || Date.now(), color, replyToId);
+  _renderMessageRaw(id, fromNick, cleanText, ts || Date.now(), color, replyToId);
   if (!ts) saveChatHistory();
   if (!document.hasFocus() && fromNick !== nick) playPing();
   if (!document.hasFocus()) {
@@ -415,9 +431,10 @@ function _renderSystemRaw(text, type, ts) {
   wrap.className = 'msg-wrap system-msg';
   wrap.dataset.text = text;
   wrap.dataset.subtype = type || '';
-  wrap.dataset.ts = ts || Date.now();
+  const normTs = normalizeTimestamp(ts) || Date.now();
+  wrap.dataset.ts = normTs;
   wrap.dataset.type = 'system';
-  wrap.innerHTML = `<span class="time">${fmtTime(ts)}</span><span class="text">${san(text)}</span>`;
+  wrap.innerHTML = `<span class="time">${fmtTime(normTs)}</span><span class="text">${san(text)}</span>`;
   container.appendChild(wrap);
   if (isAtBottom) scrollBottom();
 }
@@ -585,7 +602,15 @@ function connect() {
         renderUsers(data.users || []);
         break;
       case 'chat':
-        addMessage(data.nick, data.text, data.time ? data.time * 1000 : null, data.color);
+        // Dedup: if this chat is from us and we recently sent the same text, skip
+        const isSelf = (data.nick || '').toLowerCase() === (nick || '').toLowerCase();
+        const hash = `${data.nick}:${data.text}:${Math.floor(normalizeTimestamp(data.time) / 1000)}`;
+        if (isSelf) {
+          if (_recentHashes.includes(hash)) break;
+          _recentHashes.push(hash);
+          if (_recentHashes.length > 10) _recentHashes.shift();
+        }
+        addMessage(data.nick, data.text, normalizeTimestamp(data.time), data.color);
         break;
       case 'emote':
         addSystem(`* ${data.nick} ${data.text}`, 'emote');
@@ -668,9 +693,29 @@ function sendMessage(source) {
   const text = inp?.value.trim();
   if (!text) return;
   inp.value = '';
+  if (text.startsWith('/me ')) {
+    const emoteText = text.slice(4);
+    if (!ws || ws.readyState !== WebSocket.OPEN) { addSystem('Not connected yet.'); return; }
+    ws.send(JSON.stringify({ cmd: 'emote', text: emoteText }));
+    addSystem(`* ${nick || 'You'} ${emoteText}`, 'emote');
+    return;
+  }
   if (text.startsWith('/')) { handleCommand(text); return; }
   if (!ws || ws.readyState !== WebSocket.OPEN) { addSystem('Not connected yet.'); return; }
-  ws.send(JSON.stringify({ cmd: 'chat', text }));
+  // Embed reply context for other GameGram clients to parse
+  let finalText = text;
+  if (replyTo) {
+    const replyEl = document.querySelector(`[data-id="${replyTo}"]`);
+    if (replyEl) {
+      finalText = `[reply:${replyTo}]${text}`;
+    }
+  }
+  ws.send(JSON.stringify({ cmd: 'chat', text: finalText }));
+  // Track outgoing hash for dedup of echo
+  const now = Date.now();
+  const hash = `${nick}:${finalText}:${Math.floor(now / 1000)}`;
+  _recentHashes.push(hash);
+  if (_recentHashes.length > 10) _recentHashes.shift();
 }
 
 // ══ Tic-Tac-Toe ══════════════════════════════════════════════════════════════════════════════════════
